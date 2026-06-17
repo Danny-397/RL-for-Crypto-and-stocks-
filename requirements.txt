@@ -5,6 +5,16 @@ torch>=2.0
 gymnasium>=0.29
 matplotlib>=3.6
 
+# --- API server deps ---------------------------------------------------------
+# Included here too so the backend deploys even when a host (e.g. Render) builds
+# from the repo root. For a slim, torch-free backend build, point the host at
+# the `server/` directory instead (it has its own lightweight requirements.txt).
+flask>=3.0
+flask-cors>=4.0
+gunicorn>=21.0
+yfinance>=1.4
+curl_cffi>=0.6
+
 # Optional: pull real OHLCV data instead of the built-in synthetic generator.
 # pip install yfinance
 # yfinance>=0.2
