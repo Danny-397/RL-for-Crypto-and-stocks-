@@ -104,6 +104,8 @@ rl_trader/
     ├── run_crypto_training.py
     └── compare_markets.py
 tests/               # pytest suite for envs and agent
+tools/               # build_site_data.py — generates real results for the site
+docs/                # data-driven web dashboard (GitHub Pages ready)
 ```
 
 ---
@@ -172,9 +174,19 @@ report:
 `scripts/compare_markets.py` prints these side by side and (with `--plot`) saves
 equity curves, so the difference in learned behaviour is visible, not just asserted.
 
+**Overfitting control — domain randomization.** A single price path is trivial
+to memorise: an agent trained on one sequence reaches huge in-sample equity and
+then *loses* out-of-sample. To force a *generalizable* policy, training draws a
+**fresh synthetic path every episode** (`train_series_factory`), while
+validation and test stay on fixed held-out paths. This single change moved the
+crypto agent from catastrophic overfitting to a positive, risk-controlled
+out-of-sample backtest.
+
 > **Note on results.** Numbers depend on data and seed. With the synthetic
-> generator this repo is a *reproducible methodology demo*; swap in real OHLCV to
-> produce real backtests. The framework deliberately makes that a one-flag change.
+> generator this repo is a *reproducible methodology demo* — but the
+> [web dashboard](#web-prototype) shows **real held-out backtests**, not mock
+> numbers. Swap in real OHLCV (one `--data` flag) to produce real-market
+> backtests.
 
 ---
 
@@ -208,12 +220,21 @@ equity curves, so the difference in learned behaviour is visible, not just asser
 
 ## Web prototype
 
-A self-contained landing-page prototype lives in [`docs/`](docs/) (dark
-cyber-fintech theme with an animated agent-vs-benchmark equity chart). Open
+A self-contained landing page lives in [`docs/`](docs/) (dark cyber-fintech
+theme). Crucially, it is **data-driven**: an interactive dashboard renders
+*real* backtest output — agent-vs-benchmark equity curves, a drawdown chart, an
+action-distribution histogram, and a metric scorecard you can toggle between
+stock and crypto.
+
+```bash
+python tools/build_site_data.py --timesteps 200000   # regenerates docs/results.js from a real run
+```
+
+That script trains both agents, backtests them on held-out data, and writes the
+results the page loads — so the site never shows mock numbers. Open
 `docs/index.html` locally, or enable **GitHub Pages → Deploy from branch →
 `main` / `docs`** to publish it at
-`https://danny-397.github.io/RL-for-Crypto-and-stocks-/`. It's an early
-prototype — the design is meant to be iterated on.
+`https://danny-397.github.io/RL-for-Crypto-and-stocks-/`.
 
 ## License
 

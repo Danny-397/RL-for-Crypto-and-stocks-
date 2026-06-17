@@ -30,11 +30,17 @@ class EnvConfig:
 
 @dataclass
 class RewardConfig:
-    """Weights for the shared reward function (see :class:`BaseTradingEnv`)."""
+    """Weights for the shared reward function (see :class:`BaseTradingEnv`).
+
+    ``return_scale`` keeps the (tiny) per-step return the dominant learning
+    signal; the penalties are deliberately an order of magnitude smaller so they
+    *shape* behaviour without overwhelming the profit objective.
+    """
 
     use_log_return: bool = True       # log return is additive and well-scaled
-    drawdown_penalty: float = 0.10    # penalise depth below the equity high-water mark
-    turnover_penalty: float = 0.001   # penalise churn (transaction friction)
+    return_scale: float = 100.0       # lift ~1e-3 returns into a PPO-learnable range
+    drawdown_penalty: float = 0.05    # penalise depth below the equity high-water mark
+    turnover_penalty: float = 0.0005  # penalise churn (transaction friction)
 
 
 @dataclass
@@ -108,6 +114,5 @@ def crypto_config() -> Config:
     cfg.env.transaction_cost = 0.0010
     cfg.env.slippage = 0.0010
     cfg.env.allow_short = True
-    cfg.reward.drawdown_penalty = 0.15
-    cfg.ppo.init_log_std = -0.25
+    cfg.reward.drawdown_penalty = 0.08
     return cfg

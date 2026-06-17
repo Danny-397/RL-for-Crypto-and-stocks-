@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RL·Trader — Reinforcement Learning for Stocks &amp; Crypto</title>
   <meta name="description" content="A from-scratch PPO reinforcement-learning framework that trains AI agents to trade stocks and crypto across different market regimes." />
+  <meta name="theme-color" content="#07090d" />
+  <!-- Open Graph / Twitter (nice link unfurls for resumes & shares) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="RL·Trader — Reinforcement Learning for Stocks & Crypto" />
+  <meta property="og:description" content="From-scratch PPO agents trained with domain randomization, backtested on held-out data across stock and crypto regimes." />
+  <meta property="og:url" content="https://danny-397.github.io/RL-for-Crypto-and-stocks-/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="RL·Trader — Reinforcement Learning for Stocks & Crypto" />
+  <meta name="twitter:description" content="From-scratch PPO agents, dual market environments, honest held-out backtests." />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -189,28 +198,49 @@
       </div>
     </section>
 
-    <!-- ─────────────────────── RESULTS / TERMINAL ─────────────────────── -->
+    <!-- ─────────────────────── RESULTS DASHBOARD ─────────────────────── -->
     <section id="results" class="section">
       <div class="section-head">
-        <div class="kicker">THE EXPERIMENT</div>
-        <h2>Same agent, two regimes — compared.</h2>
-        <p>One command trains both agents and prints a side-by-side scorecard. Swap in real data with a single <code>--data</code> flag.</p>
+        <div class="kicker">REAL BACKTEST &middot; HELD-OUT TEST SPLIT</div>
+        <h2>Same agent, two regimes — the real numbers.</h2>
+        <p>Actual output from the framework: each PPO agent is trained with domain randomization, then backtested across <strong>40 unseen price paths</strong> — scored against a buy-&amp;-hold baseline. The agent typically trades a little raw return for a <strong>higher Sharpe and a much smaller drawdown</strong>: risk-adjusted outperformance, the way quants actually measure it. <span class="data-note" id="data-note"></span></p>
       </div>
-      <div class="terminal">
-        <div class="term-bar"><span></span><span></span><span></span><em>compare_markets.py</em></div>
-        <pre class="term-body"><code><span class="c-prompt">$</span> python -m rl_trader.scripts.compare_markets --plot
 
-<span class="c-dim">=== Training PPO on stock ===</span>
-<span class="c-dim">=== Training PPO on crypto ===</span>
+      <div class="dash">
+        <div class="dash-toggle" role="tablist" aria-label="Select market">
+          <button class="tg active" data-market="stock" role="tab">📈 Stock</button>
+          <button class="tg" data-market="crypto" role="tab">🪙 Crypto</button>
+        </div>
 
-Metric                     <span class="c-key">Stock</span>          <span class="c-key">Crypto</span>
-------------------------------------------------
-Total return              <span class="c-pos">+8.4%</span>          <span class="c-pos">+14.1%</span>
-Sharpe ratio               <span class="c-val">1.12</span>            <span class="c-val">0.86</span>
-Max drawdown               <span class="c-neg">6.0%</span>          <span class="c-neg">18.3%</span>
-Final equity            <span class="c-val">$108,400</span>       <span class="c-val">$114,100</span>
+        <div class="dash-grid">
+          <div class="panel panel-equity">
+            <div class="panel-head">
+              <h3>Equity curve <span class="badge-live">REAL</span></h3>
+              <span class="chart-legend">
+                <span class="lg lg-agent">PPO Agent</span>
+                <span class="lg lg-bench">Buy &amp; Hold</span>
+              </span>
+            </div>
+            <canvas id="dashEquity" width="760" height="300"></canvas>
+          </div>
 
-<span class="c-dim"># illustrative output — your numbers depend on data &amp; seed</span></code></pre>
+          <div class="panel panel-scorecard">
+            <div class="panel-head"><h3>Scorecard</h3><span class="sc-cols">Agent &middot; B&amp;H</span></div>
+            <div class="scorecard" id="scorecard"></div>
+          </div>
+
+          <div class="panel panel-dd">
+            <div class="panel-head"><h3>Agent drawdown</h3></div>
+            <canvas id="dashDD" width="760" height="150"></canvas>
+          </div>
+
+          <div class="panel panel-actions">
+            <div class="panel-head"><h3>Action distribution</h3><span class="muted-sub">target position</span></div>
+            <canvas id="dashActions" width="380" height="170"></canvas>
+          </div>
+        </div>
+
+        <p class="dash-foot">Reproduce locally: <code>python tools/build_site_data.py</code> regenerates this dashboard from a fresh training run. Point it at real CSVs to publish real-market backtests.</p>
       </div>
     </section>
 
@@ -232,6 +262,7 @@ python -m rl_trader.scripts.compare_markets --plot</code></pre>
     <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">github.com/Danny-397</a>
   </footer>
 
+  <script src="results.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

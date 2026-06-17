@@ -76,6 +76,21 @@ class BaseTradingEnv(gym.Env):
         self.equity: float = 0.0
         self.peak_equity: float = 0.0
 
+    def reload(self, data: MarketData) -> None:
+        """Swap in a fresh price/feature series (same feature dimension).
+
+        Used for **domain randomization** during training: by resampling a new
+        synthetic path between episodes, the agent is forced to learn a
+        *generalizable* policy rather than memorising one historical sequence —
+        the single most effective overfitting control for RL trading.
+        """
+        if data.features.shape[1] != self.n_features:
+            raise ValueError("reload() requires the same number of features.")
+        if len(data) <= self.window + 1:
+            raise ValueError("Reloaded series is too short for one window.")
+        self.data = data
+        self._max_t = len(data) - 1
+
     # ------------------------------------------------------------------ #
     # Core gym API                                                       #
     # ------------------------------------------------------------------ #
@@ -134,10 +149,15 @@ class BaseTradingEnv(gym.Env):
     ) -> float:
         """Shared reward: risk-aware return net of friction.
 
-        reward = return  -  drawdown_penalty * drawdown  -  turnover_penalty * turnover
+        reward = return_scale * return
+                 - drawdown_penalty * drawdown
+                 - turnover_penalty * turnover
 
         * return is log or simple, per config (log returns are additive across
           time, which pairs naturally with discounted RL objectives).
+        * ``return_scale`` lifts the per-step return (~1e-3) into a range PPO can
+          actually learn from, and — critically — keeps it the *dominant* term so
+          the agent optimises for profit, not merely for avoiding drawdown.
         * drawdown is the current depth below the equity high-water mark.
         * turnover penalises churn beyond the explicit cash cost, nudging the
           agent away from noise-trading.
@@ -152,7 +172,7 @@ class BaseTradingEnv(gym.Env):
         turnover = trade_notional / (prev_equity + eps)
 
         return (
-            ret
+            self.rcfg.return_scale * ret
             - self.rcfg.drawdown_penalty * max(drawdown, 0.0)
             - self.rcfg.turnover_penalty * turnover
         )

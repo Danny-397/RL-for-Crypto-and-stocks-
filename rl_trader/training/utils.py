@@ -133,6 +133,7 @@ def run_ppo_training(
     config,
     df: Optional["pd.DataFrame"] = None,
     logger: Optional[logging.Logger] = None,
+    train_series_factory=None,
 ):
     """Train a PPO agent on a single market end-to-end.
 
@@ -149,6 +150,11 @@ def run_ppo_training(
     df:
         Optional raw OHLCV DataFrame. If ``None``, synthetic data is generated
         so training runs with no external dependencies.
+    train_series_factory:
+        Optional zero-arg callable returning a fresh ``MarketData`` series. When
+        given, the agent is trained with **domain randomization** — a new path is
+        drawn between episodes — while validation/test stay on the fixed held-out
+        splits. This is the primary overfitting control for the synthetic setup.
 
     Returns
     -------
@@ -165,7 +171,10 @@ def run_ppo_training(
     device = resolve_device(config.train.device)
 
     splits = prepare_market_data(df, market=config.market, seed=config.train.seed)
-    env = make_env(config.market, splits["train"], config.env, config.reward)
+    # Train on randomized paths when a factory is supplied; otherwise train on
+    # the fixed training split. Validation/test always use the held-out splits.
+    train_data = train_series_factory() if train_series_factory else splits["train"]
+    env = make_env(config.market, train_data, config.env, config.reward)
     eval_env = make_env(
         config.market, splits["val"], config.env, config.reward, random_start=False
     )
@@ -202,6 +211,9 @@ def run_ppo_training(
                 ep_returns.append(ep_return)
                 ep_equities.append(info["equity"])
                 ep_return = 0.0
+                # Domain randomization: draw a fresh path for the next episode.
+                if train_series_factory:
+                    env.reload(train_series_factory())
                 obs, _ = env.reset()
 
         last_value = 0.0 if done else agent.value(obs)

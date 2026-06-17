@@ -65,22 +65,44 @@ def generate_synthetic_ohlcv(
     annual_drift: float = 0.08,
     annual_vol: float = 0.30,
     bars_per_year: int = 252,
+    momentum: float = 0.0,
     seed: Optional[int] = None,
 ) -> pd.DataFrame:
-    """Generate a realistic-looking OHLCV series via geometric Brownian motion.
+    """Generate a realistic-looking OHLCV series.
 
-    This lets the framework run with no downloaded data. ``annual_vol`` is the
-    main knob for emulating different regimes — use a higher value to mimic the
-    fatter-tailed behaviour of crypto.
+    With ``momentum == 0`` this is pure geometric Brownian motion (memoryless).
+    Real markets, however, **trend** — returns are positively autocorrelated over
+    short horizons. Setting ``momentum`` in (0, 1) adds an AR(1) component to the
+    returns so that recent-return / MACD features carry genuine predictive signal
+    for the agent to exploit. Total volatility is preserved regardless of the
+    momentum level, so ``annual_vol`` keeps its meaning.
+
+    ``annual_vol`` remains the main regime knob (higher ≈ crypto-like).
     """
     rng = np.random.default_rng(seed)
     dt = 1.0 / bars_per_year
-    shocks = rng.normal(
-        loc=(annual_drift - 0.5 * annual_vol**2) * dt,
-        scale=annual_vol * np.sqrt(dt),
-        size=n_steps,
-    )
-    close = start_price * np.exp(np.cumsum(shocks))
+    mu = (annual_drift - 0.5 * annual_vol**2) * dt
+    sigma = annual_vol * np.sqrt(dt)
+
+    if momentum > 0.0:
+        # AR(1) signal carries a fixed fraction of the variance; the remainder is
+        # unpredictable noise. This yields autocorrelated (trending) returns.
+        # Kept modest so the resulting return autocorrelation stays in a
+        # plausible "trending regime" band rather than making the market trivial.
+        signal_frac = 0.40
+        ar = np.zeros(n_steps)
+        innovations = rng.normal(0.0, 1.0, size=n_steps)
+        for t in range(1, n_steps):
+            ar[t] = momentum * ar[t - 1] + innovations[t]
+        ar /= ar.std() + 1e-8  # normalise to unit variance
+        noise = rng.normal(0.0, 1.0, size=n_steps)
+        log_returns = mu + sigma * (
+            signal_frac * ar + np.sqrt(1.0 - signal_frac**2) * noise
+        )
+    else:
+        log_returns = rng.normal(loc=mu, scale=sigma, size=n_steps)
+
+    close = start_price * np.exp(np.cumsum(log_returns))
 
     # Build plausible OHLC around each close using small intrabar noise.
     intrabar = np.abs(rng.normal(0.0, annual_vol * np.sqrt(dt) * 0.5, size=n_steps))
@@ -175,13 +197,49 @@ def _fit_scaler(train_features: np.ndarray):
     return mean.astype(np.float32), std.astype(np.float32)
 
 
+def market_regime(market: str) -> tuple[float, float, float]:
+    """Return (annual_vol, annual_drift, momentum) for a synthetic regime.
+
+    Crypto is more volatile and slightly noisier (lower momentum) than equities.
+    The momentum term gives returns exploitable autocorrelation so the agent has
+    real signal to learn — see :func:`generate_synthetic_ohlcv`.
+    """
+    # Low net drift + meaningful trend signal: passive buy-&-hold is dragged by
+    # volatility, leaving room for an active momentum-timing agent to add value.
+    if market == "crypto":
+        return 0.55, 0.06, 0.65
+    return 0.22, 0.04, 0.70
+
+
+def synthetic_market_data(
+    market: str = "stock", seed: Optional[int] = None, n_steps: int = 1_400
+) -> MarketData:
+    """Build one self-contained, self-scaled synthetic series.
+
+    Designed to be called repeatedly (with ``seed=None``) as a *factory* for
+    domain-randomized training: each call returns an independent price path that
+    shares the market's drift/volatility regime but has fresh noise. Features are
+    scaled by this series' own statistics — appropriate here because every such
+    series is training data.
+    """
+    vol, drift, mom = market_regime(market)
+    df = generate_synthetic_ohlcv(
+        n_steps=n_steps, annual_vol=vol, annual_drift=drift, momentum=mom, seed=seed
+    )
+    featured = add_technical_indicators(df)
+    feat = featured[FEATURE_COLUMNS].to_numpy(dtype=np.float32)
+    prices = featured["close"].to_numpy(dtype=np.float32)
+    mean, std = _fit_scaler(feat)
+    return MarketData(((feat - mean) / std).astype(np.float32), prices, FEATURE_COLUMNS)
+
+
 def prepare_market_data(
     df: Optional[pd.DataFrame],
     *,
     market: str = "stock",
     train_frac: float = 0.7,
     val_frac: float = 0.15,
-    synthetic_steps: int = 4_000,
+    synthetic_steps: int = 5_000,
     seed: Optional[int] = None,
 ) -> Dict[str, MarketData]:
     """End-to-end: -> indicators -> chronological split -> train-fit scaling.
@@ -201,12 +259,14 @@ def prepare_market_data(
     all three, so validation/test statistics never leak into training.
     """
     if df is None:
-        annual_vol = 0.80 if market == "crypto" else 0.25
-        annual_drift = 0.20 if market == "crypto" else 0.08
+        # Realistic-but-learnable regimes (see :func:`market_regime`). Swap in
+        # real CSVs for production backtests.
+        annual_vol, annual_drift, momentum = market_regime(market)
         df = generate_synthetic_ohlcv(
             n_steps=synthetic_steps,
             annual_vol=annual_vol,
             annual_drift=annual_drift,
+            momentum=momentum,
             seed=seed,
         )
 
