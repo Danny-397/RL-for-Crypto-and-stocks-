@@ -345,6 +345,22 @@ h2 {
 .dash-foot { margin-top: 16px; color: var(--faint); font-size: 13px; }
 .dash-foot code { font-family: var(--font-mono); color: var(--cyan); }
 
+/* ── Live inference widget ──────────────────────────────── */
+.live-card { padding: 22px 24px; }
+.live-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.live-select {
+  font-family: var(--font-display); font-size: 14px; font-weight: 600;
+  color: var(--text); background: var(--bg-soft); border: 1px solid var(--border-2);
+  border-radius: 10px; padding: 10px 14px; cursor: pointer;
+}
+.live-select:focus { outline: none; border-color: var(--volt); }
+.live-signal { font-family: var(--font-display); font-size: 20px; color: var(--muted); margin: 6px 0 4px; min-height: 26px; }
+.sig-long { color: var(--volt); font-weight: 700; }
+.sig-short { color: var(--neg); font-weight: 700; }
+.sig-flat { color: var(--faint); font-weight: 700; }
+#live-chart { width: 100%; height: auto; display: block; }
+.live-card .scorecard { margin-top: 12px; max-width: 420px; }
+
 /* ── CTA ────────────────────────────────────────────────── */
 .cta {
   max-width: 860px; margin: 40px auto 96px; padding: 64px 32px; text-align: center;

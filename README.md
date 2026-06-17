@@ -271,6 +271,23 @@ results the page loads — so the site never shows mock numbers. Open
 `main` / `docs`** to publish it at
 `https://danny-397.github.io/RL-for-Crypto-and-stocks-/`.
 
+## Deploy (Render + Vercel)
+
+Production deployment is two independent pieces — see **[DEPLOY.md](DEPLOY.md)**
+for the click-by-click guide:
+
+- **Frontend → Vercel** (static `docs/`, zero build). Works standalone on its
+  baked data.
+- **Backend → Render** (`server/`) — an optional, featherweight **live-inference
+  API**. The trained policy is exported to a tiny NumPy archive
+  (`tools/export_policy.py`) and served with plain matmuls, so the container
+  needs **no PyTorch or ONNX** and cold-starts fast on the free tier. A
+  [`render.yaml`](render.yaml) Blueprint makes it one-click.
+
+Set `window.RL_API` in `docs/config.js` to the Render URL and the dashboard's
+"Run live" widget lights up — pulling real prices and running the agent on
+demand. Leave it empty and the site is fully static.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

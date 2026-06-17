@@ -249,6 +249,33 @@
       </div>
     </section>
 
+    <!-- ─────────────────────── LIVE INFERENCE (optional backend) ─────────────────────── -->
+    <section id="live" class="section" hidden>
+      <div class="section-head">
+        <div class="kicker">LIVE &middot; POWERED BY THE RENDER API</div>
+        <h2>Run the trained agent on live prices.</h2>
+        <p>Pulls ~2 years of real daily data for a ticker and runs the deployed PPO policy in real time — no retraining, just inference.</p>
+      </div>
+      <div class="panel live-card">
+        <div class="live-controls">
+          <select id="live-market" class="live-select">
+            <option value="stock">📈 Stock</option>
+            <option value="crypto">🪙 Crypto</option>
+          </select>
+          <select id="live-ticker" class="live-select"></select>
+          <button id="live-run" class="btn btn-primary">Run live →</button>
+          <span id="live-status" class="muted-sub"></span>
+        </div>
+        <div class="live-signal" id="live-signal"></div>
+        <div class="panel-head" style="margin-top:6px">
+          <h3>Equity (held-out 2y)</h3>
+          <span class="chart-legend"><span class="lg lg-agent">Agent</span><span class="lg lg-bench">Buy &amp; Hold</span></span>
+        </div>
+        <canvas id="live-chart" width="760" height="280"></canvas>
+        <div class="scorecard" id="live-scorecard"></div>
+      </div>
+    </section>
+
     <!-- ─────────────────────── CTA ─────────────────────── -->
     <section class="cta">
       <h2>Clone it. Train it. Make it yours.</h2>
@@ -267,6 +294,7 @@ python -m rl_trader.scripts.compare_markets --plot</code></pre>
     <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">github.com/Danny-397</a>
   </footer>
 
+  <script src="config.js"></script>
   <script src="results.js"></script>
   <script src="app.js"></script>
 </body>

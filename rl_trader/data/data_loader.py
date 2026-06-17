@@ -226,6 +226,16 @@ def synthetic_market_data(
     df = generate_synthetic_ohlcv(
         n_steps=n_steps, annual_vol=vol, annual_drift=drift, momentum=mom, seed=seed
     )
+    return market_data_from_df(df)
+
+
+def market_data_from_df(df: pd.DataFrame) -> MarketData:
+    """Build a single self-scaled :class:`MarketData` from a raw OHLCV frame.
+
+    Used both by the synthetic generator and by the live-serving backend, which
+    feeds it recent real prices. Features are scaled by this series' own
+    statistics — appropriate for a single self-contained inference window.
+    """
     featured = add_technical_indicators(df)
     feat = featured[FEATURE_COLUMNS].to_numpy(dtype=np.float32)
     prices = featured["close"].to_numpy(dtype=np.float32)

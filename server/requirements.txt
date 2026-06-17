@@ -1,0 +1,10 @@
+# Backend API dependencies — deliberately lightweight (NO torch / onnx).
+# The trained policy is served with plain NumPy matmuls.
+flask>=3.0
+flask-cors>=4.0
+gunicorn>=21.0
+numpy>=1.23
+pandas>=1.5
+gymnasium>=0.29
+yfinance>=1.4
+curl_cffi>=0.6

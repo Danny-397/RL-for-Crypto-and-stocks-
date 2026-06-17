@@ -283,8 +283,82 @@
     }
   }
 
+  // ── live inference widget (optional Render backend) ─────────
+  function initLive() {
+    const API = (window.RL_API || "").replace(/\/+$/, "");
+    const section = document.getElementById("live");
+    if (!API || !section) return; // stays hidden when no backend is configured
+    section.hidden = false;
+
+    const marketSel = document.getElementById("live-market");
+    const tickerSel = document.getElementById("live-ticker");
+    const runBtn = document.getElementById("live-run");
+    const statusEl = document.getElementById("live-status");
+    const signalEl = document.getElementById("live-signal");
+    const scoreEl = document.getElementById("live-scorecard");
+    const canvas = document.getElementById("live-chart");
+
+    const FALLBACK = {
+      stock: ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "SPY", "QQQ"],
+      crypto: ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "LTC-USD"],
+    };
+    let tickerMap = FALLBACK;
+
+    function fillTickers() {
+      const list = tickerMap[marketSel.value] || FALLBACK[marketSel.value] || [];
+      tickerSel.innerHTML = list.map((t) => `<option>${t}</option>`).join("");
+    }
+    fillTickers();
+    marketSel.addEventListener("change", fillTickers);
+    fetch(`${API}/api/tickers`).then((r) => r.json())
+      .then((m) => { tickerMap = m; fillTickers(); }).catch(() => {});
+
+    function signalText(a) {
+      if (Math.abs(a) < 0.05) return `Agent's current call: <span class="sig-flat">FLAT</span> (cash)`;
+      const cls = a > 0 ? "sig-long" : "sig-short";
+      return `Agent's current call: <span class="${cls}">${Math.round(Math.abs(a) * 100)}% ${a > 0 ? "LONG" : "SHORT"}</span>`;
+    }
+
+    function liveScorecard(d) {
+      const a = d.metrics, b = d.bench_metrics;
+      const rows = [
+        ["Total return", sgn(a.total_return), sgn(b.total_return), a.total_return >= b.total_return],
+        ["Sharpe", f2(a.sharpe), f2(b.sharpe), a.sharpe >= b.sharpe],
+        ["Max drawdown", pct(a.max_drawdown), pct(b.max_drawdown), a.max_drawdown <= b.max_drawdown],
+      ];
+      scoreEl.innerHTML = rows.map(([k, av, bv, win]) => `
+        <div class="sc-row"><span class="sc-k">${k}</span>
+        <span class="sc-a ${win ? "win" : "lose"}">${av}</span>
+        <span class="sc-b">${bv}</span></div>`).join("");
+    }
+
+    async function run() {
+      runBtn.disabled = true;
+      statusEl.textContent = "fetching prices + running agent… (first call can take ~30s on a cold backend)";
+      signalEl.innerHTML = ""; scoreEl.innerHTML = "";
+      try {
+        const r = await fetch(`${API}/api/live?market=${marketSel.value}&ticker=${tickerSel.value}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        signalEl.innerHTML = signalText(d.latest_action);
+        lineChart(canvas, [
+          { data: d.equity_bench, color: BENCH, width: 2 },
+          { data: d.equity_agent, color: VOLT, width: 2.6, glow: true, fill: true, head: true },
+        ]);
+        liveScorecard(d);
+        statusEl.textContent = `${d.ticker} · ${d.n_days} trading days`;
+      } catch (e) {
+        statusEl.textContent = "⚠ " + (e && e.message ? e.message : "request failed");
+      } finally {
+        runBtn.disabled = false;
+      }
+    }
+    runBtn.addEventListener("click", run);
+  }
+
   // ── boot ────────────────────────────────────────────────────
   initHero();
   initStats();
   initDashboard();
+  initLive();
 })();
