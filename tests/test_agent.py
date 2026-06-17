@@ -6,7 +6,6 @@ produces correctly shaped advantages. A tiny synthetic run keeps them fast.
 """
 
 import numpy as np
-import torch
 
 from rl_trader.config.training_config import stock_config
 from rl_trader.data.data_loader import prepare_market_data

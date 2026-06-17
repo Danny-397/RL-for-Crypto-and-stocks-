@@ -201,9 +201,14 @@
     <!-- ─────────────────────── RESULTS DASHBOARD ─────────────────────── -->
     <section id="results" class="section">
       <div class="section-head">
-        <div class="kicker">REAL BACKTEST &middot; HELD-OUT TEST SPLIT</div>
-        <h2>Same agent, two regimes — the real numbers.</h2>
-        <p>Actual output from the framework: each PPO agent is trained with domain randomization, then backtested across <strong>40 unseen price paths</strong> — scored against a buy-&amp;-hold baseline. The agent typically trades a little raw return for a <strong>higher Sharpe and a much smaller drawdown</strong>: risk-adjusted outperformance, the way quants actually measure it. <span class="data-note" id="data-note"></span></p>
+        <div class="kicker">REAL MARKETS &middot; WALK-FORWARD &middot; OUT-OF-SAMPLE</div>
+        <h2>The honest numbers, on real market data.</h2>
+        <p>No cherry-picking: each PPO agent trains on the older history of a basket of real tickers, then is backtested on the <strong>recent, held-out period</strong> of every ticker — against buy-&amp;-hold. <span class="data-note" id="data-note"></span></p>
+      </div>
+
+      <div class="honest-note">
+        <strong>📌 How to read this.</strong> Beating passive buy-&amp;-hold out-of-sample is a famously hard, research-grade problem — and on a historic 2021–2025 bull market, this agent doesn't. <em>That's the point.</em> The contribution here is a rigorous, reproducible methodology and an <strong>honest result</strong>, not a fantasy money-machine. Where market signal provably exists (controlled synthetic benchmarks), the
+        <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">domain-randomization ablation</a> shows the method works as designed.
       </div>
 
       <div class="dash">

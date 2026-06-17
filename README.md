@@ -15,6 +15,11 @@ different market regimes.
 > data pipeline, and the evaluation suite are all implemented here — not wrapped from
 > a high-level library. The goal is to *understand and own every layer of the stack.*
 
+> **📊 [Read the full results & findings → `RESULTS.md`](RESULTS.md)** — including an
+> honest out-of-sample evaluation on real markets and an ablation that proves the
+> overfitting fix. Short version: the method provably generalizes where signal exists,
+> and — honestly — does **not** beat passive investing on real efficient markets.
+
 ---
 
 ## Why this project
@@ -103,8 +108,11 @@ rl_trader/
     ├── run_stock_training.py
     ├── run_crypto_training.py
     └── compare_markets.py
-tests/               # pytest suite for envs and agent
-tools/               # build_site_data.py — generates real results for the site
+tests/               # pytest suite (envs, agent, baselines)
+tools/
+├── fetch_data.py        # download a real OHLCV basket (Yahoo Finance)
+├── build_site_data.py   # train + backtest -> docs/results.js for the dashboard
+└── ablation.py          # domain-randomization overfitting study
 docs/                # data-driven web dashboard (GitHub Pages ready)
 ```
 
@@ -139,13 +147,17 @@ python -m rl_trader.scripts.run_stock_training  --data data/raw/AAPL.csv
 python -m rl_trader.scripts.run_crypto_training --data data/raw/BTC-USD.csv
 ```
 
-You can produce such CSVs with one line of [`yfinance`](https://github.com/ranaroussi/yfinance)
-(`pip install yfinance`):
+Or fetch the whole default basket (10 stocks + 6 crypto pairs) in one command:
 
-```python
-import yfinance as yf
-yf.download("BTC-USD", start="2019-01-01").to_csv("data/raw/BTC-USD.csv")
+```bash
+pip install yfinance
+python tools/fetch_data.py        # -> data/raw/{stock,crypto}/*.csv  (cached, with backoff)
+python tools/build_site_data.py --real --timesteps 200000   # real walk-forward dashboard
 ```
+
+`--real` trains each agent on a basket of real tickers (domain-randomized across
+names) and backtests on every ticker's **held-out recent period** — a multi-asset
+walk-forward evaluation. The bundled dashboard is generated exactly this way.
 
 ---
 
@@ -180,13 +192,20 @@ then *loses* out-of-sample. To force a *generalizable* policy, training draws a
 **fresh synthetic path every episode** (`train_series_factory`), while
 validation and test stay on fixed held-out paths. This single change moved the
 crypto agent from catastrophic overfitting to a positive, risk-controlled
-out-of-sample backtest.
+out-of-sample backtest. The effect is quantified by an **ablation study**
+(`python tools/ablation.py`), which trains agents with and without the technique
+and reports the in-sample vs. out-of-sample gap directly.
 
-> **Note on results.** Numbers depend on data and seed. With the synthetic
-> generator this repo is a *reproducible methodology demo* — but the
-> [web dashboard](#web-prototype) shows **real held-out backtests**, not mock
-> numbers. Swap in real OHLCV (one `--data` flag) to produce real-market
-> backtests.
+**Honest baselines.** The agent is benchmarked not only against buy-&-hold but
+also against *random* and *moving-average-crossover* strategies
+(`rl_trader/evaluation/baselines.py`), all run through the identical
+cost-and-slippage environment — so any edge has to be real.
+
+> **Note on results.** The [web dashboard](#web-prototype) and
+> [`RESULTS.md`](RESULTS.md) report **real, out-of-sample backtests** — no mock
+> numbers, and no hiding the unflattering parts. The honest finding (PPO does not
+> beat passive investing on real markets) is reported as plainly as the ablation
+> win. That honesty is the point.
 
 ---
 

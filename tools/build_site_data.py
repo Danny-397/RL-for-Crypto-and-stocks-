@@ -16,13 +16,16 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import glob
 import json
 import os
+import random
 
 import numpy as np
 
 from rl_trader.config.training_config import crypto_config, stock_config
 from rl_trader.data.data_loader import (
+    load_ohlcv_csv,
     prepare_market_data,
     synthetic_market_data,
 )
@@ -101,7 +104,16 @@ def run_market(market: str, cfg, timesteps: int, seed: int, n_eval: int = 40) ->
         _backtest_on_path(agent, market, cfg, periods, seed=10_000 + k)
         for k in range(n_eval)
     ]
+    return _aggregate(runs, history, cfg)
 
+
+def _aggregate(runs: list, history: dict, cfg) -> dict:
+    """Average a list of backtest runs into the payload the website consumes.
+
+    Reporting the mean over many held-out backtests (plus a win-rate vs.
+    buy-&-hold) is the honest way to summarise performance; the displayed curves
+    use the median-return run so the visual reflects the typical case.
+    """
     def _mean(which: str, key: str) -> float:
         return float(np.mean([r[which][key] for r in runs]))
 
@@ -116,11 +128,9 @@ def run_market(market: str, cfg, timesteps: int, seed: int, n_eval: int = 40) ->
     }
     win_rate = float(np.mean([r["agent_m"]["total_return"] > r["bench_m"]["total_return"] for r in runs]))
 
-    # Representative (median agent return) path for the displayed curves.
     order = np.argsort([r["agent_m"]["total_return"] for r in runs])
     rep = runs[int(order[len(order) // 2])]
 
-    # Aggregate actions across all paths for a fuller distribution.
     all_actions = np.concatenate([r["res"].actions for r in runs])
     if len(all_actions) > 600:
         idx = np.linspace(0, len(all_actions) - 1, 600).astype(int)
@@ -134,7 +144,7 @@ def run_market(market: str, cfg, timesteps: int, seed: int, n_eval: int = 40) ->
         "metrics": agent_metrics,
         "bench_metrics": bench_metrics,
         "win_rate": round(win_rate, 3),
-        "n_eval": n_eval,
+        "n_eval": len(runs),
         "training": {
             "update": history["update"],
             "reward": [round(float(r), 4) for r in history["mean_episode_return"]],
@@ -143,22 +153,102 @@ def run_market(market: str, cfg, timesteps: int, seed: int, n_eval: int = 40) ->
     }
 
 
+def load_real_basket(data_dir: str, market: str, train_frac: float = 0.6) -> dict:
+    """Load every ticker CSV under ``data_dir/market`` into train/test splits.
+
+    Each ticker is split **chronologically** (older ``train_frac`` for training,
+    the recent remainder held out for testing) with the feature scaler fit on
+    that ticker's training slice only — a clean walk-forward setup with no
+    look-ahead leakage.
+    """
+    paths = sorted(glob.glob(os.path.join(data_dir, market, "*.csv")))
+    basket = {}
+    for path in paths:
+        ticker = os.path.splitext(os.path.basename(path))[0]
+        df = load_ohlcv_csv(path)
+        splits = prepare_market_data(df, market=market, train_frac=train_frac, val_frac=0.0)
+        if len(splits["train"]) > 60 and len(splits["test"]) > 60:
+            basket[ticker] = splits
+    return basket
+
+
+def run_market_real(market: str, cfg, timesteps: int, seed: int, data_dir: str) -> dict:
+    """Train on a basket of real tickers, then backtest on each one's held-out
+    recent period — a multi-asset walk-forward evaluation on real market data."""
+    cfg.market = market
+    cfg.train.total_timesteps = timesteps
+    cfg.train.seed = seed
+    cfg.train.eval_interval = 0
+
+    basket = load_real_basket(data_dir, market)
+    if not basket:
+        raise SystemExit(
+            f"No CSVs found in {os.path.join(data_dir, market)} — run tools/fetch_data.py first."
+        )
+    tickers = list(basket)
+    train_slices = [basket[t]["train"] for t in tickers]
+
+    # Domain randomization across real assets: each episode trains on a random
+    # ticker's history, so the policy must generalize rather than fit one name.
+    random.seed(seed)
+    factory = lambda: random.choice(train_slices)  # noqa: E731
+    agent, history = run_ppo_training(cfg, train_series_factory=factory)
+
+    periods = ANNUALISATION.get(market, 252)
+    runs = []
+    for t in tickers:
+        test = basket[t]["test"]
+        env = make_env(market, test, cfg.env, cfg.reward, random_start=False)
+        res = backtest(agent, env, market=market)
+        w = cfg.env.window_size
+        prices = test.prices[w - 1 :]
+        bench_equity = cfg.env.initial_balance * (prices / prices[0])
+        agent_m = dict(res.metrics)
+        agent_m["sortino"] = _sortino(res.returns, periods)
+        runs.append({
+            "res": res, "bench_equity": bench_equity,
+            "agent_m": agent_m, "bench_m": compute_metrics(bench_equity, periods),
+        })
+
+    payload = _aggregate(runs, history, cfg)
+    payload["assets"] = tickers
+    return payload
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build docs/results.js from real runs.")
     parser.add_argument("--timesteps", type=int, default=60_000)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--real", action="store_true",
+                        help="Train/evaluate on real OHLCV under --data-dir (run fetch_data.py first).")
+    parser.add_argument("--data-dir", type=str, default="data/raw")
     parser.add_argument("--out", type=str, default=os.path.join("docs", "results.js"))
     args = parser.parse_args()
 
-    payload = {
-        "generated": _dt.date.today().isoformat(),
-        "data_source": "synthetic trending series (momentum); swap in real CSVs via --data",
-        "timesteps": args.timesteps,
-        "seed": args.seed,
-        "markets": {
+    if args.real:
+        markets = {
+            "stock": run_market_real("stock", stock_config(), args.timesteps, args.seed, args.data_dir),
+            "crypto": run_market_real("crypto", crypto_config(), args.timesteps, args.seed, args.data_dir),
+        }
+        n_stock = len(markets["stock"].get("assets", []))
+        n_crypto = len(markets["crypto"].get("assets", []))
+        data_source = (
+            f"real daily OHLCV via Yahoo Finance · {n_stock} stocks + {n_crypto} crypto pairs · "
+            f"walk-forward held-out test period"
+        )
+    else:
+        markets = {
             "stock": run_market("stock", stock_config(), args.timesteps, args.seed),
             "crypto": run_market("crypto", crypto_config(), args.timesteps, args.seed),
-        },
+        }
+        data_source = "synthetic trending series (momentum); swap in real CSVs via --real"
+
+    payload = {
+        "generated": _dt.date.today().isoformat(),
+        "data_source": data_source,
+        "timesteps": args.timesteps,
+        "seed": args.seed,
+        "markets": markets,
     }
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
