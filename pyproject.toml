@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rl-trader"
+version = "0.1.0"
+description = "A modular PPO reinforcement-learning framework for trading stocks and crypto."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Danny Lichtenberger" }]
+keywords = ["reinforcement-learning", "ppo", "trading", "quant", "crypto", "stocks"]
+dependencies = [
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "torch>=2.0",
+    "gymnasium>=0.29",
+    "matplotlib>=3.6",
+]
+
+[project.optional-dependencies]
+data = ["yfinance>=0.2"]
+dev = ["pytest>=7.0", "ruff>=0.1"]
+
+[project.scripts]
+rl-train-stock = "rl_trader.scripts.run_stock_training:main"
+rl-train-crypto = "rl_trader.scripts.run_crypto_training:main"
+rl-compare = "rl_trader.scripts.compare_markets:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rl_trader*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"

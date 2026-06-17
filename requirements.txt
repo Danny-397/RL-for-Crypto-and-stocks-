@@ -1,0 +1,10 @@
+# Core runtime dependencies. Install with:  pip install -r requirements.txt
+numpy>=1.23
+pandas>=1.5
+torch>=2.0
+gymnasium>=0.29
+matplotlib>=3.6
+
+# Optional: pull real OHLCV data instead of the built-in synthetic generator.
+# pip install yfinance
+# yfinance>=0.2
