@@ -1,0 +1,10 @@
+{
+  "stock": {
+    "single": {"in": 49.272, "oos_mean": -0.373, "oos_std": 0.19},
+    "domain": {"in": 0.955, "oos_mean": 0.771, "oos_std": 0.41}
+  },
+  "crypto": {
+    "single": {"in": 146.679, "oos_mean": -0.694, "oos_std": 0.14},
+    "domain": {"in": 0.791, "oos_mean": 1.344, "oos_std": 1.31}
+  }
+}

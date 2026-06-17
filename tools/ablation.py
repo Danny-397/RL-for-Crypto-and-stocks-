@@ -18,6 +18,8 @@ Run from the repo root:
 from __future__ import annotations
 
 import argparse
+import json
+import os
 
 import numpy as np
 
@@ -100,8 +102,10 @@ def main() -> None:
           f"{args.n_eval} held-out paths)\n")
     print(f"{'Market':<8}{'Training':<16}{'In-sample':>12}{'Out-of-sample':>22}{'Gap':>12}")
     print("-" * 70)
+    all_results = {}
     for market in markets:
         res = run(market, args.timesteps, args.seed, args.n_eval)
+        all_results[market] = res
         for label, key in (("single-path", "single"), ("domain-random", "domain")):
             r = res[key]
             oos = f"{_fmt(r['oos_mean'])} +/- {abs(r['oos_std']):.0%}"
@@ -110,6 +114,13 @@ def main() -> None:
         print("-" * 70)
     print("\nA large in-sample/out-of-sample gap = overfitting. Domain randomization\n"
           "should collapse that gap and lift out-of-sample performance.\n")
+
+    # Persist so tools/make_figures.py can render the chart without re-training.
+    out_path = os.path.join("docs", "assets", "ablation.json")
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as fh:
+        json.dump(all_results, fh, indent=2)
+    print(f"Wrote {out_path}")
 
 
 if __name__ == "__main__":

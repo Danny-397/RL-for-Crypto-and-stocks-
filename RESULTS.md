@@ -52,6 +52,8 @@ the training path ("in-sample") vs. 30 unseen paths ("out-of-sample").
 | Crypto | single-path | **+14668%** | **−69%** | +14737% |
 | Crypto | domain-random | +79% | **+134%** | **−55%** |
 
+![Domain randomization ablation](docs/assets/fig_ablation.png)
+
 **Reading it:** the single-path agents post absurd in-sample returns
 (+4927% / +14668%) by memorising their training sequence — then **lose money** on
 unseen data. Domain randomization (a fresh path every episode) collapses that
@@ -63,6 +65,8 @@ generalize. This is the project's core methodological result.
 ## 2. Real-market results (out-of-sample, walk-forward)
 
 `python tools/build_site_data.py --real` then `python tools/baseline_report.py`
+
+![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
 
 **Equities** — mean over 10 held-out tickers, 2021–2025:
 
@@ -85,6 +89,12 @@ generalize. This is the project's core methodological result.
 | Random | −78.1% | −1.22 | 80.0% |
 
 ---
+
+A representative held-out equity curve for each market (the median-return ticker)
+— note how, on crypto, the agent is visibly *more defensive*, sidestepping the
+worst of buy-&-hold's drawdowns even though it gives up upside elsewhere:
+
+![Representative held-out equity curves](docs/assets/fig_equity.png)
 
 ## 3. Discussion — what these numbers actually mean
 

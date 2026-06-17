@@ -20,6 +20,20 @@ different market regimes.
 > overfitting fix. Short version: the method provably generalizes where signal exists,
 > and — honestly — does **not** beat passive investing on real efficient markets.
 
+## Results at a glance
+
+**The core finding — domain randomization fixes overfitting.** Trained on a single
+price series, the agent *memorises* it (huge in-sample returns) and then loses
+out-of-sample. Trained on randomized paths, it generalizes:
+
+![Domain randomization ablation](docs/assets/fig_ablation.png)
+
+**Honest real-market evaluation.** On a 2021–2025 walk-forward across real tickers,
+the learned agent beats a random policy but not buy-&-hold or a simple momentum
+rule — the expected result on efficient markets, reported plainly:
+
+![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
+
 ---
 
 ## Why this project
@@ -112,8 +126,10 @@ tests/               # pytest suite (envs, agent, baselines)
 tools/
 ├── fetch_data.py        # download a real OHLCV basket (Yahoo Finance)
 ├── build_site_data.py   # train + backtest -> docs/results.js for the dashboard
-└── ablation.py          # domain-randomization overfitting study
-docs/                # data-driven web dashboard (GitHub Pages ready)
+├── ablation.py          # domain-randomization overfitting study
+├── baseline_report.py   # agent vs. buy-&-hold / random / momentum
+└── make_figures.py      # render docs/assets/*.png for the README & report
+docs/                # data-driven web dashboard + figures (GitHub Pages ready)
 ```
 
 ---
