@@ -1,5 +1,10 @@
 # RL-Trader — Reinforcement Learning for Stocks & Crypto
 
+[![CI](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/ci.yml/badge.svg)](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-d4ff3f.svg)](LICENSE)
+
 A modular, research-grade framework for training **Proximal Policy Optimization (PPO)**
 agents to trade financial markets. A single, unified agent architecture is trained
 **separately** on two custom Gymnasium environments — one for **equities**, one for
@@ -200,6 +205,15 @@ equity curves, so the difference in learned behaviour is visible, not just asser
 | Tune training | Edit the dataclasses in `config/training_config.py` or pass CLI flags |
 
 ---
+
+## Web prototype
+
+A self-contained landing-page prototype lives in [`docs/`](docs/) (dark
+cyber-fintech theme with an animated agent-vs-benchmark equity chart). Open
+`docs/index.html` locally, or enable **GitHub Pages → Deploy from branch →
+`main` / `docs`** to publish it at
+`https://danny-397.github.io/RL-for-Crypto-and-stocks-/`. It's an early
+prototype — the design is meant to be iterated on.
 
 ## License
 

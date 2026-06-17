@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RL·Trader — Reinforcement Learning for Stocks &amp; Crypto</title>
+  <meta name="description" content="A from-scratch PPO reinforcement-learning framework that trains AI agents to trade stocks and crypto across different market regimes." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ambient grid + glow -->
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <!-- ───────────────────────── NAV ───────────────────────── -->
+  <header class="nav">
+    <a class="brand" href="#top">
+      <span class="brand-mark">
+        <svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true">
+          <path d="M10 46 L24 36 L34 41 L54 16" fill="none" stroke="url(#ng)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="54" cy="16" r="5" fill="#d4ff3f"/>
+          <defs><linearGradient id="ng" x1="0" y1="64" x2="64" y2="0">
+            <stop offset="0" stop-color="#36e0ff"/><stop offset="1" stop-color="#d4ff3f"/>
+          </linearGradient></defs>
+        </svg>
+      </span>
+      <span class="brand-text">RL<span class="dot">·</span>TRADER</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#features">Framework</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#pipeline">How it works</a>
+      <a href="#results">Experiment</a>
+    </nav>
+    <a class="btn btn-ghost nav-cta" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </header>
+
+  <!-- ───────────────────────── HERO ───────────────────────── -->
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="pulse"></span> REINFORCEMENT LEARNING &middot; QUANT TRADING</div>
+        <h1>Train AI agents to <span class="grad">trade</span> stocks&nbsp;&amp; crypto.</h1>
+        <p class="lede">
+          A from-scratch <strong>PPO</strong> reinforcement-learning framework. One
+          unified agent, two custom market environments, and a disciplined,
+          leakage-controlled pipeline — built to learn how the <em>same</em> strategy
+          adapts across wildly different market regimes.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">View on GitHub →</a>
+          <a class="btn btn-ghost" href="#pipeline">See how it works</a>
+        </div>
+        <div class="hero-tags">
+          <span>PPO from scratch</span><span>Gymnasium envs</span><span>PyTorch</span><span>Backtested</span>
+        </div>
+      </div>
+
+      <!-- live-agent chart card -->
+      <div class="hero-visual">
+        <div class="chart-card">
+          <div class="chart-head">
+            <div class="chart-title">
+              <span class="live"><span class="live-dot"></span>LIVE AGENT</span>
+              <span class="chart-sub">PPO policy &middot; test split</span>
+            </div>
+            <div class="chart-legend">
+              <span class="lg lg-agent">Agent</span>
+              <span class="lg lg-bench">Buy &amp; Hold</span>
+            </div>
+          </div>
+          <canvas id="equityChart" width="560" height="300"></canvas>
+          <div class="chart-foot">
+            <div class="stat"><span class="k">Total return</span><span class="v" id="m-return">+0.0%</span></div>
+            <div class="stat"><span class="k">Sharpe</span><span class="v" id="m-sharpe">0.00</span></div>
+            <div class="stat"><span class="k">Max DD</span><span class="v" id="m-dd">0.0%</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────── STATS STRIP ───────────────────── -->
+    <section class="stats">
+      <div class="stat-cell"><div class="num" data-count="2">2</div><div class="lbl">Market environments</div></div>
+      <div class="stat-cell"><div class="num" data-count="1">1</div><div class="lbl">Unified PPO agent</div></div>
+      <div class="stat-cell"><div class="num" data-count="11">11</div><div class="lbl">Tests passing</div></div>
+      <div class="stat-cell"><div class="num" data-count="100">100</div><div class="lbl">% from scratch <span class="pct">%</span></div></div>
+    </section>
+
+    <!-- ─────────────────────── FEATURES ─────────────────────── -->
+    <section id="features" class="section">
+      <div class="section-head">
+        <div class="kicker">THE FRAMEWORK</div>
+        <h2>Engineered like a research project, not a toy.</h2>
+        <p>Every layer is modular, individually testable, and built with the practices that separate a real RL system from a notebook demo.</p>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <div class="card-icon">⚡</div>
+          <h3>PPO, from scratch</h3>
+          <p>Clipped surrogate objective, GAE advantages, entropy bonus, orthogonal init and gradient clipping — implemented in PyTorch, not wrapped from a library.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🌐</div>
+          <h3>Dual market environments</h3>
+          <p><code>StockTradingEnv</code> and <code>CryptoTradingEnv</code> share one <code>BaseTradingEnv</code>, so accounting, costs, and rewards never silently diverge.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🛡️</div>
+          <h3>Leakage control</h3>
+          <p>Chronological train / validation / test splits with scalers fit on training data only. The agent is scored on data it has never seen.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🎯</div>
+          <h3>Risk-aware rewards</h3>
+          <p>Return <em>net of</em> transaction costs, plus drawdown and turnover penalties — discouraging reckless, over-leveraged noise-trading.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">📊</div>
+          <h3>Honest backtests</h3>
+          <p>Total return, annualised Sharpe, and max drawdown on a held-out split — the metrics a quant actually cares about.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🧩</div>
+          <h3>Extensible by design</h3>
+          <p>Add a market by subclassing one base class. Add an algorithm (SAC, DDPG) behind the same agent API. An LSTM actor-critic is already stubbed.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── ARCHITECTURE ─────────────────────── -->
+    <section id="architecture" class="section">
+      <div class="section-head">
+        <div class="kicker">ARCHITECTURE</div>
+        <h2>Unified agent. Separate environments.</h2>
+        <p>The PPO agent speaks only in observations and actions — completely market-agnostic — so the exact same brain trains on both stocks and crypto.</p>
+      </div>
+      <div class="arch">
+        <div class="arch-node agent">
+          <span class="tag">UNIFIED AGENT</span>
+          <strong>PPO ActorCritic</strong>
+          <small>policy head · value head</small>
+        </div>
+        <div class="arch-flow">
+          <span>select_action ↓</span><span>↑ update(rollout)</span>
+        </div>
+        <div class="arch-node buffer">
+          <span class="tag">ON-POLICY</span>
+          <strong>Rollout Buffer + GAE</strong>
+        </div>
+        <div class="arch-split">
+          <div class="arch-node env stock">
+            <span class="tag">STOCK</span>
+            <strong>StockTradingEnv</strong>
+            <small>low cost · ~252 bars/yr</small>
+          </div>
+          <div class="arch-node env crypto">
+            <span class="tag">CRYPTO</span>
+            <strong>CryptoTradingEnv</strong>
+            <small>high cost · 365 bars/yr</small>
+          </div>
+        </div>
+        <div class="arch-node data">
+          <span class="tag">PIPELINE</span>
+          <strong>OHLCV → indicators → scale → split</strong>
+          <small>synthetic generator or your own CSVs</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── PIPELINE ─────────────────────── -->
+    <section id="pipeline" class="section">
+      <div class="section-head">
+        <div class="kicker">HOW IT WORKS</div>
+        <h2>From raw prices to a trained trader.</h2>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-n">01</div><h3>Ingest &amp; engineer</h3><p>Load OHLCV (or generate synthetic data), build returns, RSI, MACD, moving-average ratios and volatility features.</p></div>
+        <div class="step"><div class="step-n">02</div><h3>Observe</h3><p>The agent sees a rolling window of features plus its own account state — position, cash, and normalised equity.</p></div>
+        <div class="step"><div class="step-n">03</div><h3>Act &amp; learn</h3><p>It outputs a target position in [-1, 1], the env applies costs &amp; slippage, and PPO updates the policy from advantages.</p></div>
+        <div class="step"><div class="step-n">04</div><h3>Backtest</h3><p>Run the trained agent deterministically on the held-out test split and score return, Sharpe, and drawdown.</p></div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── RESULTS / TERMINAL ─────────────────────── -->
+    <section id="results" class="section">
+      <div class="section-head">
+        <div class="kicker">THE EXPERIMENT</div>
+        <h2>Same agent, two regimes — compared.</h2>
+        <p>One command trains both agents and prints a side-by-side scorecard. Swap in real data with a single <code>--data</code> flag.</p>
+      </div>
+      <div class="terminal">
+        <div class="term-bar"><span></span><span></span><span></span><em>compare_markets.py</em></div>
+        <pre class="term-body"><code><span class="c-prompt">$</span> python -m rl_trader.scripts.compare_markets --plot
+
+<span class="c-dim">=== Training PPO on stock ===</span>
+<span class="c-dim">=== Training PPO on crypto ===</span>
+
+Metric                     <span class="c-key">Stock</span>          <span class="c-key">Crypto</span>
+------------------------------------------------
+Total return              <span class="c-pos">+8.4%</span>          <span class="c-pos">+14.1%</span>
+Sharpe ratio               <span class="c-val">1.12</span>            <span class="c-val">0.86</span>
+Max drawdown               <span class="c-neg">6.0%</span>          <span class="c-neg">18.3%</span>
+Final equity            <span class="c-val">$108,400</span>       <span class="c-val">$114,100</span>
+
+<span class="c-dim"># illustrative output — your numbers depend on data &amp; seed</span></code></pre>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── CTA ─────────────────────── -->
+    <section class="cta">
+      <h2>Clone it. Train it. Make it yours.</h2>
+      <p>Runs out of the box with zero external data — then point it at real markets.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">Explore the repo →</a>
+      </div>
+      <pre class="cta-code"><code>pip install -r requirements.txt
+python -m rl_trader.scripts.compare_markets --plot</code></pre>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="foot-brand">RL<span class="dot">·</span>TRADER</div>
+    <div class="foot-meta">Reinforcement learning for stocks &amp; crypto · Built with PyTorch &amp; Gymnasium</div>
+    <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">github.com/Danny-397</a>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
