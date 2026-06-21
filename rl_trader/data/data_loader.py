@@ -141,6 +141,31 @@ def _macd(close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
     return macd, macd_signal
 
 
+def _atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    """Average True Range (Wilder), the standard volatility-of-range measure.
+
+    True range captures gaps that a simple high-low miss, so ATR is a cleaner
+    volatility proxy than close-to-close std for assets that gap overnight.
+    """
+    high, low, close = df["high"], df["low"], df["close"]
+    prev_close = close.shift(1)
+    true_range = pd.concat(
+        [high - low, (high - prev_close).abs(), (low - prev_close).abs()], axis=1
+    ).max(axis=1)
+    return true_range.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+
+
+def _zscore(series: pd.Series, window: int) -> pd.Series:
+    """Rolling z-score: how many std-devs the latest value sits from its mean.
+
+    A compact, scale-free way to express "is this unusually high/low *for this
+    asset, right now*" — the regime context a single raw level can't convey.
+    """
+    mean = series.rolling(window).mean()
+    std = series.rolling(window).std()
+    return (series - mean) / std.replace(0.0, np.nan)
+
+
 def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """Append a standard set of technical indicators to an OHLCV frame.
 
@@ -151,38 +176,82 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     close = out["close"]
 
+    # --- Multi-horizon momentum: short, medium, and long look-backs let the
+    # policy distinguish a one-day blip from a durable trend.
     out["return_1"] = close.pct_change()
     out["return_5"] = close.pct_change(5)
+    out["return_20"] = close.pct_change(20)
     out["log_return"] = np.log(close).diff()
+
+    # --- Trend / mean-reversion context relative to moving averages.
     out["sma_10_ratio"] = close / close.rolling(10).mean() - 1.0
     out["sma_30_ratio"] = close / close.rolling(30).mean() - 1.0
     out["ema_12_ratio"] = close / close.ewm(span=12, adjust=False).mean() - 1.0
-    out["volatility_10"] = out["return_1"].rolling(10).std()
+    # Long-horizon trend: a regime proxy (above/below the ~quarterly average).
+    out["sma_50_ratio"] = close / close.rolling(50).mean() - 1.0
+
+    # --- Oscillators.
     out["rsi_14"] = _rsi(close, 14) / 100.0  # scale to ~[0, 1]
     macd, macd_signal = _macd(close)
     # Normalise MACD by price so it is comparable across assets / regimes.
     out["macd"] = macd / close
     out["macd_signal"] = macd_signal / close
+
+    # --- Bollinger %B: position of price within its 20-day ±2σ band.
+    # ~0.5 = at the mean, >1 = above the upper band, <0 = below the lower band.
+    sma_20 = close.rolling(20).mean()
+    std_20 = close.rolling(20).std()
+    out["bollinger_pct_b"] = (close - (sma_20 - 2 * std_20)) / (4 * std_20)
+
+    # --- Donchian position: where price sits in its 20-day high/low range,
+    # centred to [-0.5, 0.5]. Captures breakouts the band measures miss.
+    roll_high = out["high"].rolling(20).max()
+    roll_low = out["low"].rolling(20).min()
+    out["donchian_pos"] = (close - roll_low) / (roll_high - roll_low) - 0.5
+
+    # --- Volatility level + regime: ATR (gap-aware) and a z-score of realised
+    # vol so the agent knows whether *this* moment is calm or turbulent.
+    out["volatility_10"] = out["return_1"].rolling(10).std()
+    out["atr_norm"] = _atr(out, 14) / close
+    out["vol_regime"] = _zscore(out["volatility_10"], 60)
+
+    # --- Range + volume microstructure.
     out["high_low_range"] = (out["high"] - out["low"]) / close
     out["volume_change"] = out["volume"].pct_change()
+    out["volume_zscore"] = _zscore(out["volume"], 20)
 
     return out.replace([np.inf, -np.inf], np.nan).dropna().reset_index(drop=True)
 
 
 # Feature columns fed to the agent (raw OHLCV levels are deliberately excluded).
+# Grouped by what they encode: momentum, trend context, oscillators, band/range
+# position, volatility regime, and volume microstructure.
 FEATURE_COLUMNS: List[str] = [
+    # momentum (multi-horizon)
     "return_1",
     "return_5",
+    "return_20",
     "log_return",
+    # trend / mean-reversion context
     "sma_10_ratio",
     "sma_30_ratio",
     "ema_12_ratio",
-    "volatility_10",
+    "sma_50_ratio",
+    # oscillators
     "rsi_14",
     "macd",
     "macd_signal",
+    # band / range position
+    "bollinger_pct_b",
+    "donchian_pos",
+    # volatility level + regime
+    "volatility_10",
+    "atr_norm",
+    "vol_regime",
+    # range + volume microstructure
     "high_low_range",
     "volume_change",
+    "volume_zscore",
 ]
 
 

@@ -32,15 +32,27 @@ class EnvConfig:
 class RewardConfig:
     """Weights for the shared reward function (see :class:`BaseTradingEnv`).
 
-    ``return_scale`` keeps the (tiny) per-step return the dominant learning
-    signal; the penalties are deliberately an order of magnitude smaller so they
-    *shape* behaviour without overwhelming the profit objective.
+    Two reward formulations are supported via ``kind``:
+
+    * ``"return"`` (default) — risk-aware net return: scaled per-step return
+      minus drawdown and turnover penalties. ``return_scale`` keeps the (tiny)
+      per-step return the dominant learning signal; the penalties are
+      deliberately an order of magnitude smaller so they *shape* behaviour
+      without overwhelming the profit objective.
+    * ``"dsr"`` — the **Differential Sharpe Ratio** (Moody & Saffell, 1998): an
+      online, per-step approximation of the change in the Sharpe ratio. Rewarding
+      DSR makes the agent optimise *risk-adjusted* return directly rather than
+      raw PnL, which empirically yields steadier equity curves. Turnover is still
+      penalised; the drawdown term is subsumed by the volatility normalisation.
     """
 
+    kind: str = "return"              # "return" | "dsr"
     use_log_return: bool = True       # log return is additive and well-scaled
     return_scale: float = 100.0       # lift ~1e-3 returns into a PPO-learnable range
     drawdown_penalty: float = 0.05    # penalise depth below the equity high-water mark
     turnover_penalty: float = 0.0005  # penalise churn (transaction friction)
+    dsr_eta: float = 0.04             # DSR adaptation rate (EMA horizon ~1/eta bars)
+    dsr_scale: float = 1.0            # lift the (small) DSR signal into PPO's range
 
 
 @dataclass
@@ -57,8 +69,12 @@ class PPOConfig:
     update_epochs: int = 10           # passes over each rollout
     minibatch_size: int = 256
     hidden_sizes: Tuple[int, ...] = (128, 128)
-    use_lstm: bool = False            # experimental; see models/networks.py
+    use_lstm: bool = False            # train the recurrent (LSTM) policy instead
+    recurrent_seq_len: int = 64       # truncated-BPTT sequence length (LSTM only)
     init_log_std: float = -0.5        # initial policy std = exp(-0.5) ~= 0.61
+    normalize_obs: bool = True        # running mean/std normalisation of observations
+    obs_clip: float = 10.0            # clip normalised observations to +/- this many std
+    normalize_reward: bool = False    # running-std reward scaling (off: return_scale handles it)
 
 
 @dataclass
@@ -73,6 +89,7 @@ class TrainConfig:
     checkpoint_dir: str = "checkpoints"
     log_dir: str = "runs"
     device: str = "auto"              # "auto" | "cpu" | "cuda"
+    deterministic: bool = False       # pin Torch to deterministic kernels (slower)
 
 
 @dataclass

@@ -110,6 +110,10 @@ class BaseTradingEnv(gym.Env):
         self.units = 0.0
         self.equity = self.cfg.initial_balance
         self.peak_equity = self.cfg.initial_balance
+        # Differential Sharpe Ratio running moments (first/second moment of the
+        # per-step return). Reset each episode so the estimate is path-local.
+        self._dsr_a = 0.0
+        self._dsr_b = 0.0
         return self._get_observation(), self._info()
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, dict]:
@@ -147,35 +151,60 @@ class BaseTradingEnv(gym.Env):
     def _compute_reward(
         self, prev_equity: float, new_equity: float, cost: float, trade_notional: float
     ) -> float:
-        """Shared reward: risk-aware return net of friction.
+        """Shared reward. Dispatches on ``reward.kind`` (see :class:`RewardConfig`).
 
-        reward = return_scale * return
-                 - drawdown_penalty * drawdown
-                 - turnover_penalty * turnover
-
-        * return is log or simple, per config (log returns are additive across
-          time, which pairs naturally with discounted RL objectives).
-        * ``return_scale`` lifts the per-step return (~1e-3) into a range PPO can
-          actually learn from, and — critically — keeps it the *dominant* term so
-          the agent optimises for profit, not merely for avoiding drawdown.
-        * drawdown is the current depth below the equity high-water mark.
-        * turnover penalises churn beyond the explicit cash cost, nudging the
-          agent away from noise-trading.
+        Both formulations subtract a turnover term so churn beyond the explicit
+        cash cost is discouraged.
         """
         eps = 1e-8
         if self.rcfg.use_log_return:
             ret = float(np.log((new_equity + eps) / (prev_equity + eps)))
         else:
             ret = (new_equity - prev_equity) / (prev_equity + eps)
-
-        drawdown = (self.peak_equity - new_equity) / (self.peak_equity + eps)
         turnover = trade_notional / (prev_equity + eps)
 
-        return (
-            self.rcfg.return_scale * ret
-            - self.rcfg.drawdown_penalty * max(drawdown, 0.0)
-            - self.rcfg.turnover_penalty * turnover
-        )
+        if self.rcfg.kind == "dsr":
+            base = self._differential_sharpe(ret)
+        else:
+            # Risk-aware net return: scaled return minus drawdown depth below the
+            # equity high-water mark. ``return_scale`` keeps return the dominant
+            # term so the agent optimises for profit, not merely avoiding losses.
+            drawdown = (self.peak_equity - new_equity) / (self.peak_equity + eps)
+            base = (
+                self.rcfg.return_scale * ret
+                - self.rcfg.drawdown_penalty * max(drawdown, 0.0)
+            )
+
+        return base - self.rcfg.turnover_penalty * turnover
+
+    def _differential_sharpe(self, ret: float) -> float:
+        """Differential Sharpe Ratio reward (Moody & Saffell, 1998).
+
+        Maintains exponentially-weighted estimates of the first moment ``A`` and
+        second moment ``B`` of the per-step return, then returns the marginal
+        contribution of the latest return to the Sharpe ratio:
+
+            D_t = (B_{t-1}·ΔA − ½·A_{t-1}·ΔB) / (B_{t-1} − A_{t-1}²)^{3/2}
+
+        with ΔA = R_t − A_{t-1}, ΔB = R_t² − B_{t-1}. Rewarding ``D_t`` each step
+        makes the *cumulative* reward track the Sharpe ratio, so the policy is
+        trained to maximise risk-adjusted — not raw — return.
+        """
+        eta = self.rcfg.dsr_eta
+        a_prev, b_prev = self._dsr_a, self._dsr_b
+        delta_a = ret - a_prev
+        delta_b = ret * ret - b_prev
+
+        variance = b_prev - a_prev * a_prev
+        if variance <= 1e-12:
+            dsr = 0.0  # not enough dispersion yet to define a Sharpe ratio
+        else:
+            dsr = (b_prev * delta_a - 0.5 * a_prev * delta_b) / (variance ** 1.5)
+
+        # Update the running moments for the next step.
+        self._dsr_a = a_prev + eta * delta_a
+        self._dsr_b = b_prev + eta * delta_b
+        return self.rcfg.dsr_scale * float(dsr)
 
     # ------------------------------------------------------------------ #
     # Observation + info                                                 #
