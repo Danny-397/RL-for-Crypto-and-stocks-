@@ -43,6 +43,7 @@ jobs:
           # CPU wheels keep CI fast and avoid pulling CUDA.
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
+          pip install -e .          # install the rl_trader package so tests can import it
           pip install pytest
 
       - name: Run test suite

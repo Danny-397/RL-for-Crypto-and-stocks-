@@ -35,3 +35,9 @@ include = ["rl_trader*"]
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+
+[tool.pytest.ini_options]
+# Put the repo root on sys.path so `pytest` (the console script, as CI invokes it)
+# can import the `rl_trader` package without an editable install.
+pythonpath = ["."]
+testpaths = ["tests"]
