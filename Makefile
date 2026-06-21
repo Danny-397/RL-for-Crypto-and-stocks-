@@ -4,7 +4,7 @@
 PY ?= python
 TIMESTEPS ?= 200000
 
-.PHONY: help install test lint fetch build build-synth ablation baselines figures all
+.PHONY: help install test lint fetch build build-synth ablation baselines portfolio figures all
 
 help:
 	@echo "install     install runtime + dev dependencies"
@@ -15,6 +15,7 @@ help:
 	@echo "build-synth train + backtest on synthetic data -> docs/results.js"
 	@echo "ablation    run the domain-randomization ablation -> docs/assets/ablation.json"
 	@echo "baselines   print agent vs baselines on the real test data"
+	@echo "portfolio   train the cross-sectional portfolio agent vs quant baselines"
 	@echo "figures     render docs/assets/*.png from results"
 	@echo "all         lint + test"
 
@@ -42,6 +43,9 @@ ablation:
 
 baselines:
 	$(PY) tools/baseline_report.py
+
+portfolio:
+	$(PY) tools/portfolio_experiment.py --market stock --timesteps $(TIMESTEPS)
 
 figures:
 	$(PY) tools/make_figures.py

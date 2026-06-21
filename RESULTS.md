@@ -182,7 +182,49 @@ This mirrors §2 exactly: on synthetic markets where a signal provably exists th
 agent is repeatably profitable but still statistically indistinguishable from
 buy-&-hold; on real markets, even the apparent edge evaporates under resampling.
 
-## 6. Two methods worth calling out
+## 6. Cross-sectional portfolio allocation
+
+Single-asset timing is only half the game — real quant strategies allocate *across*
+assets. `PortfolioTradingEnv` generalises the **same** PPO agent to a whole basket:
+it sees every asset's features at once and emits an *N*-dimensional **weight vector**
+(long the strong, short the weak) under a gross-exposure budget. That's a strictly
+harder problem, and a strictly harder benchmark — the honest comparison is now an
+**equal-weight basket**, not one buy-&-hold line, plus the classic **cross-sectional
+momentum** factor.
+
+`python tools/portfolio_experiment.py --market stock`
+
+**Stock** — 10-name basket, held-out test:
+
+| Strategy | Return | Sharpe | Max DD |
+|---|---:|---:|---:|
+| PPO portfolio agent | −43.4% | −0.76 | 48.3% |
+| **Equal-weight (1/N)** | **+163.7%** | **1.48** | **19.9%** |
+| Cross-sectional momentum | +5.0% | 0.16 | 21.8% |
+| Random weights | −66.2% | −2.74 | 68.3% |
+
+**Crypto** — 6-coin basket:
+
+| Strategy | Return | Sharpe | Max DD |
+|---|---:|---:|---:|
+| PPO portfolio agent | −80.2% | −1.12 | 80.2% |
+| **Equal-weight (1/N)** | **−3.7%** | **0.30** | 68.1% |
+| Cross-sectional momentum | −21.9% | −0.36 | **37.2%** |
+| Random weights | −80.1% | −4.06 | 81.3% |
+
+**Reading it:** the learned allocator beats random but is **crushed by the
+equal-weight basket** on both markets (by ~200 points on equities), and
+underperforms even the simple cross-sectional-momentum factor. The gap is far too
+large to be seed luck — it's the single-asset story again at a harder problem: a
+from-scratch RL *allocator* does not out-allocate naive diversification on real
+data. The contribution here is the **capability** (a working cross-sectional,
+long/short, budget-constrained RL allocator) and the **apples-to-apples evaluation**
+against the benchmarks a quant actually uses — not a manufactured edge. It also
+crisply explains *why* the agents underperform: raw daily features carry little
+exploitable cross-sectional signal, so equal-weight diversification is hard to beat.
+(Re-run across seeds with `tools/portfolio_experiment.py --seeds 5`.)
+
+## 7. Two methods worth calling out
 
 - **Differential Sharpe Ratio reward (`RewardConfig.kind = "dsr"`).** An online,
   per-step approximation of the change in the Sharpe ratio — rewarding it trains
@@ -194,19 +236,19 @@ buy-&-hold; on real markets, even the apparent edge evaporates under resampling.
   at episode boundaries, and the update replays whole sequences from their stored
   initial state (truncated BPTT) rather than shuffling individual transitions.
 
-## 7. Limitations & next steps
+## 8. Limitations & next steps
 
-- **Signal is the bottleneck, not the agent.** The most impactful next step is
-  richer, lower-noise features (cross-sectional ranks, regime labels, alt-data,
-  longer horizons) rather than a bigger network.
+- **Signal is the bottleneck, not the agent.** Across single-asset *and*
+  cross-sectional setups, the ceiling is the data: raw daily OHLCV carries little
+  exploitable structure. The most impactful next step is richer, lower-noise
+  features (regime labels, alt-data, longer horizons) rather than a bigger network.
 - **Real-data walk-forward could be multi-*fold*** (the `evaluation/walk_forward.py`
   splitter is built for this) — §5 already adds multi-*seed* CIs on the real basket;
   rolling re-training folds would add a second axis of robustness.
-- **Cross-sectional / portfolio allocation** (long the strong, short the weak) is
-  the most promising route to a real *equities* edge, and head-to-head feed-forward
-  vs. LSTM studies are a natural extension the codebase is already structured for.
+- **Head-to-head feed-forward vs. LSTM** and cost/turnover-sensitivity sweeps are
+  natural extensions the codebase is already structured for.
 
-## 8. Reproduce everything
+## 9. Reproduce everything
 
 Training is fully seeded, so these commands re-derive the numbers above.
 
@@ -218,5 +260,6 @@ python tools/baseline_report.py                             # agent vs baselines
 python tools/ablation.py --timesteps 60000                  # the overfitting ablation (§1)
 python tools/significance.py --market crypto --seeds 5      # synthetic multi-seed test (§2)
 python tools/real_significance.py --seeds 5                 # real-data multi-seed test (§5)
+python tools/portfolio_experiment.py --market stock         # cross-sectional allocation (§6)
 pytest -q                                                   # the test suite
 ```

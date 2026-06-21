@@ -48,6 +48,13 @@ the lucky backtest; `tools/real_significance.py` is what catches it.
 
 ![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
 
+**Cross-sectional allocation reaches the same honest ceiling.** The same PPO agent
+also runs as a **portfolio allocator** — observing a whole basket and choosing
+long/short weights across it (`tools/portfolio_experiment.py`). On real data it
+beats random but is **decisively beaten by a plain equal-weight basket** (stock
+−43% vs. +164%; crypto −80% vs. −4%) and even by cross-sectional momentum. Naive
+diversification is hard to beat — which is exactly the point, honestly measured.
+
 ---
 
 ## Why this project
@@ -122,6 +129,12 @@ short). Targeting a position rather than emitting incremental buy/sell orders gi
 the agent direct, stable control over its exposure and makes **position sizing**
 an explicit, learnable decision.
 
+**Cross-sectional mode** (`PortfolioTradingEnv`): the same PPO agent generalises
+from one asset to a **basket** — it observes every asset's features at once and
+emits an *N*-dimensional **weight vector** (long the strong, short the weak), under
+a gross-exposure budget. This is the harder, more realistic problem of *allocation*
+rather than single-name timing; run it with `tools/portfolio_experiment.py`.
+
 ---
 
 ## Project structure
@@ -131,17 +144,20 @@ rl_trader/
 ├── config/          # dataclass hyper-parameters + market presets
 │   └── training_config.py
 ├── data/            # OHLCV loading, indicators, scaling, splits, synthetic data
-│   └── data_loader.py
+│   ├── data_loader.py     # single-asset pipeline
+│   └── portfolio_data.py  # multi-asset, date-aligned basket pipeline
 ├── envs/            # Gymnasium environments
 │   ├── base_env.py      # shared mechanics (accounting, costs, reward)
 │   ├── stock_env.py
-│   └── crypto_env.py
+│   ├── crypto_env.py
+│   └── portfolio_env.py # cross-sectional, N-asset weight-allocation env
 ├── models/          # the agent and its networks
 │   ├── networks.py      # shared-trunk ActorCritic + recurrent (LSTM) ActorCritic
 │   └── ppo_agent.py     # PPO: clipped objective, GAE, save/load
 ├── training/        # rollout collection + PPO update loop + logging
 │   ├── utils.py         # RolloutBuffer (GAE), feed-forward training engine, logger
 │   ├── recurrent.py     # recurrent PPO: sequence buffer + truncated-BPTT update
+│   ├── portfolio.py     # cross-sectional portfolio training loop
 │   ├── normalization.py # running (Welford) observation/reward normaliser
 │   ├── train_stock.py
 │   └── train_crypto.py
@@ -149,12 +165,13 @@ rl_trader/
 │   ├── evaluate_agent.py
 │   ├── statistics.py    # bootstrap CIs + paired permutation tests
 │   ├── walk_forward.py  # rolling multi-fold walk-forward splits + runner
+│   ├── portfolio_eval.py # portfolio backtest + cross-sectional baselines
 │   └── plots.py
 └── scripts/         # command-line entry points
     ├── run_stock_training.py
     ├── run_crypto_training.py
     └── compare_markets.py
-tests/               # pytest suite (envs, agent, features, reward, recurrent, stats)
+tests/               # pytest suite (envs, agent, features, reward, recurrent, stats, normalization, portfolio)
 tools/
 ├── fetch_data.py        # download a real OHLCV basket (Yahoo Finance)
 ├── build_site_data.py   # train + backtest -> docs/results.js for the dashboard
@@ -162,6 +179,7 @@ tools/
 ├── baseline_report.py   # agent vs. buy-&-hold / random / momentum
 ├── significance.py      # multi-seed CIs + permutation test (synthetic)
 ├── real_significance.py # multi-seed CIs + permutation test on the real basket
+├── portfolio_experiment.py # cross-sectional portfolio agent vs. quant baselines
 └── make_figures.py      # render docs/assets/*.png for the README & report
 docs/                # data-driven web dashboard + figures (GitHub Pages ready)
 ```
