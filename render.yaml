@@ -8,7 +8,9 @@ services:
     plan: free
     rootDir: server
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --workers 1 --bind 0.0.0.0:$PORT --timeout 120
+    # ${PORT:-10000} guards against an unset/empty PORT (Render's default is 10000)
+    # so the service can't die with "'' is not a valid port number".
+    startCommand: gunicorn app:app --workers 1 --bind 0.0.0.0:${PORT:-10000} --timeout 120
     healthCheckPath: /health
     autoDeploy: true
     envVars:
