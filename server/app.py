@@ -69,6 +69,10 @@ def policy_action(market: str, obs: np.ndarray) -> float:
     """Deterministic target position in [-1, 1] for a single observation."""
     p = _POLICIES[market]
     x = obs.reshape(1, -1).astype(np.float32)
+    # Apply the exported observation normaliser (if the policy was trained with one).
+    if "obs_mean" in p:
+        clip = float(p["obs_clip"]) if "obs_clip" in p else 10.0
+        x = np.clip((x - p["obs_mean"]) / p["obs_std"], -clip, clip).astype(np.float32)
     n = int(p["n_trunk"])
     for i in range(n):
         x = x @ p[f"w{i}"].T + p[f"b{i}"]

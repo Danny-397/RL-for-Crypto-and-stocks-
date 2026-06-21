@@ -40,6 +40,10 @@ def _train(market: str, cfg, timesteps: int, seed: int, domain_random: bool):
     cfg.train.total_timesteps = timesteps
     cfg.train.seed = seed
     cfg.train.eval_interval = 0
+    # Write to a throwaway dir so the ablation never clobbers the deployment
+    # checkpoints produced by build_site_data.py --real (which baseline_report
+    # and export_policy load).
+    cfg.train.checkpoint_dir = os.path.join("checkpoints", "_ablation")
 
     if domain_random:
         factory = lambda: synthetic_market_data(market)  # noqa: E731

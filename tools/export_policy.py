@@ -38,6 +38,13 @@ def export(market: str, ckpt_dir: str = "checkpoints", out_dir: str = "server/mo
     arrays["wm"] = agent.ac.policy_mean.weight.detach().cpu().numpy().astype(np.float32)
     arrays["bm"] = agent.ac.policy_mean.bias.detach().cpu().numpy().astype(np.float32)
 
+    # Carry the observation normaliser so the server standardises inputs exactly
+    # as training did (otherwise the served policy sees out-of-distribution obs).
+    if getattr(agent, "obs_rms", None) is not None:
+        arrays["obs_mean"] = agent.obs_rms.mean.astype(np.float32)
+        arrays["obs_std"] = np.sqrt(agent.obs_rms.var + agent.obs_rms.epsilon).astype(np.float32)
+        arrays["obs_clip"] = np.array(agent.obs_rms.clip, dtype=np.float32)
+
     os.makedirs(out_dir, exist_ok=True)
     out = os.path.join(out_dir, f"ppo_{market}.npz")
     np.savez(out, **arrays)

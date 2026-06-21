@@ -139,7 +139,7 @@
         <article class="card">
           <div class="card-icon">🧩</div>
           <h3>Extensible by design</h3>
-          <p>Add a market by subclassing one base class. Add an algorithm (SAC, DDPG) behind the same agent API. An LSTM actor-critic is already stubbed.</p>
+          <p>Add a market by subclassing one base class. Add an algorithm (SAC, DDPG) behind the same agent API. A recurrent (LSTM) PPO policy is fully implemented — flip one config flag.</p>
         </article>
       </div>
     </section>
@@ -207,8 +207,8 @@
       </div>
 
       <div class="honest-note">
-        <strong>📌 How to read this.</strong> Beating passive buy-&amp;-hold out-of-sample is a famously hard, research-grade problem — and on a historic 2021–2025 bull market, this agent doesn't. <em>That's the point.</em> The contribution here is a rigorous, reproducible methodology and an <strong>honest result</strong>, not a fantasy money-machine. Where market signal provably exists (controlled synthetic benchmarks), the
-        <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">domain-randomization ablation</a> shows the method works as designed.
+        <strong>📌 How to read this.</strong> These numbers are <strong>one favorable training seed</strong> — and on it the crypto agent looks like it beats buy-&amp;-hold. Don't be fooled: re-run across many seeds and the edge <strong>evaporates</strong> (mean &minus;17%, a confidence interval straddling zero, statistically indistinguishable from buy-&amp;-hold; equities is significantly worse). There is <strong>no reliable, seed-robust edge</strong> on real markets — exactly what market efficiency predicts. The
+        <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">multi-seed significance study</a> is what catches that false positive — and that discipline, not a fantasy return, is the contribution.
       </div>
 
       <div class="dash">

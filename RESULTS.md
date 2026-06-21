@@ -12,12 +12,19 @@ result. All numbers here are reproducible with the commands in the final section
    with known structure, the agent learns a profitable, *generalizing* policy —
    and an ablation proves that **domain randomization is what makes it
    generalize** (it collapses the in-sample/out-of-sample overfitting gap by
-   ~270×).
-2. **On real markets, the learned agent does not beat passive investing.** Over
-   a held-out 2021–2025 walk-forward window, PPO trails both buy-&-hold and a
-   simple moving-average rule. It *does* beat a random policy, so it learned
-   something — just not a tradable edge. This is consistent with weak-form market
-   efficiency and is the honest, expected outcome.
+   two-to-three orders of magnitude).
+2. **A single seed can *look* like a real-market win — and that's the trap.** The
+   bundled dashboard run (seed 42) shows the crypto agent at **+80% vs. buy-&-hold's
+   +10%**, winning 5 of 6 coins. Taken alone, that's a tempting headline.
+3. **Multi-seed evaluation dissolves the illusion.** Re-run across **5 seeds** and
+   the real crypto agent *averages a loss* — **−17%, 95% CI [−55%, +24%]**,
+   statistically indistinguishable from buy-&-hold (permutation p ≈ 0.78). On
+   equities it is significantly **worse** than the +212% bull (p ≈ 0.002). There is
+   **no reliable, seed-robust edge on real markets** — consistent with weak-form
+   market efficiency.
+4. **Catching that is the result.** The framework's own significance tooling
+   exposed a false positive that a naive project would have shipped as a win. The
+   contribution is the **rigorous, honest methodology** — not a fantasy return.
 
 The point of the project is the **methodology and the honest evaluation**, not a
 fantasy money-machine.
@@ -28,11 +35,14 @@ fantasy money-machine.
 
 | | |
 |---|---|
-| **Algorithm** | PPO implemented from scratch in PyTorch (clipped objective, GAE, entropy bonus, orthogonal init, grad clipping) |
+| **Algorithm** | PPO implemented from scratch in PyTorch (clipped objective, GAE, entropy bonus, orthogonal init, grad clipping) — plus a fully-implemented **recurrent (LSTM) PPO** variant (truncated BPTT) |
 | **Environments** | Custom Gymnasium `StockTradingEnv` / `CryptoTradingEnv` over a shared base; continuous target-position actions in `[-1, 1]`; transaction costs + slippage |
+| **Features** | **19 engineered, stationary features** per bar — multi-horizon momentum, MA/EMA ratios, RSI, MACD, Bollinger %B, Donchian position, ATR, a volatility-regime z-score, and volume microstructure — over a rolling window |
+| **Reward** | Selectable: risk-aware net return (return − drawdown − turnover) **or** the **Differential Sharpe Ratio** (Moody & Saffell, 1998) |
+| **Training** | Running (Welford) observation normalisation, exported and applied at serve time; fully seeded (Torch + NumPy + env RNG) so runs are reproducible |
 | **Real data** | 10 equities + 6 crypto pairs, daily OHLCV, ~10 yrs (Yahoo Finance) |
-| **Split** | Chronological walk-forward — train on the older 60%, test on the held-out recent 40% (2021–2025); scalers fit on training data only |
-| **Reporting** | Mean across the basket; agent run deterministically; benchmarked vs. buy-&-hold, random, and a moving-average-crossover rule |
+| **Split** | Chronological walk-forward — train on the older 60%, test on the held-out recent 40%; scalers fit on training data only |
+| **Reporting** | Mean across the basket; agent run deterministically; benchmarked vs. buy-&-hold, random, and a moving-average-crossover rule; uncertainty via bootstrap CIs + a permutation test |
 
 ---
 
@@ -47,24 +57,52 @@ the training path ("in-sample") vs. 30 unseen paths ("out-of-sample").
 
 | Market | Training | In-sample | Out-of-sample | Gap |
 |---|---|---:|---:|---:|
-| Stock | single-path | **+4927%** | **−37%** | +4965% |
-| Stock | domain-random | +96% | **+77%** | **+18%** |
-| Crypto | single-path | **+14668%** | **−69%** | +14737% |
-| Crypto | domain-random | +79% | **+134%** | **−55%** |
+| Stock | single-path | **+5821%** | **−41%** | +5862% |
+| Stock | domain-random | −12% | **+30%** | **−42%** |
+| Crypto | single-path | **+18709%** | **−71%** | +18780% |
+| Crypto | domain-random | +63% | **+99%** | **−36%** |
 
 ![Domain randomization ablation](docs/assets/fig_ablation.png)
 
-**Reading it:** the single-path agents post absurd in-sample returns
-(+4927% / +14668%) by memorising their training sequence — then **lose money** on
-unseen data. Domain randomization (a fresh path every episode) collapses that
-gap by two-to-three orders of magnitude and produces agents that actually
-generalize. This is the project's core methodological result.
+**Reading it:** the single-path agents post absurd in-sample returns by
+memorising their training sequence — then **lose money** on unseen data. Domain
+randomization (a fresh path every episode) collapses that gap by orders of
+magnitude and produces agents whose out-of-sample return is actually *positive*.
+This is the project's core methodological result.
 
 ---
 
-## 2. Real-market results (out-of-sample, walk-forward)
+## 2. Is the edge real, or seed luck? — a multi-seed significance study
+
+A single backtest is an anecdote. `tools/significance.py` trains **5 independent
+seeds**, evaluates each on the **same 20 held-out synthetic paths**, and then
+quantifies the result two ways: a bootstrap 95% confidence interval across seeds,
+and a paired permutation test of the agent vs. buy-&-hold across paths.
+
+`python tools/significance.py --market crypto --seeds 5 --timesteps 40000`
+
+| Market | Agent OOS return (95% CI) | Agent OOS Sharpe (95% CI) | Buy & hold | Agent − B&H | p-value |
+|---|---:|---:|---:|---:|---:|
+| Stock | +18.3% `[+9.2%, +29.9%]` | +0.32 `[0.18, 0.47]` | +30.3% | −12.0% | 0.53 |
+| Crypto | +63.0% `[+37.5%, +88.5%]` | +0.50 `[0.34, 0.64]` | +65.2% | −2.2% | 0.96 |
+
+**Reading it:** the confidence intervals are *tight and positive* — the agent
+reliably makes risk-adjusted money across seeds, not by luck. But the permutation
+test says the difference from buy-&-hold is **not statistically significant**
+(p ≫ 0.05). The honest conclusion: the agent learns a genuine, repeatable policy
+that is *competitive with* — not provably better than — passive exposure on these
+synthetic paths. That is exactly the discipline I apply to the real-data win below.
+
+---
+
+## 3. Real-market results — a single seed (out-of-sample, walk-forward)
 
 `python tools/build_site_data.py --real` then `python tools/baseline_report.py`
+
+> ⚠️ **Read this with §5.** The tables below are **one training seed (42)** — the
+> run the dashboard displays. It happens to be *favorable* for crypto. §5 shows
+> what happens across many seeds, and the honest picture is very different. This
+> single-seed table is shown for transparency, not as the headline result.
 
 ![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
 
@@ -72,66 +110,113 @@ generalize. This is the project's core methodological result.
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| PPO agent | −34.6% | −0.67 | 43.6% |
-| Buy & hold | **+201.6%** | **0.93** | 28.6% |
-| MA crossover | +62.8% | 0.60 | **24.3%** |
+| PPO agent | +0.2% | 0.01 | 33.2% |
+| Buy & hold | **+212.1%** | **0.96** | 27.7% |
+| MA crossover | +78.4% | 0.72 | **22.7%** |
 | Flat (cash) | 0.0% | 0.00 | 0.0% |
-| Random | −54.9% | −1.28 | 59.0% |
+| Random | −51.3% | −1.23 | 56.4% |
 
-**Crypto** — mean over 6 held-out tickers:
+**Crypto** — mean over 6 held-out tickers (agent wins on 5 of 6):
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| PPO agent | −18.8% | −0.21 | 59.3% |
-| Buy & hold | +9.9% | 0.30 | 77.0% |
-| MA crossover | **+11.0%** | 0.25 | 59.0% |
+| **PPO agent** | **+80.5%** | **+0.43** | 65.3% |
+| Buy & hold | +10.4% | −0.19 | 75.8% |
+| MA crossover | +14.1% | +0.27 | 58.2% |
 | Flat (cash) | 0.0% | 0.00 | 0.0% |
-| Random | −78.1% | −1.22 | 80.0% |
+| Random | −65.9% | −1.32 | 75.3% |
 
 ---
 
-A representative held-out equity curve for each market (the median-return ticker)
-— note how, on crypto, the agent is visibly *more defensive*, sidestepping the
-worst of buy-&-hold's drawdowns even though it gives up upside elsewhere:
+A representative held-out equity curve for each market (the median-return ticker):
 
 ![Representative held-out equity curves](docs/assets/fig_equity.png)
 
-## 3. Discussion — what these numbers actually mean
+## 4. Discussion — why the single-seed table is misleading
 
-- **The agent beats random but not the real benchmarks.** Beating a random
-  policy by ~20 percentage points shows the network learned *non-trivial*
-  structure. Losing to buy-&-hold and a moving-average rule shows that structure
-  isn't a tradable edge on real daily data.
-- **This is what market efficiency looks like.** Raw daily OHLCV + standard
-  indicators carry very little exploitable autocorrelation. An agent that trades
-  on it gets whipsawed and pays costs; passive exposure to a rising market wins.
-  The 2021–2025 equity test window was a historic mega-cap bull — an especially
-  brutal benchmark.
-- **Simple beat complex.** The hand-coded MA-crossover rule outperformed the
-  learned agent and even had the *lowest drawdown* of any equity strategy
-  (24.3%). That's a genuinely useful, humbling result and a reminder that model
-  complexity is not a virtue by itself.
-- **One bright spot:** the crypto agent's max drawdown (59%) was well below
-  buy-&-hold's (77%) — it *was* more defensive, just not enough to overcome the
-  return gap.
+- **Seed 42 is a favorable draw, not a representative one.** On this seed the crypto
+  agent posts +80% and wins 5 of 6 coins. It is tempting — and wrong — to stop here.
+  Training is fully seeded so the number *reproduces*, but reproducing a lucky seed
+  doesn't make it typical. §5 re-runs the experiment across many seeds and finds the
+  average crypto outcome is a **loss** with a confidence interval that comfortably
+  straddles zero.
+- **The equities single seed is already an honest loss.** Even on the displayed
+  seed the stock agent only breaks even (+0.2%) against the +212% mega-cap bull, and
+  the hand-coded MA-crossover (+78%) beat it — a reminder that model complexity is
+  not a virtue by itself. Across seeds (§5) it is *significantly* worse than
+  buy-&-hold.
+- **This is what weak-form market efficiency looks like.** Raw daily OHLCV carries
+  little exploitable structure; an agent trading on it gets whipsawed and pays costs.
+  Any single backtest is dominated by seed and split luck — which is exactly why a
+  *distribution* (§5), not a point estimate (§3), is the honest unit of evidence.
 
-## 4. Limitations & next steps
+## 5. Real-data significance — does the single-seed win survive?
+
+This is the section that matters. `tools/real_significance.py` repeats the entire
+real walk-forward across **5 independent seeds**, then reports a bootstrap 95% CI
+on the basket-mean return *across seeds* and a paired permutation test of the agent
+vs. buy-&-hold *across the held-out tickers*.
+
+`python tools/real_significance.py --seeds 5 --timesteps 150000`
+
+| Market | Agent return (95% CI across seeds) | Mean win-rate | Buy & hold | Agent − B&H | p-value | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| Stock | **−13.1%** `[−25.7%, −1.6%]` | 0% | +212.4% | −225.5% | **0.002** | significantly **worse** than B&H |
+| Crypto | **−17.2%** `[−55.1%, +24.5%]` | 37% | +10.9% | −28.1% | 0.78 | **indistinguishable** from B&H |
+
+**Reading it:** the crypto confidence interval straddles zero by a wide margin —
+the +80% single-seed run in §3 sits in the lucky right tail, while the *expected*
+outcome is a loss. The permutation test cannot distinguish the crypto agent from
+buy-&-hold (p ≈ 0.78), and on equities the agent is *significantly worse* (p ≈
+0.002). **There is no reliable, seed-robust edge on real markets.** A naive project
+would have shipped the §3 table as a win; the multi-seed test is what catches it —
+and that catch *is* the result.
+
+**Not a training-budget artifact.** Re-running crypto at the dashboard's full
+200k-step budget gives the same verdict — mean **−7.8%**, 95% CI **[−54%, +42%]**,
+p ≈ 0.90. The extra training nudges the average up but the interval is just as wide;
+tellingly, seed 42's +80% sits *above* even this CI's upper bound, confirming it as
+an outlier draw rather than the expected outcome.
+
+This mirrors §2 exactly: on synthetic markets where a signal provably exists the
+agent is repeatably profitable but still statistically indistinguishable from
+buy-&-hold; on real markets, even the apparent edge evaporates under resampling.
+
+## 6. Two methods worth calling out
+
+- **Differential Sharpe Ratio reward (`RewardConfig.kind = "dsr"`).** An online,
+  per-step approximation of the change in the Sharpe ratio — rewarding it trains
+  the agent to optimise *risk-adjusted* return directly rather than raw PnL. (Whether
+  it beats the plain return reward out-of-sample is, like everything here, a
+  seed-distribution question — not something a single run can settle.)
+- **Recurrent (LSTM) PPO (`PPOConfig.use_lstm = True`).** A fully-wired recurrent
+  actor-critic: the rollout threads the LSTM hidden state through time and resets it
+  at episode boundaries, and the update replays whole sequences from their stored
+  initial state (truncated BPTT) rather than shuffling individual transitions.
+
+## 7. Limitations & next steps
 
 - **Signal is the bottleneck, not the agent.** The most impactful next step is
   richer, lower-noise features (cross-sectional ranks, regime labels, alt-data,
   longer horizons) rather than a bigger network.
-- **Walk-forward could be multi-fold** (rolling re-training) rather than a single
-  60/40 split, with confidence intervals across seeds.
-- **Cost/turnover sensitivity** and a recurrent (LSTM) policy are natural
-  extensions the codebase is already structured for.
+- **Real-data walk-forward could be multi-*fold*** (the `evaluation/walk_forward.py`
+  splitter is built for this) — §5 already adds multi-*seed* CIs on the real basket;
+  rolling re-training folds would add a second axis of robustness.
+- **Cross-sectional / portfolio allocation** (long the strong, short the weak) is
+  the most promising route to a real *equities* edge, and head-to-head feed-forward
+  vs. LSTM studies are a natural extension the codebase is already structured for.
 
-## 5. Reproduce everything
+## 8. Reproduce everything
+
+Training is fully seeded, so these commands re-derive the numbers above.
 
 ```bash
 pip install -r requirements.txt
-python tools/fetch_data.py                          # download the real basket
-python tools/build_site_data.py --real --timesteps 200000   # real walk-forward
-python tools/baseline_report.py                     # agent vs baselines (tables above)
-python tools/ablation.py --timesteps 60000          # the overfitting ablation
-pytest -q                                           # the test suite
+python tools/fetch_data.py                                  # download the real basket
+python tools/build_site_data.py --real --timesteps 200000   # real walk-forward (§3)
+python tools/baseline_report.py                             # agent vs baselines (§3)
+python tools/ablation.py --timesteps 60000                  # the overfitting ablation (§1)
+python tools/significance.py --market crypto --seeds 5      # synthetic multi-seed test (§2)
+python tools/real_significance.py --seeds 5                 # real-data multi-seed test (§5)
+pytest -q                                                   # the test suite
 ```

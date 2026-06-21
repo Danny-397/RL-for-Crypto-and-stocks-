@@ -15,10 +15,13 @@ different market regimes.
 > data pipeline, and the evaluation suite are all implemented here — not wrapped from
 > a high-level library. The goal is to *understand and own every layer of the stack.*
 
-> **📊 [Read the full results & findings → `RESULTS.md`](RESULTS.md)** — including an
-> honest out-of-sample evaluation on real markets and an ablation that proves the
-> overfitting fix. Short version: the method provably generalizes where signal exists,
-> and — honestly — does **not** beat passive investing on real efficient markets.
+> **📊 [Read the full results & findings → `RESULTS.md`](RESULTS.md)** — an ablation
+> that proves the overfitting fix, and a multi-seed significance study with an
+> honest punchline. Short version: a *single* seed makes the crypto agent look like
+> it beats the market (+80% vs. +10%) — but re-run across many seeds, that edge
+> **evaporates** (mean −17%, CI straddling zero, indistinguishable from buy-&-hold).
+> The project's own rigor tooling catches the false positive. **That discipline is
+> the result**, not a fantasy return.
 
 ## Results at a glance
 
@@ -28,9 +31,20 @@ out-of-sample. Trained on randomized paths, it generalizes:
 
 ![Domain randomization ablation](docs/assets/fig_ablation.png)
 
-**Honest real-market evaluation.** On a 2021–2025 walk-forward across real tickers,
-the learned agent beats a random policy but not buy-&-hold or a simple momentum
-rule — the expected result on efficient markets, reported plainly:
+**A single backtest lies; a distribution tells the truth.** On one favorable seed
+the crypto agent looks like it crushes buy-&-hold (+80% vs. +10%, winning 5 of 6
+coins — this is the run the dashboard shows). But the honest test is to repeat the
+whole walk-forward across many seeds:
+
+| Market | Agent return (95% CI, 5 seeds) | vs. buy-&-hold | Verdict |
+|---|---:|---:|---|
+| Crypto | **−17%** `[−55%, +24%]` | +11% | indistinguishable (p ≈ 0.78) |
+| Stock | **−13%** `[−26%, −2%]` | +212% | significantly **worse** (p ≈ 0.002) |
+
+The crypto confidence interval straddles zero — the +80% run sits in the lucky
+right tail, not the centre. **There is no reliable, seed-robust edge on real
+markets**, exactly as weak-form market efficiency predicts. A naive project ships
+the lucky backtest; `tools/real_significance.py` is what catches it.
 
 ![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
 
@@ -50,9 +64,19 @@ to historical price paths. This framework is a disciplined attempt to do RL trad
 - **Honest evaluation.** Agents are scored on a **held-out test set** with the
   metrics a quant actually cares about — total return, **annualised Sharpe**, and
   **maximum drawdown** — not on the data they trained on.
-- **Risk-aware rewards.** The reward is return *net of* transaction costs, a
-  drawdown penalty, and a turnover penalty — discouraging reckless, over-leveraged,
+- **Risk-aware rewards.** Two selectable formulations: a return *net of*
+  transaction costs, a drawdown penalty, and a turnover penalty; or the
+  **Differential Sharpe Ratio** (Moody & Saffell, 1998), which optimises
+  *risk-adjusted* return online. Both discourage reckless, over-leveraged,
   noise-trading behaviour.
+- **Uncertainty quantification.** Headline claims ship with bootstrap confidence
+  intervals across seeds and a paired permutation test against buy-&-hold (on
+  *both* synthetic and real data), plus a rolling multi-fold walk-forward — so a
+  result is a distribution, not an anecdote.
+- **Stable, reproducible training.** A running observation normaliser (Welford,
+  exported and applied at serve time) keeps inputs well-scaled, and full seeding of
+  Torch + NumPy + the environment RNG makes a run **bit-for-bit reproducible** — the
+  same seed reproduces the documented numbers.
 
 ---
 
@@ -83,10 +107,14 @@ to historical price paths. This framework is a disciplined attempt to do RL trad
         └─────────────────────────────────────────────────────────┘
 ```
 
-**Observation** (per step): a rolling window of engineered features — returns over
-multiple horizons, moving-average ratios, RSI, MACD, realised volatility,
-high–low range, volume change — plus the agent's own account state (position
-fraction, cash fraction, normalised equity).
+**Observation** (per step): a rolling window of **19 engineered features**, grouped
+by what they encode — multi-horizon momentum (1/5/20-bar + log returns),
+trend/mean-reversion context (10/30/50 SMA ratios, EMA ratio), oscillators (RSI,
+MACD + signal), band/range position (Bollinger %B, Donchian position), volatility
+*level and regime* (10-bar vol, ATR, a 60-bar volatility z-score), and volume
+microstructure (high–low range, volume change, volume z-score) — plus the agent's
+own account state (position fraction, cash fraction, normalised equity). The regime
+and band features give the policy the context a single price level can't convey.
 
 **Action**: a single continuous value in `[-1, 1]` interpreted as the **target
 position** as a fraction of equity (`+1` = fully long, `0` = flat, `-1` = fully
@@ -109,25 +137,31 @@ rl_trader/
 │   ├── stock_env.py
 │   └── crypto_env.py
 ├── models/          # the agent and its networks
-│   ├── networks.py      # shared-trunk ActorCritic (+ optional LSTM)
+│   ├── networks.py      # shared-trunk ActorCritic + recurrent (LSTM) ActorCritic
 │   └── ppo_agent.py     # PPO: clipped objective, GAE, save/load
 ├── training/        # rollout collection + PPO update loop + logging
-│   ├── utils.py         # RolloutBuffer (GAE), training engine, logger
+│   ├── utils.py         # RolloutBuffer (GAE), feed-forward training engine, logger
+│   ├── recurrent.py     # recurrent PPO: sequence buffer + truncated-BPTT update
+│   ├── normalization.py # running (Welford) observation/reward normaliser
 │   ├── train_stock.py
 │   └── train_crypto.py
-├── evaluation/      # backtesting metrics and plots
+├── evaluation/      # backtesting metrics, statistics, plots
 │   ├── evaluate_agent.py
+│   ├── statistics.py    # bootstrap CIs + paired permutation tests
+│   ├── walk_forward.py  # rolling multi-fold walk-forward splits + runner
 │   └── plots.py
 └── scripts/         # command-line entry points
     ├── run_stock_training.py
     ├── run_crypto_training.py
     └── compare_markets.py
-tests/               # pytest suite (envs, agent, baselines)
+tests/               # pytest suite (envs, agent, features, reward, recurrent, stats)
 tools/
 ├── fetch_data.py        # download a real OHLCV basket (Yahoo Finance)
 ├── build_site_data.py   # train + backtest -> docs/results.js for the dashboard
 ├── ablation.py          # domain-randomization overfitting study
 ├── baseline_report.py   # agent vs. buy-&-hold / random / momentum
+├── significance.py      # multi-seed CIs + permutation test (synthetic)
+├── real_significance.py # multi-seed CIs + permutation test on the real basket
 └── make_figures.py      # render docs/assets/*.png for the README & report
 docs/                # data-driven web dashboard + figures (GitHub Pages ready)
 ```
@@ -219,9 +253,9 @@ cost-and-slippage environment — so any edge has to be real.
 
 > **Note on results.** The [web dashboard](#web-prototype) and
 > [`RESULTS.md`](RESULTS.md) report **real, out-of-sample backtests** — no mock
-> numbers, and no hiding the unflattering parts. The honest finding (PPO does not
-> beat passive investing on real markets) is reported as plainly as the ablation
-> win. That honesty is the point.
+> numbers, and no hiding the unflattering parts. The dashboard shows one favorable
+> seed; the multi-seed significance study then shows that edge does **not** survive
+> resampling. Reporting that — rather than the lucky backtest — is the point.
 
 ---
 
@@ -233,11 +267,16 @@ cost-and-slippage environment — so any edge has to be real.
 - **Shared `BaseTradingEnv`.** All accounting, cost, and reward logic lives in one
   place, so the stock and crypto envs cannot silently diverge.
 - **From-scratch PPO** with the stabilisers that matter in practice: GAE,
-  advantage normalisation, clipped value loss, entropy bonus, orthogonal init, and
-  gradient clipping.
+  advantage normalisation, clipped value loss, entropy bonus, orthogonal init,
+  gradient clipping, and a running observation normaliser.
+- **Two policy families, one training contract.** A feed-forward shared-trunk
+  `ActorCritic` and a fully-implemented **recurrent (LSTM) actor-critic** train
+  through the same PPO machinery — the recurrent variant adds hidden-state
+  continuity during rollout collection and replays whole sequences (truncated BPTT)
+  during the update. Flip `PPOConfig.use_lstm` to switch.
 - **Extensible by construction.** Add a market by subclassing `BaseTradingEnv`;
-  add an algorithm (DDPG/SAC) alongside `PPOAgent`; an LSTM actor-critic is already
-  stubbed in `networks.py` as a documented next step.
+  add an algorithm (DDPG/SAC) alongside `PPOAgent` with the same
+  `select_action`/`update` API.
 
 ---
 
@@ -247,8 +286,10 @@ cost-and-slippage environment — so any edge has to be real.
 | --- | --- |
 | Add a new market (e.g. FX) | Subclass `BaseTradingEnv`, register it in `envs/__init__.make_env` |
 | Add a new algorithm | Implement alongside `PPOAgent` with the same `select_action`/`update` API |
-| Use sequence models | Wire `RecurrentActorCritic` into a recurrent rollout buffer |
+| Use sequence models | Set `PPOConfig.use_lstm = True` — the recurrent PPO loop is built in |
+| Optimise risk-adjusted return | Set `RewardConfig.kind = "dsr"` (Differential Sharpe Ratio) |
 | Change the reward | Edit `RewardConfig` weights or `BaseTradingEnv._compute_reward` |
+| Test significance | `tools/significance.py` (CIs + permutation) or `evaluation/walk_forward.py` |
 | Tune training | Edit the dataclasses in `config/training_config.py` or pass CLI flags |
 
 ---
