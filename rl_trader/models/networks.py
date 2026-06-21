@@ -5,11 +5,10 @@ Gaussian policy (continuous position sizing) and a scalar value estimate.
 Sharing the trunk is parameter-efficient and lets both objectives benefit from
 the same learned feature representation.
 
-A :class:`RecurrentActorCritic` (LSTM) is provided as a documented extension
-point for sequence modelling. The bundled PPO loop is feed-forward, so wiring
-the recurrent variant into training requires sequential mini-batching with
-preserved hidden states — intentionally left as an exercise rather than a
-half-working default.
+A :class:`RecurrentActorCritic` (LSTM) is also provided and **fully trainable**
+via :mod:`rl_trader.training.recurrent`, which threads hidden states through the
+rollout and replays whole sequences (truncated BPTT) during the PPO update.
+Select it with ``PPOConfig.use_lstm = True``.
 """
 
 from __future__ import annotations
@@ -98,11 +97,16 @@ class ActorCritic(nn.Module):
 
 
 class RecurrentActorCritic(nn.Module):
-    """LSTM-based actor-critic (experimental extension point).
+    """LSTM-based actor-critic for sequence-aware trading policies.
 
-    Provided so sequence modelling is a natural next step. Training it requires
-    a recurrent rollout buffer that preserves hidden states across time and
-    samples whole sequences — not supported by the feed-forward PPO loop here.
+    Where :class:`ActorCritic` sees a fixed window flattened into one vector,
+    this network carries an LSTM hidden state across time, so the policy can in
+    principle model longer-range temporal dependencies than the window exposes.
+    It is trained by :class:`~rl_trader.training.recurrent.RecurrentPPOAgent`,
+    which preserves hidden states across the rollout and replays whole sequences
+    (truncated BPTT) during the PPO update.
+
+    A small pre-LSTM encoder + orthogonal init mirror the MLP's stability tricks.
     """
 
     def __init__(
@@ -113,15 +117,59 @@ class RecurrentActorCritic(nn.Module):
         init_log_std: float = -0.5,
     ) -> None:
         super().__init__()
-        self.lstm = nn.LSTM(obs_dim, hidden_size, batch_first=True)
-        self.policy_mean = nn.Linear(hidden_size, act_dim)
-        self.value_head = nn.Linear(hidden_size, 1)
+        self.hidden_size = hidden_size
+        self.encoder = mlp([obs_dim, hidden_size], activation=nn.Tanh)
+        self.encoder.apply(lambda m: _orthogonal_init(m, gain=2.0**0.5))
+        self.lstm = nn.LSTM(hidden_size, hidden_size, batch_first=True)
+        for name, param in self.lstm.named_parameters():
+            if "weight" in name:
+                nn.init.orthogonal_(param)
+            elif "bias" in name:
+                nn.init.constant_(param, 0.0)
+        self.policy_mean = _orthogonal_init(nn.Linear(hidden_size, act_dim), gain=0.01)
+        self.value_head = _orthogonal_init(nn.Linear(hidden_size, 1), gain=1.0)
         self.log_std = nn.Parameter(torch.ones(act_dim) * init_log_std)
 
+    def initial_state(self, batch_size: int = 1, device=None):
+        """Return a zeroed ``(h, c)`` hidden state for a fresh sequence."""
+        shape = (1, batch_size, self.hidden_size)
+        h = torch.zeros(shape, device=device)
+        c = torch.zeros(shape, device=device)
+        return h, c
+
     def forward(self, obs_seq: torch.Tensor, hidden=None):
-        """``obs_seq`` has shape [batch, seq_len, obs_dim]."""
-        out, hidden = self.lstm(obs_seq, hidden)
+        """Run a sequence through the network.
+
+        ``obs_seq`` has shape ``[batch, seq_len, obs_dim]``. Returns the action
+        distribution, the value estimate ``[batch, seq_len]``, and the final
+        hidden state (for continuing the rollout).
+        """
+        encoded = torch.tanh(self.encoder(obs_seq))
+        out, hidden = self.lstm(encoded, hidden)
         mean = torch.tanh(self.policy_mean(out))
         std = torch.exp(self.log_std).expand_as(mean)
         value = self.value_head(out).squeeze(-1)
         return Normal(mean, std), value, hidden
+
+    @torch.no_grad()
+    def act(self, obs: torch.Tensor, hidden, deterministic: bool = False):
+        """Advance one step. ``obs`` is ``[obs_dim]``; returns action, log-prob,
+        value, and the updated hidden state."""
+        dist, value, hidden = self.forward(obs.view(1, 1, -1), hidden)
+        action = dist.mean if deterministic else dist.sample()
+        log_prob = dist.log_prob(action).sum(-1)
+        return action.view(-1), log_prob.view(()), value.view(()), hidden
+
+    def evaluate_sequence(
+        self, obs_seq: torch.Tensor, actions: torch.Tensor, hidden
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Evaluate stored actions over a sequence for the PPO update.
+
+        ``obs_seq`` is ``[batch, seq_len, obs_dim]`` and ``actions`` is
+        ``[batch, seq_len, act_dim]``; returns per-step ``(log_probs, entropy,
+        values)``, each ``[batch, seq_len]``.
+        """
+        dist, values, _ = self.forward(obs_seq, hidden)
+        log_probs = dist.log_prob(actions).sum(-1)
+        entropy = dist.entropy().sum(-1)
+        return log_probs, entropy, values

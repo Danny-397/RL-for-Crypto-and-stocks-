@@ -12,13 +12,21 @@ import pandas as pd
 import torch
 
 
-def set_seed(seed: int) -> None:
-    """Seed Python, NumPy, and Torch for reproducible runs."""
+def set_seed(seed: int, deterministic: bool = False) -> None:
+    """Seed Python, NumPy, and Torch for reproducible runs.
+
+    With ``deterministic=True`` we also pin Torch to single-threaded, deterministic
+    kernels — slower, but it makes a run bit-for-bit repeatable, which is what you
+    want when a *documented* result has to be re-derivable.
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+    if deterministic:
+        torch.use_deterministic_algorithms(True, warn_only=True)
+        torch.set_num_threads(1)
 
 
 def get_logger(name: str = "rl_trader", log_dir: str | None = None) -> logging.Logger:
@@ -160,6 +168,14 @@ def run_ppo_training(
     -------
     (agent, history) where ``history`` is a dict of per-update metric lists.
     """
+    # Recurrent training has its own loop (hidden-state continuity + sequence
+    # replay); dispatch to it when the LSTM policy is requested.
+    if getattr(config.ppo, "use_lstm", False):
+        from .recurrent import run_recurrent_ppo_training
+        return run_recurrent_ppo_training(
+            config, df=df, logger=logger, train_series_factory=train_series_factory
+        )
+
     # Imported lazily to avoid a heavy import chain when only the buffer/logger
     # utilities are needed (e.g. in unit tests).
     from ..data.data_loader import prepare_market_data
@@ -167,7 +183,7 @@ def run_ppo_training(
     from ..models.ppo_agent import PPOAgent, resolve_device
 
     log = logger or get_logger("rl_trader", config.train.log_dir)
-    set_seed(config.train.seed)
+    set_seed(config.train.seed, getattr(config.train, "deterministic", False))
     device = resolve_device(config.train.device)
 
     splits = prepare_market_data(df, market=config.market, seed=config.train.seed)
@@ -194,17 +210,30 @@ def run_ppo_training(
         "policy_loss": [], "value_loss": [], "entropy": [], "val_return": [],
     }
 
+    # Optional running-std reward normalisation (off by default — the env's
+    # return_scale already lifts rewards into PPO's range). Learning uses the
+    # scaled reward; episode-return logging stays on the raw reward.
+    from .normalization import RunningNormalizer
+    reward_rms = RunningNormalizer(1) if getattr(config.ppo, "normalize_reward", False) else None
+
     n_updates = max(1, config.train.total_timesteps // config.train.rollout_length)
-    obs, _ = env.reset()
+    # Seed the first reset so the env's RNG stream (random-start positions, and
+    # any stochastic dynamics) is deterministic for a given config.train.seed.
+    obs, _ = env.reset(seed=config.train.seed)
     ep_return, ep_returns, ep_equities = 0.0, [], []
 
     for update in range(1, n_updates + 1):
         buffer.reset()
         for _ in range(config.train.rollout_length):
+            agent.observe(obs)  # fold raw obs into the running normaliser
             action, log_prob, value = agent.select_action(obs)
             next_obs, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
-            buffer.add(obs, action, log_prob, reward, value, done)
+            train_reward = reward
+            if reward_rms is not None:
+                reward_rms.update(np.array([[reward]], dtype=np.float64))
+                train_reward = float(reward / (np.sqrt(reward_rms.var[0]) + 1e-8))
+            buffer.add(obs, action, log_prob, train_reward, value, done)
             obs = next_obs
             ep_return += reward
             if done:

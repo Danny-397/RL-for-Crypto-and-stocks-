@@ -23,6 +23,7 @@ import torch
 import torch.nn as nn
 
 from ..config.training_config import PPOConfig
+from ..training.normalization import RunningNormalizer
 from .networks import ActorCritic
 
 
@@ -56,6 +57,21 @@ class PPOAgent:
         ).to(self.device)
         self.optimizer = torch.optim.Adam(self.ac.parameters(), lr=config.learning_rate)
 
+        # Running observation normaliser (fitted during training, frozen at eval).
+        self.obs_rms = (
+            RunningNormalizer(obs_dim, clip=config.obs_clip)
+            if getattr(config, "normalize_obs", False)
+            else None
+        )
+
+    def observe(self, observation: np.ndarray) -> None:
+        """Fold a raw observation into the normaliser (called during rollout only)."""
+        if self.obs_rms is not None:
+            self.obs_rms.update(np.asarray(observation, dtype=np.float64))
+
+    def _norm(self, observation: np.ndarray) -> np.ndarray:
+        return self.obs_rms.normalize(observation) if self.obs_rms is not None else observation
+
     # ------------------------------------------------------------------ #
     # Acting                                                             #
     # ------------------------------------------------------------------ #
@@ -66,7 +82,7 @@ class PPOAgent:
         Returns ``(action, log_prob, value)`` as NumPy/floats. When
         ``deterministic`` is True the policy mean is used (for evaluation).
         """
-        obs = torch.as_tensor(observation, dtype=torch.float32, device=self.device).unsqueeze(0)
+        obs = torch.as_tensor(self._norm(observation), dtype=torch.float32, device=self.device).unsqueeze(0)
         dist, value = self.ac(obs)
         if deterministic:
             action = dist.mean
@@ -82,7 +98,7 @@ class PPOAgent:
     @torch.no_grad()
     def value(self, observation: np.ndarray) -> float:
         """Estimate the state value (used to bootstrap the final GAE step)."""
-        obs = torch.as_tensor(observation, dtype=torch.float32, device=self.device).unsqueeze(0)
+        obs = torch.as_tensor(self._norm(observation), dtype=torch.float32, device=self.device).unsqueeze(0)
         _, value = self.ac(obs)
         return float(value.item())
 
@@ -98,11 +114,21 @@ class PPOAgent:
         """
         policy_losses, value_losses, entropies, clip_fracs = [], [], [], []
 
+        # The buffer stores *raw* observations; normalise them here with the stats
+        # accumulated over the rollout (frozen for the duration of the update).
+        norm_mean = norm_std = None
+        if self.obs_rms is not None:
+            norm_mean = torch.as_tensor(self.obs_rms.mean, dtype=torch.float32, device=self.device)
+            norm_std = torch.as_tensor(
+                np.sqrt(self.obs_rms.var + self.obs_rms.epsilon), dtype=torch.float32, device=self.device
+            )
+
         for _ in range(self.cfg.update_epochs):
             for batch in buffer.iter_minibatches(self.cfg.minibatch_size, self.device):
-                log_probs, entropy, values = self.ac.evaluate(
-                    batch["observations"], batch["actions"]
-                )
+                obs = batch["observations"]
+                if norm_mean is not None:
+                    obs = torch.clamp((obs - norm_mean) / norm_std, -self.obs_rms.clip, self.obs_rms.clip)
+                log_probs, entropy, values = self.ac.evaluate(obs, batch["actions"])
                 ratio = torch.exp(log_probs - batch["old_log_probs"])
                 adv = batch["advantages"]
 
@@ -158,6 +184,7 @@ class PPOAgent:
                 "obs_dim": self.obs_dim,
                 "act_dim": self.act_dim,
                 "config": self.cfg,
+                "obs_rms": self.obs_rms.state_dict() if self.obs_rms is not None else None,
             },
             path,
         )
@@ -167,6 +194,8 @@ class PPOAgent:
         ckpt = torch.load(path, map_location=map_location or self.device, weights_only=False)
         self.ac.load_state_dict(ckpt["model_state"])
         self.optimizer.load_state_dict(ckpt["optimizer_state"])
+        if ckpt.get("obs_rms") is not None:
+            self.obs_rms = RunningNormalizer.from_state_dict(ckpt["obs_rms"])
 
     @classmethod
     def from_checkpoint(
@@ -177,4 +206,6 @@ class PPOAgent:
         ckpt = torch.load(path, map_location=device, weights_only=False)
         agent = cls(ckpt["obs_dim"], ckpt["act_dim"], ckpt["config"], device=device)
         agent.ac.load_state_dict(ckpt["model_state"])
+        if ckpt.get("obs_rms") is not None:
+            agent.obs_rms = RunningNormalizer.from_state_dict(ckpt["obs_rms"])
         return agent
