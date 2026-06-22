@@ -124,6 +124,48 @@ def api_results():
         return jsonify(error=f"results unavailable: {exc}"), 503
 
 
+try:
+    from curl_cffi import requests as _cffi_requests
+    _YF_SESSION = _cffi_requests.Session(impersonate="chrome")  # dodge Yahoo bot rate-limits
+except Exception:  # pragma: no cover - curl_cffi is optional
+    _YF_SESSION = None
+
+
+def _fetch_ohlcv(ticker: str, attempts: int = 3):
+    """Download ~2y of daily OHLCV, retrying transient yfinance failures.
+
+    Returns ``(dataframe, None)`` on success or ``(None, message)`` on failure. A
+    browser-impersonating curl_cffi session (when available) plus a few retries
+    smooth over the rate-limiting / empty-response flakiness that otherwise makes
+    arbitrary-ticker lookups fail intermittently on the free tier.
+    """
+    import yfinance as yf
+    cols = ["open", "high", "low", "close", "volume"]
+    last = "no data returned"
+    for i in range(attempts):
+        try:
+            kw = dict(period="2y", interval="1d", auto_adjust=True, progress=False, threads=False)
+            try:
+                raw = yf.download(ticker, session=_YF_SESSION, **kw) if _YF_SESSION else yf.download(ticker, **kw)
+            except TypeError:  # this yfinance build doesn't accept a session kwarg
+                raw = yf.download(ticker, **kw)
+            if getattr(raw.columns, "nlevels", 1) > 1:  # yfinance MultiIndex
+                raw.columns = raw.columns.get_level_values(0)
+            df = raw.rename(columns=str.lower)
+            if all(c in df.columns for c in cols):
+                df = df[cols].dropna()
+                if len(df) >= 120:
+                    return df, None
+                last = f"only {len(df)} rows of history for {ticker}"
+            else:
+                last = f"no price data returned for {ticker}"
+        except Exception as exc:  # pragma: no cover - network
+            last = f"fetch error: {str(exc)[:100]}"
+        if i < attempts - 1:
+            time.sleep(0.7 * (i + 1))
+    return None, last
+
+
 @app.get("/api/live")
 def api_live():
     """Run the trained agent live on recent real prices for one ticker."""
@@ -137,17 +179,10 @@ def api_live():
     if cached:
         return jsonify(cached)
 
-    try:
-        import yfinance as yf
-        raw = yf.download(ticker, period="2y", interval="1d",
-                          auto_adjust=True, progress=False)
-        if getattr(raw.columns, "nlevels", 1) > 1:  # yfinance returns a MultiIndex
-            raw.columns = raw.columns.get_level_values(0)
-        df = raw.rename(columns=str.lower)[["open", "high", "low", "close", "volume"]].dropna()
-        if len(df) < 120:
-            return jsonify(error=f"not enough data for {ticker}"), 422
-    except Exception as exc:
-        return jsonify(error=f"data fetch failed for {ticker}: {exc}"), 502
+    df, err = _fetch_ohlcv(ticker)
+    if df is None:
+        code = 422 if "rows of history" in err else 502
+        return jsonify(error=err), code
 
     cfg = crypto_config() if market == "crypto" else stock_config()
     data = market_data_from_df(df.reset_index(drop=True))
