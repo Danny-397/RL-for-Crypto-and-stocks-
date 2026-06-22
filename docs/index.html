@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RL·Trader — Reinforcement Learning for Stocks &amp; Crypto</title>
-  <meta name="description" content="A from-scratch PPO reinforcement-learning framework that trains AI agents to trade stocks and crypto across different market regimes." />
+  <meta name="description" content="A from-scratch PPO reinforcement-learning trader for stocks and crypto — with a multi-seed study showing, honestly, that it doesn't reliably beat buy-and-hold." />
   <meta name="theme-color" content="#07090d" />
   <!-- Open Graph / Twitter (nice link unfurls for resumes & shares) -->
   <meta property="og:type" content="website" />
@@ -43,7 +43,8 @@
       <a href="#features">Framework</a>
       <a href="#architecture">Architecture</a>
       <a href="#pipeline">How it works</a>
-      <a href="#results">Experiment</a>
+      <a href="#results">Results</a>
+      <a href="#lab">Lab</a>
     </nav>
     <a class="btn btn-ghost nav-cta" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -56,12 +57,12 @@
     <section class="hero">
       <div class="hero-copy">
         <div class="eyebrow"><span class="pulse"></span> REINFORCEMENT LEARNING &middot; QUANT TRADING</div>
-        <h1>Train AI agents to <span class="grad">trade</span> stocks&nbsp;&amp; crypto.</h1>
+        <h1>I built an RL agent to <span class="grad">trade</span> — then proved it doesn't beat the market.</h1>
         <p class="lede">
-          A from-scratch <strong>PPO</strong> reinforcement-learning framework. One
-          unified agent, two custom market environments, and a disciplined,
-          leakage-controlled pipeline — built to learn how the <em>same</em> strategy
-          adapts across wildly different market regimes.
+          A from-scratch <strong>PPO</strong> agent, two custom market environments,
+          and a leakage-controlled pipeline (train-only scaling, chronological
+          splits) — built to test whether one strategy can adapt to both equities
+          and crypto, and to measure <em>honestly</em> whether it actually works.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">View on GitHub →</a>
@@ -97,18 +98,18 @@
 
     <!-- ───────────────────── STATS STRIP ───────────────────── -->
     <section class="stats">
-      <div class="stat-cell"><div class="num" data-count="2">2</div><div class="lbl">Market environments</div></div>
-      <div class="stat-cell"><div class="num" data-count="1">1</div><div class="lbl">Unified PPO agent</div></div>
+      <div class="stat-cell"><div class="num" data-count="16">16</div><div class="lbl">Real tickers backtested</div></div>
+      <div class="stat-cell"><div class="num" data-count="5">5</div><div class="lbl">Seeds in the significance study</div></div>
+      <div class="stat-cell"><div class="num" data-count="19">19</div><div class="lbl">Engineered features</div></div>
       <div class="stat-cell"><div class="num" data-count="46">46</div><div class="lbl">Tests passing</div></div>
-      <div class="stat-cell"><div class="num" data-count="100">100</div><div class="lbl">% from scratch <span class="pct">%</span></div></div>
     </section>
 
     <!-- ─────────────────────── FEATURES ─────────────────────── -->
     <section id="features" class="section">
       <div class="section-head">
         <div class="kicker">THE FRAMEWORK</div>
-        <h2>Engineered like a research project, not a toy.</h2>
-        <p>Every layer is modular, individually testable, and built with the practices that separate a real RL system from a notebook demo.</p>
+        <h2>Built from the algorithm up.</h2>
+        <p>PPO, both environments, the data pipeline, and the evaluation are implemented here — no <code>stable-baselines</code>, no wrappers. Each layer is a separate, individually tested module.</p>
       </div>
       <div class="grid">
         <article class="card">
@@ -249,14 +250,34 @@
       </div>
     </section>
 
-    <!-- ─────────────────────── LIVE INFERENCE (optional backend) ─────────────────────── -->
-    <section id="live" class="section" hidden>
+    <!-- ─────────────────────── INTERACTIVE LAB ─────────────────────── -->
+    <section id="lab" class="section">
       <div class="section-head">
-        <div class="kicker">LIVE &middot; POWERED BY THE RENDER API</div>
-        <h2>Run the trained agent on live prices.</h2>
-        <p>Pulls ~2 years of real daily data for a ticker and runs the deployed PPO policy in real time — no retraining, just inference.</p>
+        <div class="kicker">INTERACTIVE LAB</div>
+        <h2>Watch it learn — then run it yourself.</h2>
+        <p>Switch between the stock and crypto agents. The first chart is the <strong>actual training run</strong> — episode reward as PPO learns. Then point the trained policy at any ticker and run it live on real prices.</p>
       </div>
-      <div class="panel live-card">
+
+      <div class="dash-toggle lab-toggle" role="tablist" aria-label="Select market">
+        <button class="tg active" data-market="stock" role="tab">📈 Stock</button>
+        <button class="tg" data-market="crypto" role="tab">🪙 Crypto</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Learning curve <span class="muted-sub">does the agent actually improve?</span></h3>
+          <span class="chart-legend"><span class="lg lg-agent">smoothed</span><span class="lg lg-bench">per update</span></span>
+        </div>
+        <canvas id="labLearn" width="980" height="260"></canvas>
+        <p class="lab-caption" id="labCaption"></p>
+      </div>
+
+      <!-- Run it live (needs the optional Render backend; revealed when RL_API is set) -->
+      <div id="live" class="panel live-card" hidden>
+        <div class="panel-head">
+          <h3>Run it live <span class="badge-live">REAL-TIME</span></h3>
+          <span class="muted-sub">deployed policy &middot; live prices &middot; no retraining</span>
+        </div>
         <div class="live-controls">
           <select id="live-market" class="live-select">
             <option value="stock">📈 Stock</option>
@@ -278,8 +299,8 @@
 
     <!-- ─────────────────────── CTA ─────────────────────── -->
     <section class="cta">
-      <h2>Clone it. Train it. Make it yours.</h2>
-      <p>Runs out of the box with zero external data — then point it at real markets.</p>
+      <h2>Clone it. Train it. Break my results.</h2>
+      <p>Runs out of the box with zero external data — then point it at real markets and check the numbers yourself.</p>
       <div class="cta-row">
         <a class="btn btn-primary" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">Explore the repo →</a>
       </div>

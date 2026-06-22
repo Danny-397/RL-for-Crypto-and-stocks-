@@ -356,9 +356,66 @@
     runBtn.addEventListener("click", run);
   }
 
+  // ── interactive lab: learning curve + market switch ─────────
+  function ema(arr, alpha) {
+    if (!arr.length) return arr;
+    let m = arr[0]; const out = [];
+    for (const v of arr) { m = alpha * v + (1 - alpha) * m; out.push(m); }
+    return out;
+  }
+
+  function renderLab(market) {
+    if (!DATA) return;
+    const m = DATA.markets[market];
+    if (!m || !m.training || !m.training.reward) return;
+    const r = m.training.reward;
+    lineChart(document.getElementById("labLearn"), [
+      { data: r, color: "rgba(140,152,168,0.45)", width: 1 },
+      { data: ema(r, 0.15), color: VOLT, width: 2.6, glow: true },
+    ]);
+    const cap = document.getElementById("labCaption");
+    if (cap) {
+      const k = Math.min(5, r.length);
+      const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+      const first = mean(r.slice(0, k)), last = mean(r.slice(-k));
+      const verb = last > first ? "climbed" : "moved";
+      cap.innerHTML =
+        `Mean episode reward ${verb} from <b>${first.toFixed(1)}</b> to ` +
+        `<b>${last.toFixed(1)}</b> over ${r.length} PPO updates — the policy is ` +
+        `learning a strategy. (Reward is the env's risk-adjusted objective, not dollars; ` +
+        `whether that translates to real-market profit is the honest question answered above.)`;
+    }
+  }
+
+  function initLab() {
+    if (!DATA) return;
+    const toggles = document.querySelectorAll(".lab-toggle .tg");
+    const liveMarket = document.getElementById("live-market");
+    toggles.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        toggles.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const mkt = btn.dataset.market;
+        renderLab(mkt);
+        // keep the live-run widget in sync with the chosen market
+        if (liveMarket) { liveMarket.value = mkt; liveMarket.dispatchEvent(new Event("change")); }
+      });
+    });
+    const el = document.getElementById("labLearn");
+    if (el && "IntersectionObserver" in window) {
+      const io = new IntersectionObserver((e) => {
+        if (e[0].isIntersecting) { renderLab("stock"); io.disconnect(); }
+      }, { threshold: 0.2 });
+      io.observe(el);
+    } else {
+      renderLab("stock");
+    }
+  }
+
   // ── boot ────────────────────────────────────────────────────
   initHero();
   initStats();
   initDashboard();
-  initLive();
+  initLive();   // must run before initLab so the live-market change handler exists
+  initLab();
 })();

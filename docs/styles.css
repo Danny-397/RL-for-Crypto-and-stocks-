@@ -361,6 +361,15 @@ h2 {
 #live-chart { width: 100%; height: auto; display: block; }
 .live-card .scorecard { margin-top: 12px; max-width: 420px; }
 
+/* ── Interactive lab ────────────────────────────────────── */
+.lab-toggle { margin-bottom: 18px; }
+#live { margin-top: 22px; }
+.lab-caption {
+  color: var(--muted); font-size: 14px; line-height: 1.6; margin-top: 14px;
+  max-width: 760px;
+}
+.lab-caption b { color: var(--volt); font-family: var(--font-mono); }
+
 /* ── CTA ────────────────────────────────────────────────── */
 .cta {
   max-width: 860px; margin: 40px auto 96px; padding: 64px 32px; text-align: center;
