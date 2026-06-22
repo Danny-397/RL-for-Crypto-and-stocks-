@@ -26,6 +26,7 @@ import numpy as np
 from rl_trader.config.training_config import crypto_config, stock_config
 from rl_trader.data.data_loader import (
     add_technical_indicators,
+    attach_market_index,
     load_ohlcv_csv,
     prepare_market_data,
     synthetic_market_data,
@@ -213,20 +214,11 @@ def load_real_basket(data_dir: str, market: str, train_frac: float = 0.6) -> dic
     look-ahead leakage.
     """
     paths = sorted(glob.glob(os.path.join(data_dir, market, "*.csv")))
-    # Reference market index for cross-asset features (SPY for equities, BTC for
-    # crypto) — already part of the cached basket. Merged onto each ticker by date.
-    index_ticker = "SPY" if market == "stock" else "BTC-USD"
-    index_path = os.path.join(data_dir, market, f"{index_ticker}.csv")
-    market_df = load_ohlcv_csv(index_path)[["date", "close"]].rename(
-        columns={"close": "_mkt_close"}) if os.path.exists(index_path) else None
-
     basket = {}
     for path in paths:
         ticker = os.path.splitext(os.path.basename(path))[0]
-        df = load_ohlcv_csv(path)
-        if market_df is not None:
-            df = df.merge(market_df, on="date", how="left")
-            df["_mkt_close"] = df["_mkt_close"].ffill()
+        # Merge the reference index (SPY/BTC) so the cross-asset features are populated.
+        df = attach_market_index(load_ohlcv_csv(path), data_dir, market)
         splits = prepare_market_data(df, market=market, train_frac=train_frac, val_frac=0.0)
         if len(splits["train"]) > 60 and len(splits["test"]) > 60:
             # Recover the held-out test-window dates (prepare_market_data drops the

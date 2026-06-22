@@ -59,6 +59,30 @@ def load_ohlcv_csv(path: str, date_column: Optional[str] = "date") -> pd.DataFra
     return df
 
 
+def attach_market_index(df: pd.DataFrame, data_dir: str, market: str) -> pd.DataFrame:
+    """Merge the reference-index close onto ``df`` as ``_mkt_close`` (by date).
+
+    Adds the cross-asset context the market features need (SPY for stocks, BTC-USD
+    for crypto). **Every** real-data loader must call this so the agent is scored on
+    the same observation it trained on — otherwise the market features silently read
+    as zero and results diverge. A no-op (returns ``df`` unchanged) if the index CSV
+    is absent or the frame has no ``date`` column.
+    """
+    import glob  # noqa: PLC0415 - local to keep the module import light
+    import os
+
+    if "date" not in df.columns:
+        return df
+    index_ticker = "SPY" if market == "stock" else "BTC-USD"
+    matches = glob.glob(os.path.join(data_dir, market, f"{index_ticker}.csv"))
+    if not matches:
+        return df
+    mkt = load_ohlcv_csv(matches[0])[["date", "close"]].rename(columns={"close": "_mkt_close"})
+    df = df.merge(mkt, on="date", how="left")
+    df["_mkt_close"] = df["_mkt_close"].ffill()
+    return df
+
+
 def generate_synthetic_ohlcv(
     n_steps: int = 4_000,
     start_price: float = 100.0,

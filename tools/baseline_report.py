@@ -17,7 +17,7 @@ import os
 import numpy as np
 
 from rl_trader.config.training_config import crypto_config, stock_config
-from rl_trader.data.data_loader import load_ohlcv_csv, prepare_market_data
+from rl_trader.data.data_loader import attach_market_index, load_ohlcv_csv, prepare_market_data
 from rl_trader.envs import make_env
 from rl_trader.evaluation.baselines import evaluate_baselines
 from rl_trader.evaluation.evaluate_agent import backtest
@@ -28,8 +28,9 @@ def _basket(market: str, data_dir: str = "data/raw"):
     out = {}
     for path in sorted(glob.glob(os.path.join(data_dir, market, "*.csv"))):
         ticker = os.path.splitext(os.path.basename(path))[0]
-        splits = prepare_market_data(load_ohlcv_csv(path), market=market,
-                                     train_frac=0.6, val_frac=0.0)
+        # merge the market index so the cross-asset features match how the agent trained
+        df = attach_market_index(load_ohlcv_csv(path), data_dir, market)
+        splits = prepare_market_data(df, market=market, train_frac=0.6, val_frac=0.0)
         if len(splits["test"]) > 60:
             out[ticker] = splits
     return out
