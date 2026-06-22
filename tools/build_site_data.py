@@ -25,6 +25,7 @@ import numpy as np
 
 from rl_trader.config.training_config import crypto_config, stock_config
 from rl_trader.data.data_loader import (
+    add_technical_indicators,
     load_ohlcv_csv,
     prepare_market_data,
     synthetic_market_data,
@@ -41,6 +42,16 @@ def _downsample(arr, n: int = 160) -> list:
         return [round(float(v), 4) for v in arr]
     idx = np.linspace(0, len(arr) - 1, n).astype(int)
     return [round(float(v), 4) for v in arr[idx]]
+
+
+def _pick(seq, n: int = 160) -> list:
+    """Downsample a non-numeric sequence (e.g. date strings) on the same index
+    grid as :func:`_downsample`, so labels stay aligned with the plotted points."""
+    seq = list(seq)
+    if len(seq) <= n:
+        return seq
+    idx = np.linspace(0, len(seq) - 1, n).astype(int)
+    return [seq[i] for i in idx]
 
 
 def _drawdown(equity) -> list:
@@ -130,6 +141,7 @@ def _aggregate(runs: list, history: dict, cfg) -> dict:
 
     order = np.argsort([r["agent_m"]["total_return"] for r in runs])
     rep = runs[int(order[len(order) // 2])]
+    rep_dates = rep.get("dates", [])
 
     all_actions = np.concatenate([r["res"].actions for r in runs])
     if len(all_actions) > 600:
@@ -141,6 +153,9 @@ def _aggregate(runs: list, history: dict, cfg) -> dict:
         "equity_bench": _downsample(rep["bench_equity"]),
         "drawdown": _downsample(_drawdown(rep["res"].equity_curve)),
         "actions": [round(float(a), 3) for a in all_actions],
+        "start_date": rep_dates[0] if rep_dates else None,
+        "end_date": rep_dates[-1] if rep_dates else None,
+        "dates": _pick(rep_dates[1:]) if rep_dates else None,
         "metrics": agent_metrics,
         "bench_metrics": bench_metrics,
         "win_rate": round(win_rate, 3),
@@ -164,6 +179,8 @@ def _per_ticker_record(run: dict) -> dict:
     """
     res = run["res"]
     prices_aligned = np.asarray(run["prices"], dtype=float)[1:]  # match actions length
+    dates = run.get("dates", [])
+    dates_aligned = dates[1:] if dates else []                   # match actions/price
     agent_m, bench_m = run["agent_m"], run["bench_m"]
     return {
         "ticker": run["ticker"],
@@ -171,6 +188,9 @@ def _per_ticker_record(run: dict) -> dict:
         "equity_bench": _downsample(run["bench_equity"]),
         "price": _downsample(prices_aligned),
         "actions_t": _downsample(res.actions),
+        "dates": _pick(dates_aligned),
+        "start_date": dates[0] if dates else None,
+        "end_date": dates[-1] if dates else None,
         "drawdown": _downsample(_drawdown(res.equity_curve)),
         "metrics": {
             k: round(float(agent_m[k]), 4)
@@ -199,6 +219,12 @@ def load_real_basket(data_dir: str, market: str, train_frac: float = 0.6) -> dic
         df = load_ohlcv_csv(path)
         splits = prepare_market_data(df, market=market, train_frac=train_frac, val_frac=0.0)
         if len(splits["train"]) > 60 and len(splits["test"]) > 60:
+            # Recover the held-out test-window dates (prepare_market_data drops the
+            # date column). The chronological split matches prepare_market_data's:
+            # test = rows[int(n*train_frac):], on the indicator-featured frame.
+            featured = add_technical_indicators(df)
+            train_end = int(len(featured) * train_frac)
+            splits["dates"] = featured["date"].astype(str).str.slice(0, 10).tolist()[train_end:]
             basket[ticker] = splits
     return basket
 
@@ -233,11 +259,13 @@ def run_market_real(market: str, cfg, timesteps: int, seed: int, data_dir: str) 
         res = backtest(agent, env, market=market)
         w = cfg.env.window_size
         prices = test.prices[w - 1 :]
+        dates = basket[t]["dates"][w - 1 :]  # aligned to prices / equity curve
         bench_equity = cfg.env.initial_balance * (prices / prices[0])
         agent_m = dict(res.metrics)
         agent_m["sortino"] = _sortino(res.returns, periods)
         runs.append({
             "res": res, "bench_equity": bench_equity, "ticker": t, "prices": prices,
+            "dates": dates,
             "agent_m": agent_m, "bench_m": compute_metrics(bench_equity, periods),
         })
 

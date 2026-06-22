@@ -15,6 +15,21 @@
   const f2 = (v) => v.toFixed(2);
   const money = (v) => "$" + Math.round(v).toLocaleString("en-US");
 
+  // date helpers (ISO "YYYY-MM-DD" -> "Mon YYYY" / "Mon D, YYYY")
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const fmtMon = (s) => { if (!s) return ""; const [y, m] = s.split("-"); return `${MON[+m - 1]} ${y}`; };
+  const fmtDay = (s) => { if (!s) return ""; const [y, m, d] = s.split("-"); return `${MON[+m - 1]} ${+d}, ${y}`; };
+
+  // what is the agent actually doing? summarise its positions over the run.
+  function behaviorSummary(acts) {
+    if (!acts || !acts.length) return "";
+    let lng = 0, sht = 0, flt = 0, gross = 0;
+    for (const a of acts) { if (a > 0.05) lng++; else if (a < -0.05) sht++; else flt++; gross += Math.abs(a); }
+    const n = acts.length, p = (x) => Math.round((x / n) * 100);
+    return `<b>How it traded:</b> long ${p(lng)}% of the time · short ${p(sht)}% · flat ${p(flt)}% ` +
+      `· avg exposure ${(gross / n).toFixed(2)}×. The return is the cumulative result of those daily position calls — net of costs.`;
+  }
+
   const reduceMotion = window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -181,9 +196,24 @@
     renderScorecard(d);
     drawdownChart(document.getElementById("dashDD"), d.drawdown);
     // per-ticker: bin its position-over-time; basket: pooled action distribution
-    histogram(document.getElementById("dashActions"), sel ? sel.actions_t : m.actions);
+    const actsForBehavior = sel ? sel.actions_t : m.actions;
+    histogram(document.getElementById("dashActions"), actsForBehavior);
     const title = document.getElementById("sel-title");
     if (title) title.innerHTML = (sel ? sel.ticker : "Whole basket (avg)") + ' <span class="badge-live">REAL</span>';
+
+    // dates / period so the user knows WHEN this is from
+    const eqDates = document.getElementById("equityDates");
+    if (eqDates) eqDates.innerHTML = d.start_date
+      ? `<span>${fmtMon(d.start_date)}</span><span>held-out, out-of-sample</span><span>${fmtMon(d.end_date)}</span>`
+      : "";
+    const period = document.getElementById("period");
+    if (period) period.innerHTML = d.start_date
+      ? `Held-out test window: <b>${fmtDay(d.start_date)}</b> → <b>${fmtDay(d.end_date)}</b>`
+      : "";
+    // what the agent actually did to get this result
+    const beh = document.getElementById("behavior");
+    if (beh) beh.innerHTML = behaviorSummary(actsForBehavior);
+
     renderScrubber(sel);
   }
 
@@ -210,6 +240,10 @@
       if (explorer.cursor > range.max) explorer.cursor = range.max;
       range.value = explorer.cursor;
     }
+    const sd = document.getElementById("scrubDates");
+    if (sd) sd.innerHTML = (sel.dates && sel.dates.length)
+      ? `<span>${fmtMon(sel.dates[0])}</span><span>drag to scrub →</span><span>${fmtMon(sel.dates[sel.dates.length - 1])}</span>`
+      : "";
     drawScrub(canvas, sel, explorer.cursor);
     updateScrubReadout(out, sel, explorer.cursor);
   }
@@ -247,11 +281,12 @@
 
   function updateScrubReadout(out, sel, cursor) {
     if (!out) return;
-    const a = sel.actions_t[cursor], p = sel.price[cursor], n = sel.price.length;
+    const a = sel.actions_t[cursor], p = sel.price[cursor];
+    const when = (sel.dates && sel.dates[cursor]) ? fmtDay(sel.dates[cursor]) : `step ${cursor + 1}`;
     const pos = Math.abs(a) < 0.05
       ? '<span class="sig-flat">FLAT</span> (in cash)'
       : `<span class="${a > 0 ? "sig-long" : "sig-short"}">${Math.round(Math.abs(a) * 100)}% ${a > 0 ? "LONG" : "SHORT"}</span>`;
-    out.innerHTML = `Step <b>${cursor + 1}</b> / ${n} &middot; price <b>$${p.toFixed(2)}</b> &middot; agent held ${pos}`;
+    out.innerHTML = `<b>${when}</b> &middot; price <b>$${p.toFixed(2)}</b> &middot; agent held ${pos}`;
   }
 
   // ── hero chart (animated reveal of real stock data) ─────────

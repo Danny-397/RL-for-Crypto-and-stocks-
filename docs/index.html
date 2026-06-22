@@ -223,11 +223,14 @@
             </span>
           </div>
           <canvas id="dashEquity" width="760" height="300"></canvas>
+          <div class="axis-dates" id="equityDates"></div>
         </div>
 
         <div class="panel panel-scorecard">
           <div class="panel-head"><h3>Scorecard</h3><span class="sc-cols">Agent &middot; B&amp;H</span></div>
+          <div class="period" id="period"></div>
           <div class="scorecard" id="scorecard"></div>
+          <div class="behavior" id="behavior"></div>
         </div>
       </div>
 
@@ -239,6 +242,7 @@
         </div>
         <canvas id="scrubChart" width="980" height="240"></canvas>
         <input id="scrubRange" class="scrub-range" type="range" min="0" max="159" value="159" aria-label="Scrub through time" />
+        <div class="axis-dates" id="scrubDates"></div>
         <div class="scrub-readout" id="scrubReadout"></div>
       </div>
 
