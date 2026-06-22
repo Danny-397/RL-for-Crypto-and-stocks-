@@ -361,6 +361,14 @@ h2 {
 #live-chart { width: 100%; height: auto; display: block; }
 .live-card .scorecard { margin-top: 12px; max-width: 420px; }
 
+/* ── Top-level views (Home / Stocks / Crypto tabs) ──────── */
+.view { display: none; }
+.view.active { display: block; animation: view-in .28s ease both; }
+@keyframes view-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.navtab { cursor: pointer; }
+.navtab.active { color: var(--volt); }
+.brand { cursor: pointer; }
+
 /* ── Markets explorer ───────────────────────────────────── */
 /* big primary market tabs */
 .market-tabs { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }

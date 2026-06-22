@@ -39,11 +39,10 @@
       </span>
       <span class="brand-text">RL<span class="dot">·</span>TRADER</span>
     </a>
-    <nav class="nav-links">
-      <a href="#features">Framework</a>
-      <a href="#architecture">Architecture</a>
-      <a href="#pipeline">How it works</a>
-      <a href="#markets">Markets</a>
+    <nav class="nav-links" id="nav-tabs">
+      <a href="#home" class="navtab active" data-view="home">Home</a>
+      <a href="#stocks" class="navtab" data-view="stocks">📈 Stocks</a>
+      <a href="#crypto" class="navtab" data-view="crypto">🪙 Crypto</a>
     </nav>
     <a class="btn btn-ghost nav-cta" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -53,6 +52,8 @@
 
   <!-- ───────────────────────── HERO ───────────────────────── -->
   <main id="top">
+    <!-- ═══════════════════════ HOME VIEW ═══════════════════════ -->
+    <div class="view active" id="view-home">
     <section class="hero">
       <div class="hero-copy">
         <div class="eyebrow"><span class="pulse"></span> REINFORCEMENT LEARNING &middot; QUANT TRADING</div>
@@ -64,8 +65,8 @@
           and crypto, and to measure <em>honestly</em> whether it actually works.
         </p>
         <div class="hero-cta">
-          <a class="btn btn-primary" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">View on GitHub →</a>
-          <a class="btn btn-ghost" href="#pipeline">See how it works</a>
+          <a class="btn btn-primary navtab" data-view="stocks" href="#stocks">Explore the agent →</a>
+          <a class="btn btn-ghost" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">View on GitHub</a>
         </div>
         <div class="hero-tags">
           <span>PPO from scratch</span><span>Gymnasium envs</span><span>PyTorch</span><span>Backtested</span>
@@ -197,23 +198,16 @@
         <div class="step"><div class="step-n">04</div><h3>Backtest</h3><p>Run the trained agent deterministically on the held-out test split and score return, Sharpe, and drawdown.</p></div>
       </div>
     </section>
+    </div><!-- /view-home -->
 
+    <!-- ═══════════════════════ MARKET VIEW (Stocks / Crypto) ═══════════════════════ -->
+    <div class="view" id="view-market">
     <!-- ─────────────────────── MARKETS EXPLORER ─────────────────────── -->
     <section id="markets" class="section">
       <div class="section-head">
-        <div class="kicker">REAL MARKETS &middot; WALK-FORWARD &middot; OUT-OF-SAMPLE</div>
-        <h2>Explore what the agent actually trades.</h2>
-        <p>Pick a market, then click any ticker to see <em>that name's</em> out-of-sample backtest, watch the positions the agent held day by day, and run the policy live on fresh prices. <span class="data-note" id="data-note"></span></p>
-      </div>
-
-      <!-- primary market tabs -->
-      <div class="market-tabs" role="tablist" aria-label="Select market">
-        <button class="mtab active" data-market="stock" role="tab">
-          <span class="mtab-emoji">📈</span><span class="mtab-name">Stocks</span><span class="mtab-sub" id="mtab-sub-stock"></span>
-        </button>
-        <button class="mtab" data-market="crypto" role="tab">
-          <span class="mtab-emoji">🪙</span><span class="mtab-name">Crypto</span><span class="mtab-sub" id="mtab-sub-crypto"></span>
-        </button>
+        <div class="kicker" id="market-kicker">REAL MARKETS &middot; WALK-FORWARD &middot; OUT-OF-SAMPLE</div>
+        <h2 id="market-title">Explore what the agent trades.</h2>
+        <p>Click any ticker to see <em>that name's</em> out-of-sample backtest, scrub through the positions the agent held day by day, and run the policy live on fresh prices. <span class="data-note" id="data-note"></span></p>
       </div>
 
       <!-- basket: clickable tickers (populated from results.js) -->
@@ -298,6 +292,7 @@
 
       <p class="dash-foot">Reproduce: <code>python tools/build_site_data.py --real</code> regenerates every chart here from a fresh, <strong>seeded</strong> training run.</p>
     </section>
+    </div><!-- /view-market -->
 
     <!-- ─────────────────────── CTA ─────────────────────── -->
     <section class="cta">

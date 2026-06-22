@@ -371,8 +371,15 @@
     explorer.market = market;
     explorer.sel = null;
     explorer.cursor = 159;
-    document.querySelectorAll(".market-tabs .mtab").forEach(
-      (b) => b.classList.toggle("active", b.dataset.market === market));
+    const isStock = market === "stock";
+    const m = currentMarket();
+    const n = m && m.per_ticker ? m.per_ticker.length : (m && m.assets ? m.assets.length : 0);
+    const kick = document.getElementById("market-kicker");
+    const title = document.getElementById("market-title");
+    if (kick) kick.textContent = (isStock ? "STOCKS" : "CRYPTO") + " · REAL · WALK-FORWARD · OUT-OF-SAMPLE";
+    if (title) title.textContent = isStock
+      ? `Explore the agent on ${n} real stocks.`
+      : `Explore the agent on ${n} real crypto pairs.`;
     buildBasket();
     renderSelection();
     renderLab(market);
@@ -389,12 +396,6 @@
       note.textContent =
         `Trained on ${DATA.data_source} · ${DATA.timesteps.toLocaleString()} steps · ${DATA.generated}.`;
     }
-    ["stock", "crypto"].forEach((mkt) => {
-      const el = document.getElementById("mtab-sub-" + mkt), m = DATA.markets[mkt];
-      if (el && m) el.textContent = (m.per_ticker ? m.per_ticker.length : (m.assets || []).length) + " names";
-    });
-    document.querySelectorAll(".market-tabs .mtab").forEach(
-      (btn) => btn.addEventListener("click", () => setMarket(btn.dataset.market)));
     const range = document.getElementById("scrubRange");
     if (range) range.addEventListener("input", () => {
       explorer.cursor = parseInt(range.value, 10);
@@ -404,15 +405,37 @@
         updateScrubReadout(document.getElementById("scrubReadout"), sel, explorer.cursor);
       }
     });
-    const anchor = document.getElementById("markets");
-    if (anchor && "IntersectionObserver" in window) {
-      const io = new IntersectionObserver((e) => {
-        if (e[0].isIntersecting) { setMarket("stock"); io.disconnect(); }
-      }, { threshold: 0.05 });
-      io.observe(anchor);
-    } else {
-      setMarket("stock");
-    }
+  }
+
+  // ── top-level routing: Home / Stocks / Crypto tabs ──────────
+  function showView(view) {
+    const isMarket = view === "stocks" || view === "crypto";
+    const home = document.getElementById("view-home");
+    const market = document.getElementById("view-market");
+    if (home) home.classList.toggle("active", view === "home");
+    if (market) market.classList.toggle("active", isMarket);
+    document.querySelectorAll(".navtab").forEach(
+      (a) => a.classList.toggle("active", a.dataset.view === view));
+    if (isMarket) setMarket(view === "stocks" ? "stock" : "crypto");
+    window.scrollTo(0, 0);
+  }
+
+  function initRouter() {
+    const valid = ["home", "stocks", "crypto"];
+    document.querySelectorAll(".navtab").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        const v = a.dataset.view;
+        history.replaceState(null, "", "#" + v);
+        showView(v);
+      });
+    });
+    const brand = document.querySelector(".brand");
+    if (brand) brand.addEventListener("click", (e) => {
+      e.preventDefault(); history.replaceState(null, "", "#home"); showView("home");
+    });
+    const initial = (location.hash || "#home").replace("#", "");
+    showView(valid.includes(initial) ? initial : "home");
   }
 
   // ── live inference widget (optional Render backend) ─────────
@@ -522,6 +545,7 @@
   // ── boot ────────────────────────────────────────────────────
   initHero();
   initStats();
-  initLive();      // must run before the explorer so the live-market change handler exists
-  initExplorer();  // market tabs, clickable basket, scrubber, learning curve, verdict
+  initLive();      // must run before the router so the live-market change handler exists
+  initExplorer();  // data note + scrubber wiring
+  initRouter();    // Home / Stocks / Crypto top-level tabs
 })();
