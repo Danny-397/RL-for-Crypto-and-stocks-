@@ -153,6 +153,37 @@ def _aggregate(runs: list, history: dict, cfg) -> dict:
     }
 
 
+def _per_ticker_record(run: dict) -> dict:
+    """Compact per-ticker payload for the interactive explorer.
+
+    Keeps each named asset's own agent-vs-buy&hold curves, plus the price series
+    and the agent's per-step position (``actions_t``) so the frontend can render a
+    "watch the agent act" scrubber. ``actions`` is one shorter than the equity
+    curve (an action per transition), so the price line is aligned to it by
+    dropping the first bar — that way price[i] and actions_t[i] share an index.
+    """
+    res = run["res"]
+    prices_aligned = np.asarray(run["prices"], dtype=float)[1:]  # match actions length
+    agent_m, bench_m = run["agent_m"], run["bench_m"]
+    return {
+        "ticker": run["ticker"],
+        "equity_agent": _downsample(res.equity_curve),
+        "equity_bench": _downsample(run["bench_equity"]),
+        "price": _downsample(prices_aligned),
+        "actions_t": _downsample(res.actions),
+        "drawdown": _downsample(_drawdown(res.equity_curve)),
+        "metrics": {
+            k: round(float(agent_m[k]), 4)
+            for k in ("total_return", "sharpe", "sortino", "max_drawdown", "final_equity")
+        },
+        "bench_metrics": {
+            k: round(float(bench_m[k]), 4)
+            for k in ("total_return", "sharpe", "max_drawdown", "final_equity")
+        },
+        "latest_action": round(float(res.actions[-1]), 3),
+    }
+
+
 def load_real_basket(data_dir: str, market: str, train_frac: float = 0.6) -> dict:
     """Load every ticker CSV under ``data_dir/market`` into train/test splits.
 
@@ -206,12 +237,13 @@ def run_market_real(market: str, cfg, timesteps: int, seed: int, data_dir: str) 
         agent_m = dict(res.metrics)
         agent_m["sortino"] = _sortino(res.returns, periods)
         runs.append({
-            "res": res, "bench_equity": bench_equity,
+            "res": res, "bench_equity": bench_equity, "ticker": t, "prices": prices,
             "agent_m": agent_m, "bench_m": compute_metrics(bench_equity, periods),
         })
 
     payload = _aggregate(runs, history, cfg)
     payload["assets"] = tickers
+    payload["per_ticker"] = [_per_ticker_record(r) for r in runs]
     return payload
 
 

@@ -361,8 +361,42 @@ h2 {
 #live-chart { width: 100%; height: auto; display: block; }
 .live-card .scorecard { margin-top: 12px; max-width: 420px; }
 
-/* ── Interactive lab ────────────────────────────────────── */
-.lab-toggle { margin-bottom: 18px; }
+/* ── Markets explorer ───────────────────────────────────── */
+/* big primary market tabs */
+.market-tabs { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.mtab {
+  flex: 1; min-width: 200px; display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px; cursor: pointer; text-align: left;
+  background: var(--surface); border: 1px solid var(--border-2); border-radius: 14px;
+  color: var(--muted); font-family: var(--font-display); font-size: 20px; font-weight: 600;
+  transition: border-color .15s ease, color .15s ease, transform .15s ease;
+}
+.mtab:hover { color: var(--text); transform: translateY(-2px); }
+.mtab.active { color: var(--text); border-color: transparent;
+  box-shadow: inset 0 0 0 2px var(--volt), 0 8px 30px rgba(212,255,63,0.08); }
+.mtab-emoji { font-size: 24px; }
+.mtab-sub { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--faint); }
+
+/* clickable basket of named tickers */
+.basket { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+.chip {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 500;
+  padding: 7px 13px; border-radius: 999px; cursor: pointer;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border-2); color: var(--muted);
+  transition: color .12s ease, border-color .12s ease, background .12s ease;
+}
+.chip:hover { color: var(--text); border-color: var(--cyan); }
+.chip.active { color: #06210f; background: var(--grad); border-color: transparent; font-weight: 700; }
+
+/* "watch the agent act" scrubber */
+.scrub-range { width: 100%; margin: 12px 0 8px; accent-color: var(--volt); cursor: pointer; }
+.scrub-readout { font-family: var(--font-mono); font-size: 13px; color: var(--muted); min-height: 20px; }
+.scrub-readout b { color: var(--text); }
+.lg-long::before { background: var(--volt); }
+.lg-short::before { background: var(--neg); }
+.lg-flat::before { background: var(--faint); }
+
+/* learning-curve caption + live widget spacing */
 #live { margin-top: 22px; }
 .lab-caption {
   color: var(--muted); font-size: 14px; line-height: 1.6; margin-top: 14px;

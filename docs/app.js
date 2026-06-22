@@ -159,18 +159,99 @@
       </div>`).join("");
   }
 
-  // ── render one market into the dashboard ────────────────────
-  function renderMarket(market) {
+  // ── markets explorer: state + per-asset rendering ──────────
+  const explorer = { market: "stock", sel: null /* per_ticker obj, or null = basket avg */, cursor: 159 };
+  const currentMarket = () => DATA.markets[explorer.market];
+
+  const VERDICT = {
+    stock: "On a <b>single favorable seed</b> the stock agent roughly breaks even — but a 2021&ndash;2025 mega-cap bull (+212%) runs away from it. Across <b>5 seeds</b> it is <b>significantly worse</b> than buy-&amp;-hold (mean &minus;13%, 95% CI [&minus;26%, &minus;2%], p&thinsp;&approx;&thinsp;0.002).",
+    crypto: "On a <b>single favorable seed</b> the crypto agent can look like it beats buy-&amp;-hold. Across <b>5 seeds</b> that edge <b>evaporates</b> — mean &minus;17%, 95% CI [&minus;55%, +24%], statistically indistinguishable from buy-&amp;-hold (p&thinsp;&approx;&thinsp;0.78).",
+  };
+  const VERDICT_TAIL = ' There is <b>no reliable, seed-robust edge</b> on real markets — exactly what market efficiency predicts, and the honest result the <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">multi-seed study</a> is built to catch.';
+
+  function renderSelection() {
     if (!DATA) return;
-    const m = DATA.markets[market];
-    if (!m) return;
+    const m = currentMarket();
+    const sel = explorer.sel;          // null => whole-basket aggregate
+    const d = sel || m;
     lineChart(document.getElementById("dashEquity"), [
-      { data: m.equity_bench, color: BENCH, width: 2 },
-      { data: m.equity_agent, color: VOLT, width: 2.6, glow: true, fill: true, head: true },
+      { data: d.equity_bench, color: BENCH, width: 2 },
+      { data: d.equity_agent, color: VOLT, width: 2.6, glow: true, fill: true, head: true },
     ]);
-    drawdownChart(document.getElementById("dashDD"), m.drawdown);
-    histogram(document.getElementById("dashActions"), m.actions);
-    renderScorecard(m);
+    renderScorecard(d);
+    drawdownChart(document.getElementById("dashDD"), d.drawdown);
+    // per-ticker: bin its position-over-time; basket: pooled action distribution
+    histogram(document.getElementById("dashActions"), sel ? sel.actions_t : m.actions);
+    const title = document.getElementById("sel-title");
+    if (title) title.innerHTML = (sel ? sel.ticker : "Whole basket (avg)") + ' <span class="badge-live">REAL</span>';
+    renderScrubber(sel);
+  }
+
+  // ── "watch the agent act": price + the position the agent held ──
+  function renderScrubber(sel) {
+    const canvas = document.getElementById("scrubChart");
+    const range = document.getElementById("scrubRange");
+    const out = document.getElementById("scrubReadout");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!sel || !sel.price || !sel.actions_t) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "rgba(231,237,245,0.45)";
+      ctx.font = "15px Inter, system-ui, sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("Pick a single ticker above to watch the agent's positions play out.",
+        canvas.width / 2, canvas.height / 2);
+      if (range) range.style.display = "none";
+      if (out) out.innerHTML = "";
+      return;
+    }
+    if (range) {
+      range.style.display = "";
+      range.max = sel.price.length - 1;
+      if (explorer.cursor > range.max) explorer.cursor = range.max;
+      range.value = explorer.cursor;
+    }
+    drawScrub(canvas, sel, explorer.cursor);
+    updateScrubReadout(out, sel, explorer.cursor);
+  }
+
+  function drawScrub(canvas, sel, cursor) {
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width, H = canvas.height, pad = { l: 10, r: 10, t: 14, b: 14 };
+    const price = sel.price, acts = sel.actions_t, n = price.length;
+    ctx.clearRect(0, 0, W, H);
+    let lo = Math.min.apply(null, price), hi = Math.max.apply(null, price);
+    const span = (hi - lo) || 1; lo -= span * 0.06; hi += span * 0.06;
+    const X = (i) => pad.l + (n <= 1 ? 0 : (i / (n - 1)) * (W - pad.l - pad.r));
+    const Y = (v) => pad.t + (1 - (v - lo) / (hi - lo)) * (H - pad.t - pad.b);
+    const colW = (W - pad.l - pad.r) / (n - 1);
+    // shade the background by the position the agent held (green long / red short)
+    for (let i = 0; i < n; i++) {
+      const a = acts[i];
+      if (Math.abs(a) < 0.05) continue;
+      ctx.fillStyle = a > 0 ? "rgba(212,255,63,0.10)" : "rgba(255,107,107,0.13)";
+      ctx.fillRect(X(i) - colW / 2, pad.t, colW + 1, H - pad.t - pad.b);
+    }
+    // price line
+    ctx.beginPath(); ctx.moveTo(X(0), Y(price[0]));
+    for (let i = 1; i < n; i++) ctx.lineTo(X(i), Y(price[i]));
+    ctx.strokeStyle = "rgba(231,237,245,0.85)"; ctx.lineWidth = 1.8; ctx.lineJoin = "round"; ctx.stroke();
+    // cursor
+    const cx = X(cursor), a = acts[cursor];
+    ctx.strokeStyle = "rgba(54,224,255,0.9)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, H - pad.b); ctx.stroke();
+    ctx.fillStyle = a > 0.05 ? VOLT : (a < -0.05 ? "#ff6b6b" : "#8a97a8");
+    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(cx, Y(price[cursor]), 4.2, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  function updateScrubReadout(out, sel, cursor) {
+    if (!out) return;
+    const a = sel.actions_t[cursor], p = sel.price[cursor], n = sel.price.length;
+    const pos = Math.abs(a) < 0.05
+      ? '<span class="sig-flat">FLAT</span> (in cash)'
+      : `<span class="${a > 0 ? "sig-long" : "sig-short"}">${Math.round(Math.abs(a) * 100)}% ${a > 0 ? "LONG" : "SHORT"}</span>`;
+    out.innerHTML = `Step <b>${cursor + 1}</b> / ${n} &middot; price <b>$${p.toFixed(2)}</b> &middot; agent held ${pos}`;
   }
 
   // ── hero chart (animated reveal of real stock data) ─────────
@@ -253,33 +334,84 @@
     nums.forEach((n) => io.observe(n));
   }
 
-  // ── data note + market toggle ───────────────────────────────
-  function initDashboard() {
+  // ── explorer controller: market tabs + clickable basket ─────
+  function syncLiveTicker(market, ticker) {
+    const ms = document.getElementById("live-market");
+    const ts = document.getElementById("live-ticker");
+    if (ms && ms.value !== market) { ms.value = market; ms.dispatchEvent(new Event("change")); }
+    if (ts && ticker) {
+      if (![...ts.options].some((o) => o.value === ticker)) {
+        const o = document.createElement("option"); o.textContent = ticker; ts.appendChild(o);
+      }
+      ts.value = ticker;
+    }
+  }
+
+  function buildBasket() {
+    const wrap = document.getElementById("basket");
+    if (!wrap) return;
+    const tickers = currentMarket().per_ticker || [];
+    wrap.innerHTML =
+      '<button class="chip active" data-idx="-1">◎ Whole basket</button>' +
+      tickers.map((t, i) => `<button class="chip" data-idx="${i}">${t.ticker}</button>`).join("");
+    wrap.querySelectorAll(".chip").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const idx = parseInt(btn.dataset.idx, 10);
+        explorer.sel = idx < 0 ? null : currentMarket().per_ticker[idx];
+        explorer.cursor = (explorer.sel && explorer.sel.price) ? explorer.sel.price.length - 1 : 159;
+        renderSelection();
+        if (explorer.sel) syncLiveTicker(explorer.market, explorer.sel.ticker);
+      });
+    });
+  }
+
+  function setMarket(market) {
+    explorer.market = market;
+    explorer.sel = null;
+    explorer.cursor = 159;
+    document.querySelectorAll(".market-tabs .mtab").forEach(
+      (b) => b.classList.toggle("active", b.dataset.market === market));
+    buildBasket();
+    renderSelection();
+    renderLab(market);
+    const v = document.getElementById("verdict");
+    if (v) v.innerHTML = `<strong>📌 The honest verdict.</strong> ${VERDICT[market]}${VERDICT_TAIL}`;
+    const ms = document.getElementById("live-market");
+    if (ms && ms.value !== market) { ms.value = market; ms.dispatchEvent(new Event("change")); }
+  }
+
+  function initExplorer() {
     if (!DATA) return;
     const note = document.getElementById("data-note");
     if (note) {
-      const nEval = (DATA.markets.stock && DATA.markets.stock.n_eval) || null;
-      const evalStr = nEval ? ` · mean over ${nEval} held-out paths` : "";
       note.textContent =
-        `Trained on ${DATA.data_source} · ${DATA.timesteps.toLocaleString()} steps${evalStr} · ${DATA.generated}.`;
+        `Trained on ${DATA.data_source} · ${DATA.timesteps.toLocaleString()} steps · ${DATA.generated}.`;
     }
-    const toggles = document.querySelectorAll(".tg");
-    toggles.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        toggles.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        renderMarket(btn.dataset.market);
-      });
+    ["stock", "crypto"].forEach((mkt) => {
+      const el = document.getElementById("mtab-sub-" + mkt), m = DATA.markets[mkt];
+      if (el && m) el.textContent = (m.per_ticker ? m.per_ticker.length : (m.assets || []).length) + " names";
     });
-    // Render the default market once the dashboard scrolls into view.
-    const dash = document.querySelector(".dash-grid");
-    if (dash && "IntersectionObserver" in window) {
+    document.querySelectorAll(".market-tabs .mtab").forEach(
+      (btn) => btn.addEventListener("click", () => setMarket(btn.dataset.market)));
+    const range = document.getElementById("scrubRange");
+    if (range) range.addEventListener("input", () => {
+      explorer.cursor = parseInt(range.value, 10);
+      const sel = explorer.sel;
+      if (sel && sel.price) {
+        drawScrub(document.getElementById("scrubChart"), sel, explorer.cursor);
+        updateScrubReadout(document.getElementById("scrubReadout"), sel, explorer.cursor);
+      }
+    });
+    const anchor = document.getElementById("markets");
+    if (anchor && "IntersectionObserver" in window) {
       const io = new IntersectionObserver((e) => {
-        if (e[0].isIntersecting) { renderMarket("stock"); io.disconnect(); }
-      }, { threshold: 0.15 });
-      io.observe(dash);
+        if (e[0].isIntersecting) { setMarket("stock"); io.disconnect(); }
+      }, { threshold: 0.05 });
+      io.observe(anchor);
     } else {
-      renderMarket("stock");
+      setMarket("stock");
     }
   }
 
@@ -387,35 +519,9 @@
     }
   }
 
-  function initLab() {
-    if (!DATA) return;
-    const toggles = document.querySelectorAll(".lab-toggle .tg");
-    const liveMarket = document.getElementById("live-market");
-    toggles.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        toggles.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        const mkt = btn.dataset.market;
-        renderLab(mkt);
-        // keep the live-run widget in sync with the chosen market
-        if (liveMarket) { liveMarket.value = mkt; liveMarket.dispatchEvent(new Event("change")); }
-      });
-    });
-    const el = document.getElementById("labLearn");
-    if (el && "IntersectionObserver" in window) {
-      const io = new IntersectionObserver((e) => {
-        if (e[0].isIntersecting) { renderLab("stock"); io.disconnect(); }
-      }, { threshold: 0.2 });
-      io.observe(el);
-    } else {
-      renderLab("stock");
-    }
-  }
-
   // ── boot ────────────────────────────────────────────────────
   initHero();
   initStats();
-  initDashboard();
-  initLive();   // must run before initLab so the live-market change handler exists
-  initLab();
+  initLive();      // must run before the explorer so the live-market change handler exists
+  initExplorer();  // market tabs, clickable basket, scrubber, learning curve, verdict
 })();

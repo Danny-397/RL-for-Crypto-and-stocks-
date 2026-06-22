@@ -43,8 +43,7 @@
       <a href="#features">Framework</a>
       <a href="#architecture">Architecture</a>
       <a href="#pipeline">How it works</a>
-      <a href="#results">Results</a>
-      <a href="#lab">Lab</a>
+      <a href="#markets">Markets</a>
     </nav>
     <a class="btn btn-ghost nav-cta" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -199,83 +198,84 @@
       </div>
     </section>
 
-    <!-- ─────────────────────── RESULTS DASHBOARD ─────────────────────── -->
-    <section id="results" class="section">
+    <!-- ─────────────────────── MARKETS EXPLORER ─────────────────────── -->
+    <section id="markets" class="section">
       <div class="section-head">
         <div class="kicker">REAL MARKETS &middot; WALK-FORWARD &middot; OUT-OF-SAMPLE</div>
-        <h2>The honest numbers, on real market data.</h2>
-        <p>No cherry-picking: each PPO agent trains on the older history of a basket of real tickers, then is backtested on the <strong>recent, held-out period</strong> of every ticker — against buy-&amp;-hold. <span class="data-note" id="data-note"></span></p>
+        <h2>Explore what the agent actually trades.</h2>
+        <p>Pick a market, then click any ticker to see <em>that name's</em> out-of-sample backtest, watch the positions the agent held day by day, and run the policy live on fresh prices. <span class="data-note" id="data-note"></span></p>
       </div>
 
-      <div class="honest-note">
-        <strong>📌 How to read this.</strong> These numbers are <strong>one favorable training seed</strong> — and on it the crypto agent looks like it beats buy-&amp;-hold. Don't be fooled: re-run across many seeds and the edge <strong>evaporates</strong> (mean &minus;17%, a confidence interval straddling zero, statistically indistinguishable from buy-&amp;-hold; equities is significantly worse). There is <strong>no reliable, seed-robust edge</strong> on real markets — exactly what market efficiency predicts. The
-        <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">multi-seed significance study</a> is what catches that false positive — and that discipline, not a fantasy return, is the contribution.
+      <!-- primary market tabs -->
+      <div class="market-tabs" role="tablist" aria-label="Select market">
+        <button class="mtab active" data-market="stock" role="tab">
+          <span class="mtab-emoji">📈</span><span class="mtab-name">Stocks</span><span class="mtab-sub" id="mtab-sub-stock"></span>
+        </button>
+        <button class="mtab" data-market="crypto" role="tab">
+          <span class="mtab-emoji">🪙</span><span class="mtab-name">Crypto</span><span class="mtab-sub" id="mtab-sub-crypto"></span>
+        </button>
       </div>
 
-      <div class="dash">
-        <div class="dash-toggle" role="tablist" aria-label="Select market">
-          <button class="tg active" data-market="stock" role="tab">📈 Stock</button>
-          <button class="tg" data-market="crypto" role="tab">🪙 Crypto</button>
+      <!-- basket: clickable tickers (populated from results.js) -->
+      <div class="basket" id="basket" aria-label="Select an asset"></div>
+
+      <div class="dash-grid">
+        <div class="panel panel-equity">
+          <div class="panel-head">
+            <h3 id="sel-title">Equity curve <span class="badge-live">REAL</span></h3>
+            <span class="chart-legend">
+              <span class="lg lg-agent">PPO Agent</span>
+              <span class="lg lg-bench">Buy &amp; Hold</span>
+            </span>
+          </div>
+          <canvas id="dashEquity" width="760" height="300"></canvas>
         </div>
 
-        <div class="dash-grid">
-          <div class="panel panel-equity">
-            <div class="panel-head">
-              <h3>Equity curve <span class="badge-live">REAL</span></h3>
-              <span class="chart-legend">
-                <span class="lg lg-agent">PPO Agent</span>
-                <span class="lg lg-bench">Buy &amp; Hold</span>
-              </span>
-            </div>
-            <canvas id="dashEquity" width="760" height="300"></canvas>
-          </div>
-
-          <div class="panel panel-scorecard">
-            <div class="panel-head"><h3>Scorecard</h3><span class="sc-cols">Agent &middot; B&amp;H</span></div>
-            <div class="scorecard" id="scorecard"></div>
-          </div>
-
-          <div class="panel panel-dd">
-            <div class="panel-head"><h3>Agent drawdown</h3></div>
-            <canvas id="dashDD" width="760" height="150"></canvas>
-          </div>
-
-          <div class="panel panel-actions">
-            <div class="panel-head"><h3>Action distribution</h3><span class="muted-sub">target position</span></div>
-            <canvas id="dashActions" width="380" height="170"></canvas>
-          </div>
+        <div class="panel panel-scorecard">
+          <div class="panel-head"><h3>Scorecard</h3><span class="sc-cols">Agent &middot; B&amp;H</span></div>
+          <div class="scorecard" id="scorecard"></div>
         </div>
-
-        <p class="dash-foot">Reproduce locally: <code>python tools/build_site_data.py</code> regenerates this dashboard from a fresh training run. Point it at real CSVs to publish real-market backtests.</p>
-      </div>
-    </section>
-
-    <!-- ─────────────────────── INTERACTIVE LAB ─────────────────────── -->
-    <section id="lab" class="section">
-      <div class="section-head">
-        <div class="kicker">INTERACTIVE LAB</div>
-        <h2>Watch it learn — then run it yourself.</h2>
-        <p>Switch between the stock and crypto agents. The first chart is the <strong>actual training run</strong> — episode reward as PPO learns. Then point the trained policy at any ticker and run it live on real prices.</p>
       </div>
 
-      <div class="dash-toggle lab-toggle" role="tablist" aria-label="Select market">
-        <button class="tg active" data-market="stock" role="tab">📈 Stock</button>
-        <button class="tg" data-market="crypto" role="tab">🪙 Crypto</button>
-      </div>
-
+      <!-- watch the agent act: price + the position it held, scrubbable -->
       <div class="panel">
         <div class="panel-head">
-          <h3>Learning curve <span class="muted-sub">does the agent actually improve?</span></h3>
+          <h3>Watch the agent act <span class="muted-sub">price &amp; the position it held</span></h3>
+          <span class="chart-legend"><span class="lg lg-long">long</span><span class="lg lg-short">short</span><span class="lg lg-flat">flat</span></span>
+        </div>
+        <canvas id="scrubChart" width="980" height="240"></canvas>
+        <input id="scrubRange" class="scrub-range" type="range" min="0" max="159" value="159" aria-label="Scrub through time" />
+        <div class="scrub-readout" id="scrubReadout"></div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="panel panel-dd">
+          <div class="panel-head"><h3>Agent drawdown</h3></div>
+          <canvas id="dashDD" width="760" height="150"></canvas>
+        </div>
+        <div class="panel panel-actions">
+          <div class="panel-head"><h3>Action distribution</h3><span class="muted-sub">target position over the run</span></div>
+          <canvas id="dashActions" width="380" height="170"></canvas>
+        </div>
+      </div>
+
+      <!-- how it learned (training reward) -->
+      <div class="panel">
+        <div class="panel-head">
+          <h3>How it learned <span class="muted-sub">episode reward over training</span></h3>
           <span class="chart-legend"><span class="lg lg-agent">smoothed</span><span class="lg lg-bench">per update</span></span>
         </div>
-        <canvas id="labLearn" width="980" height="260"></canvas>
+        <canvas id="labLearn" width="980" height="240"></canvas>
         <p class="lab-caption" id="labCaption"></p>
       </div>
 
-      <!-- Run it live (needs the optional Render backend; revealed when RL_API is set) -->
+      <!-- honest verdict, per market (populated by app.js) -->
+      <div class="honest-note" id="verdict"></div>
+
+      <!-- run it live (needs the optional Render backend; revealed when RL_API is set) -->
       <div id="live" class="panel live-card" hidden>
         <div class="panel-head">
-          <h3>Run it live <span class="badge-live">REAL-TIME</span></h3>
+          <h3>Run it live on the selected asset <span class="badge-live">REAL-TIME</span></h3>
           <span class="muted-sub">deployed policy &middot; live prices &middot; no retraining</span>
         </div>
         <div class="live-controls">
@@ -295,6 +295,8 @@
         <canvas id="live-chart" width="760" height="280"></canvas>
         <div class="scorecard" id="live-scorecard"></div>
       </div>
+
+      <p class="dash-foot">Reproduce: <code>python tools/build_site_data.py --real</code> regenerates every chart here from a fresh, <strong>seeded</strong> training run.</p>
     </section>
 
     <!-- ─────────────────────── CTA ─────────────────────── -->
