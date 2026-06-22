@@ -20,8 +20,8 @@ help:
 	@echo "all         lint + test"
 
 install:
-	$(PY) -m pip install -r requirements.txt
-	$(PY) -m pip install pytest ruff yfinance
+	$(PY) -m pip install -e .          # full dev/training env (torch, matplotlib, …)
+	$(PY) -m pip install pytest ruff
 
 test:
 	$(PY) -m pytest -q

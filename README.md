@@ -189,10 +189,10 @@ docs/                # data-driven web dashboard + figures (GitHub Pages ready)
 ## Quick start
 
 ```bash
-# 1. Install
+# 1. Install — `pip install -e .` is the FULL dev/training env (pulls torch etc.).
+#    `requirements.txt` alone is the lightweight, torch-free *serving* set.
 python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-pip install -e .                                      # optional: editable install
+pip install -e .                                      # training + research (torch, matplotlib, …)
 
 # 2. Train (uses a built-in synthetic data generator — no downloads needed)
 python -m rl_trader.scripts.run_stock_training  --timesteps 50000
