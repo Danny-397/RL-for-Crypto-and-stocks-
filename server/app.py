@@ -154,7 +154,8 @@ def _fetch_ohlcv(ticker: str, attempts: int = 3):
             df = raw.rename(columns=str.lower)
             if all(c in df.columns for c in cols):
                 df = df[cols].dropna()
-                if len(df) >= 120:
+                # need enough rows to survive the ~120-bar feature warm-up + a window
+                if len(df) >= 200:
                     return df, None
                 last = f"only {len(df)} rows of history for {ticker}"
             else:
@@ -164,6 +165,21 @@ def _fetch_ohlcv(ticker: str, attempts: int = 3):
         if i < attempts - 1:
             time.sleep(0.7 * (i + 1))
     return None, last
+
+
+_INDEX_CACHE: dict = {}
+
+
+def _market_index(market: str):
+    """Fetch (and briefly cache) the reference index OHLCV for cross-asset features."""
+    tk = "SPY" if market == "stock" else "BTC-USD"
+    hit = _INDEX_CACHE.get(tk)
+    if hit and (time.time() - hit[0]) < 1800:  # 30-min TTL
+        return hit[1]
+    df, _err = _fetch_ohlcv(tk)
+    if df is not None:
+        _INDEX_CACHE[tk] = (time.time(), df)
+    return df
 
 
 @app.get("/api/live")
@@ -183,6 +199,14 @@ def api_live():
     if df is None:
         code = 422 if "rows of history" in err else 502
         return jsonify(error=err), code
+
+    # cross-asset context: align the market index (SPY / BTC) onto this ticker so
+    # the relative-strength + market-regime features match how the agent trained.
+    # Best-effort — if the index can't be fetched, those features stay neutral.
+    idx = _market_index(market)
+    if idx is not None:
+        df = df.copy()
+        df["_mkt_close"] = idx["close"].reindex(df.index).ffill().bfill()
 
     cfg = crypto_config() if market == "crypto" else stock_config()
     data = market_data_from_df(df.reset_index(drop=True))

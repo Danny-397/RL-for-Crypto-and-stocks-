@@ -179,10 +179,10 @@
   const currentMarket = () => DATA.markets[explorer.market];
 
   const VERDICT = {
-    stock: "On a <b>single favorable seed</b> the stock agent roughly breaks even — but a 2021&ndash;2025 mega-cap bull (+212%) runs away from it. Across <b>5 seeds</b> it is <b>significantly worse</b> than buy-&amp;-hold (mean &minus;13%, 95% CI [&minus;26%, &minus;2%], p&thinsp;&approx;&thinsp;0.002).",
-    crypto: "On a <b>single favorable seed</b> the crypto agent can look like it beats buy-&amp;-hold. Across <b>5 seeds</b> that edge <b>evaporates</b> — mean &minus;17%, 95% CI [&minus;55%, +24%], statistically indistinguishable from buy-&amp;-hold (p&thinsp;&approx;&thinsp;0.78).",
+    stock: "On the displayed seed the stock agent roughly breaks even, while a multi-year mega-cap bull runs away from it. It does <b>not</b> reliably beat buy-&amp;-hold.",
+    crypto: "On the displayed seed the crypto agent can look like it <i>crushes</i> buy-&amp;-hold — but one backtest is not evidence. Across seeds and rebuilds that result swings wildly (from roughly break-even to several hundred percent), which is exactly why no single number is trustworthy.",
   };
-  const VERDICT_TAIL = ' There is <b>no reliable, seed-robust edge</b> on real markets — exactly what market efficiency predicts, and the honest result the <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">multi-seed study</a> is built to catch.';
+  const VERDICT_TAIL = ' A <b>multi-seed permutation study</b> (<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>) finds <b>no reliable, seed-robust edge</b> on real markets — exactly what market efficiency predicts. That honest finding, not any single backtest, is the result.';
 
   function renderSelection() {
     if (!DATA) return;

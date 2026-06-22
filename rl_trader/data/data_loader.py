@@ -220,6 +220,36 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     out["volume_change"] = out["volume"].pct_change()
     out["volume_zscore"] = _zscore(out["volume"], 20)
 
+    # --- Longer-horizon momentum, trend, and risk regime. These look-backs give
+    # the policy the *market context* the short windows miss: a durable multi-month
+    # trend, how deep the current drawdown is, and whether volatility is expanding.
+    out["return_60"] = close.pct_change(60)
+    out["return_120"] = close.pct_change(120)
+    out["sma_100_ratio"] = close / close.rolling(100).mean() - 1.0
+    # Distance below the trailing ~6-month high (<= 0): a drawdown / risk-off signal.
+    out["high_120_dist"] = close / out["high"].rolling(120).max() - 1.0
+    # Volatility regime: short vs longer realised vol (>0 expanding, <0 contracting).
+    vol_60 = out["return_1"].rolling(60).std()
+    out["vol_ratio"] = out["volatility_10"] / (vol_60 + 1e-8) - 1.0
+
+    # --- Market context (cross-asset). When a reference-index close is supplied via
+    # a `_mkt_close` column (e.g. SPY for stocks, BTC-USD for crypto), encode the
+    # asset's strength *relative to the market* and the market's own trend/momentum —
+    # genuinely exogenous information a single ticker's OHLCV can't provide. Absent a
+    # reference, these default to 0.0 so the feature vector stays a fixed width.
+    if "_mkt_close" in out.columns:
+        mkt = out["_mkt_close"]
+        out["rel_return_5"] = close.pct_change(5) - mkt.pct_change(5)
+        out["rel_return_20"] = close.pct_change(20) - mkt.pct_change(20)
+        out["market_trend"] = mkt / mkt.rolling(50).mean() - 1.0
+        out["market_ret_20"] = mkt.pct_change(20)
+        out = out.drop(columns=["_mkt_close"])
+    else:
+        out["rel_return_5"] = 0.0
+        out["rel_return_20"] = 0.0
+        out["market_trend"] = 0.0
+        out["market_ret_20"] = 0.0
+
     return out.replace([np.inf, -np.inf], np.nan).dropna().reset_index(drop=True)
 
 
@@ -252,6 +282,17 @@ FEATURE_COLUMNS: List[str] = [
     "high_low_range",
     "volume_change",
     "volume_zscore",
+    # longer-horizon momentum / trend / risk regime
+    "return_60",
+    "return_120",
+    "sma_100_ratio",
+    "high_120_dist",
+    "vol_ratio",
+    # market context (cross-asset; relative strength + market regime)
+    "rel_return_5",
+    "rel_return_20",
+    "market_trend",
+    "market_ret_20",
 ]
 
 

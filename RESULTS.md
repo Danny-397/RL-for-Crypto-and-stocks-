@@ -37,7 +37,7 @@ fantasy money-machine.
 |---|---|
 | **Algorithm** | PPO implemented from scratch in PyTorch (clipped objective, GAE, entropy bonus, orthogonal init, grad clipping) — plus a fully-implemented **recurrent (LSTM) PPO** variant (truncated BPTT) |
 | **Environments** | Custom Gymnasium `StockTradingEnv` / `CryptoTradingEnv` over a shared base; continuous target-position actions in `[-1, 1]`; transaction costs + slippage |
-| **Features** | **19 engineered, stationary features** per bar — multi-horizon momentum, MA/EMA ratios, RSI, MACD, Bollinger %B, Donchian position, ATR, a volatility-regime z-score, and volume microstructure — over a rolling window |
+| **Features** | **28 engineered, stationary features** per bar — multi-horizon momentum (1–120 bar), MA/EMA ratios, RSI, MACD, Bollinger %B, Donchian position, ATR, volatility-regime signals, distance-below-trailing-high, volume microstructure, and **cross-asset context** (relative strength vs. SPY/BTC + market trend/momentum) — over a rolling window |
 | **Reward** | Selectable: risk-aware net return (return − drawdown − turnover) **or** the **Differential Sharpe Ratio** (Moody & Saffell, 1998) |
 | **Training** | Running (Welford) observation normalisation, exported and applied at serve time; fully seeded (Torch + NumPy + env RNG) so runs are reproducible |
 | **Real data** | 10 equities + 6 crypto pairs, daily OHLCV, ~10 yrs (Yahoo Finance) |
@@ -240,8 +240,13 @@ exploitable cross-sectional signal, so equal-weight diversification is hard to b
 
 - **Signal is the bottleneck, not the agent.** Across single-asset *and*
   cross-sectional setups, the ceiling is the data: raw daily OHLCV carries little
-  exploitable structure. The most impactful next step is richer, lower-noise
-  features (regime labels, alt-data, longer horizons) rather than a bigger network.
+  exploitable structure. The feature set now spans 28 indicators — including
+  longer-horizon momentum, long-trend, drawdown-from-high, a volatility-regime
+  ratio, and **cross-asset context** (relative strength vs. SPY/BTC + market
+  trend/momentum), which adds genuinely exogenous information beyond a single
+  ticker's OHLCV. The remaining levers are *more* exogenous data: macro series
+  (VIX, rates, the dollar) and ultimately fundamentals / news sentiment — not a
+  bigger network.
 - **Real-data walk-forward could be multi-*fold*** (the `evaluation/walk_forward.py`
   splitter is built for this) — §5 already adds multi-*seed* CIs on the real basket;
   rolling re-training folds would add a second axis of robustness.

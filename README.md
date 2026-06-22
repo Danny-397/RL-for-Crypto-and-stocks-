@@ -114,14 +114,18 @@ to historical price paths. This framework is a disciplined attempt to do RL trad
         └─────────────────────────────────────────────────────────┘
 ```
 
-**Observation** (per step): a rolling window of **19 engineered features**, grouped
-by what they encode — multi-horizon momentum (1/5/20-bar + log returns),
-trend/mean-reversion context (10/30/50 SMA ratios, EMA ratio), oscillators (RSI,
+**Observation** (per step): a rolling window of **28 engineered features**, grouped
+by what they encode — multi-horizon momentum (1/5/20/60/120-bar + log returns),
+trend/mean-reversion context (10/30/50/100 SMA ratios, EMA ratio), oscillators (RSI,
 MACD + signal), band/range position (Bollinger %B, Donchian position), volatility
-*level and regime* (10-bar vol, ATR, a 60-bar volatility z-score), and volume
-microstructure (high–low range, volume change, volume z-score) — plus the agent's
-own account state (position fraction, cash fraction, normalised equity). The regime
-and band features give the policy the context a single price level can't convey.
+*level and regime* (10-bar vol, ATR, a 60-bar volatility z-score, short/long vol
+ratio), and a risk-regime signal (distance below the trailing 6-month high), plus
+volume microstructure (high–low range, volume change, volume z-score), and
+**cross-asset market context** — the asset's *relative strength* vs. the market
+index (SPY for stocks, BTC for crypto) and the market's own trend/momentum — and the
+agent's own account state (position fraction, cash fraction, normalised equity). The
+relative-strength and market-regime features feed the policy genuinely *exogenous*
+information a single ticker's OHLCV can't convey.
 
 **Action**: a single continuous value in `[-1, 1]` interpreted as the **target
 position** as a fraction of equity (`+1` = fully long, `0` = flat, `-1` = fully
