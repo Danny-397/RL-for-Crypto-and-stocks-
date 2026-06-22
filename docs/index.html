@@ -267,15 +267,17 @@
       <!-- run it live (needs the optional Render backend; revealed when RL_API is set) -->
       <div id="live" class="panel live-card" hidden>
         <div class="panel-head">
-          <h3>Run it live on the selected asset <span class="badge-live">REAL-TIME</span></h3>
-          <span class="muted-sub">deployed policy &middot; live prices &middot; no retraining</span>
+          <h3>Run it live on any ticker <span class="badge-live">REAL-TIME</span></h3>
+          <span class="muted-sub">type any stock or crypto symbol &middot; live prices &middot; no retraining</span>
         </div>
         <div class="live-controls">
           <select id="live-market" class="live-select">
             <option value="stock">Stock</option>
             <option value="crypto">Crypto</option>
           </select>
-          <select id="live-ticker" class="live-select"></select>
+          <input id="live-ticker" class="live-select live-input" list="ticker-suggestions"
+                 placeholder="Type any ticker — e.g. TSLA or DOGE-USD" autocomplete="off" spellcheck="false" />
+          <datalist id="ticker-suggestions"></datalist>
           <button id="live-run" class="btn btn-primary">Run live →</button>
           <span id="live-status" class="muted-sub"></span>
         </div>

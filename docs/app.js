@@ -374,12 +374,7 @@
     const ms = document.getElementById("live-market");
     const ts = document.getElementById("live-ticker");
     if (ms && ms.value !== market) { ms.value = market; ms.dispatchEvent(new Event("change")); }
-    if (ts && ticker) {
-      if (![...ts.options].some((o) => o.value === ticker)) {
-        const o = document.createElement("option"); o.textContent = ticker; ts.appendChild(o);
-      }
-      ts.value = ticker;
-    }
+    if (ts && ticker) ts.value = ticker;  // free-text input — just set it
   }
 
   function buildBasket() {
@@ -494,14 +489,24 @@
     };
     let tickerMap = FALLBACK;
 
-    function fillTickers() {
+    const datalist = document.getElementById("ticker-suggestions");
+    function fillTickers(setDefault) {
       const list = tickerMap[marketSel.value] || FALLBACK[marketSel.value] || [];
-      tickerSel.innerHTML = list.map((t) => `<option>${t}</option>`).join("");
+      if (datalist) datalist.innerHTML = list.map((t) => `<option value="${t}"></option>`).join("");
+      if (setDefault) tickerSel.value = list[0] || "";
     }
-    fillTickers();
-    marketSel.addEventListener("change", fillTickers);
+    fillTickers(true);
+    // changing market just refreshes suggestions + the default symbol
+    marketSel.addEventListener("change", () => fillTickers(true));
     fetch(`${API}/api/tickers`).then((r) => r.json())
-      .then((m) => { tickerMap = m; fillTickers(); }).catch(() => {});
+      .then((m) => { tickerMap = m; fillTickers(!tickerSel.value); }).catch(() => {});
+
+    // accept ANY symbol the user types; normalise crypto to yfinance's FOO-USD form
+    function normalizedTicker() {
+      let t = (tickerSel.value || "").trim().toUpperCase();
+      if (marketSel.value === "crypto" && t && !t.includes("-")) t += "-USD";
+      return t;
+    }
 
     function signalText(a) {
       if (Math.abs(a) < 0.05) return `Agent's current call: <span class="sig-flat">FLAT</span> (cash)`;
@@ -523,11 +528,14 @@
     }
 
     async function run() {
+      const ticker = normalizedTicker();
+      if (!ticker) { statusEl.textContent = "Type a ticker symbol first (e.g. TSLA or DOGE-USD)."; return; }
+      tickerSel.value = ticker;  // show the normalised symbol back to the user
       runBtn.disabled = true;
-      statusEl.textContent = "fetching prices + running agent… (first call can take ~30s on a cold backend)";
+      statusEl.textContent = `fetching ${ticker} + running agent… (first call can take ~30s on a cold backend)`;
       signalEl.innerHTML = ""; scoreEl.innerHTML = "";
       try {
-        const r = await fetch(`${API}/api/live?market=${marketSel.value}&ticker=${tickerSel.value}`);
+        const r = await fetch(`${API}/api/live?market=${marketSel.value}&ticker=${encodeURIComponent(ticker)}`);
         const d = await r.json();
         if (d.error) throw new Error(d.error);
         signalEl.innerHTML = signalText(d.latest_action);
@@ -536,7 +544,7 @@
           { data: d.equity_agent, color: VOLT, width: 2.6, glow: true, fill: true, head: true },
         ]);
         liveScorecard(d);
-        statusEl.textContent = `${d.ticker} · ${d.n_days} trading days`;
+        statusEl.textContent = `${d.ticker} · ${d.n_days} trading days · held-out 2y`;
       } catch (e) {
         statusEl.textContent = "Error: " + (e && e.message ? e.message : "request failed");
       } finally {
@@ -544,6 +552,7 @@
       }
     }
     runBtn.addEventListener("click", run);
+    tickerSel.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); run(); } });
   }
 
   // ── interactive lab: learning curve + market switch ─────────
