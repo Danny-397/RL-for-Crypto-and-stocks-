@@ -387,7 +387,7 @@
     if (!wrap) return;
     const tickers = currentMarket().per_ticker || [];
     wrap.innerHTML =
-      '<button class="chip active" data-idx="-1">◎ Whole basket</button>' +
+      '<button class="chip active" data-idx="-1">Whole basket</button>' +
       tickers.map((t, i) => `<button class="chip" data-idx="${i}">${t.ticker}</button>`).join("");
     wrap.querySelectorAll(".chip").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -419,7 +419,7 @@
     renderSelection();
     renderLab(market);
     const v = document.getElementById("verdict");
-    if (v) v.innerHTML = `<strong>📌 The honest verdict.</strong> ${VERDICT[market]}${VERDICT_TAIL}`;
+    if (v) v.innerHTML = `<strong>The honest verdict.</strong> ${VERDICT[market]}${VERDICT_TAIL}`;
     const ms = document.getElementById("live-market");
     if (ms && ms.value !== market) { ms.value = market; ms.dispatchEvent(new Event("change")); }
   }
@@ -538,7 +538,7 @@
         liveScorecard(d);
         statusEl.textContent = `${d.ticker} · ${d.n_days} trading days`;
       } catch (e) {
-        statusEl.textContent = "⚠ " + (e && e.message ? e.message : "request failed");
+        statusEl.textContent = "Error: " + (e && e.message ? e.message : "request failed");
       } finally {
         runBtn.disabled = false;
       }
