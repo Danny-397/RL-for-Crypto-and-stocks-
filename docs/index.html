@@ -10,7 +10,7 @@
   <meta property="og:type" content="website" />
   <meta property="og:title" content="RL·Trader — Reinforcement Learning for Stocks & Crypto" />
   <meta property="og:description" content="From-scratch PPO agents trained with domain randomization, backtested on held-out data across stock and crypto regimes." />
-  <meta property="og:url" content="https://danny-397.github.io/RL-for-Crypto-and-stocks-/" />
+  <meta property="og:url" content="https://rl-for-crypto-and-stocks.vercel.app/" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="RL·Trader — Reinforcement Learning for Stocks & Crypto" />
   <meta name="twitter:description" content="From-scratch PPO agents, dual market environments, honest held-out backtests." />
@@ -133,7 +133,7 @@
           <p>Total return, annualised Sharpe, and max drawdown on a held-out split — the metrics a quant actually cares about.</p>
         </article>
         <article class="card">
-          <h3>Extensible by design</h3>
+          <h3>Swap the policy or the market</h3>
           <p>The same PPO agent trades one asset <em>or</em> allocates across a whole basket (cross-sectional long/short). A recurrent (LSTM) policy is fully implemented, and new markets/algorithms drop in behind the same API.</p>
         </article>
       </div>
@@ -144,7 +144,7 @@
       <div class="section-head">
         <div class="kicker">ARCHITECTURE</div>
         <h2>Unified agent. Separate environments.</h2>
-        <p>The PPO agent speaks only in observations and actions — completely market-agnostic — so the exact same brain trains on both stocks and crypto.</p>
+        <p>The PPO agent speaks only in observations and actions — completely market-agnostic — so the exact same network trains on both stocks and crypto.</p>
       </div>
       <div class="arch">
         <div class="arch-node agent">
@@ -299,7 +299,7 @@
       <div class="cta-row">
         <a class="btn btn-primary" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">Explore the repo →</a>
       </div>
-      <pre class="cta-code"><code>pip install -r requirements.txt
+      <pre class="cta-code"><code>pip install -e .
 python -m rl_trader.scripts.compare_markets --plot</code></pre>
     </section>
   </main>
