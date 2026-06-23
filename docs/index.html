@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <a class="skip-link" href="#top">Skip to content</a>
   <!-- ambient grid + glow -->
   <div class="bg-grid" aria-hidden="true"></div>
   <div class="bg-glow" aria-hidden="true"></div>
@@ -254,10 +255,10 @@
           <h3>Watch the agent act <span class="muted-sub">price &amp; the position it held</span></h3>
           <span class="chart-legend"><span class="lg lg-long">long</span><span class="lg lg-short">short</span><span class="lg lg-flat">flat</span></span>
         </div>
-        <canvas id="scrubChart" width="980" height="240"></canvas>
+        <canvas id="scrubChart" width="980" height="240" aria-label="Price and the position the agent held over the held-out period"></canvas>
         <input id="scrubRange" class="scrub-range" type="range" min="0" max="159" value="159" aria-label="Scrub through time" />
         <div class="axis-dates" id="scrubDates"></div>
-        <div class="scrub-readout" id="scrubReadout"></div>
+        <div class="scrub-readout" id="scrubReadout" aria-live="polite"></div>
       </div>
 
       <div class="dash-grid">
@@ -284,6 +285,16 @@
       <!-- what the agent learned, per market (populated by app.js) -->
       <div class="insight" id="insight"></div>
 
+      <!-- multi-seed return distribution: is the edge real, or seed luck? -->
+      <div class="panel" id="seedDistPanel" hidden>
+        <div class="panel-head">
+          <h3>Is the edge real? <span class="muted-sub">return across 5 independent training seeds</span></h3>
+          <span class="chart-legend"><span class="lg lg-agent">per seed</span><span class="lg lg-bench">buy &amp; hold</span></span>
+        </div>
+        <canvas id="seedDist" width="980" height="180"></canvas>
+        <p class="lab-caption" id="seedDistCaption"></p>
+      </div>
+
       <!-- honest verdict, per market (populated by app.js) -->
       <div class="honest-note" id="verdict"></div>
 
@@ -303,9 +314,9 @@
           <datalist id="ticker-suggestions"></datalist>
           <button id="live-run" class="btn btn-primary">Run live →</button>
           <span id="live-spin" class="spinner" hidden aria-hidden="true"></span>
-          <span id="live-status" class="muted-sub"></span>
+          <span id="live-status" class="muted-sub" aria-live="polite"></span>
         </div>
-        <div class="live-signal" id="live-signal"></div>
+        <div class="live-signal" id="live-signal" aria-live="polite"></div>
         <div class="panel-head" style="margin-top:6px">
           <h3>Equity (held-out 2y)</h3>
           <span class="chart-legend"><span class="lg lg-agent">Agent</span><span class="lg lg-bench">Buy &amp; Hold</span></span>
@@ -338,6 +349,7 @@ python -m rl_trader.scripts.compare_markets --plot</code></pre>
 
   <script src="config.js"></script>
   <script src="results.js"></script>
+  <script src="significance.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

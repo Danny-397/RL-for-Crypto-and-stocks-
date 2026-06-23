@@ -463,6 +463,68 @@
     return `${lead} But 2021&ndash;2026 equities were a one-way mega-cap bull — nearly every name rose${eg}, leaving little to defend against, so trimming and exiting mostly bled upside + costs. It beat buy-&amp;-hold on only <b>${wins}/${n}</b> names; the policy's edge needs a market that falls <i>sometimes</i> — as crypto did.`;
   }
 
+  // ── multi-seed distribution: visualise whether the edge survives reseeding ──
+  function renderSeedDist(market) {
+    const panel = document.getElementById("seedDistPanel");
+    const d = (window.RL_SIGNIFICANCE || {})[market];
+    if (!panel) return;
+    if (!d || !d.seed_returns || !d.seed_returns.length) { panel.hidden = true; return; }
+    panel.hidden = false;
+    const cv = document.getElementById("seedDist");
+    const ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    const vals = d.seed_returns.concat([d.ci_low, d.ci_high, d.bh, 0]);
+    let lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    const span = (hi - lo) || 1; lo -= span * 0.12; hi += span * 0.12;
+    const padL = 16, padR = 16, axisY = H * 0.46;
+    const X = (v) => padL + ((v - lo) / (hi - lo)) * (W - padL - padR);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(W - padR, axisY); ctx.stroke();
+
+    // 95% CI band + mean
+    ctx.fillStyle = "rgba(212,255,63,0.12)";
+    ctx.fillRect(X(d.ci_low), axisY - 30, X(d.ci_high) - X(d.ci_low), 60);
+    ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(X(d.mean), axisY - 30); ctx.lineTo(X(d.mean), axisY + 30); ctx.stroke();
+
+    // zero reference
+    if (lo < 0 && hi > 0) {
+      const zx = X(0);
+      ctx.strokeStyle = "rgba(255,255,255,0.22)"; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(zx, axisY - 44); ctx.lineTo(zx, axisY + 44); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.font = "11px JetBrains Mono, monospace"; ctx.textAlign = "center";
+      ctx.fillText("0%", zx, axisY + 58);
+    }
+    // buy & hold marker
+    const bx = X(d.bh);
+    ctx.strokeStyle = BENCH; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(bx, axisY - 40); ctx.lineTo(bx, axisY + 40); ctx.stroke();
+    ctx.fillStyle = BENCH; ctx.font = "11px JetBrains Mono, monospace"; ctx.textAlign = "center";
+    ctx.fillText("buy & hold " + sgn(d.bh), bx, axisY - 48);
+
+    // one dot per seed, spread vertically so the scatter is visible
+    const nseed = d.seed_returns.length;
+    d.seed_returns.forEach((v, i) => {
+      const y = axisY + (i - (nseed - 1) / 2) * 11;
+      ctx.fillStyle = VOLT; ctx.shadowColor = VOLT; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(X(v), y, 5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+    });
+
+    const cap = document.getElementById("seedDistCaption");
+    if (cap) {
+      const tie = d.p >= 0.05;
+      cap.innerHTML =
+        `Each dot is one independently-seeded training run. They scatter from ` +
+        `<b>${sgn(Math.min.apply(null, d.seed_returns))}</b> to ` +
+        `<b>${sgn(Math.max.apply(null, d.seed_returns))}</b> (mean <b>${sgn(d.mean)}</b>); ` +
+        `the shaded band is the 95% CI. Buy-&-hold is ${sgn(d.bh)}. ` +
+        (tie
+          ? `The band ${d.ci_low < 0 && d.ci_high > 0 ? "straddles zero" : "overlaps buy-&-hold"} and the permutation test can't tell the agent apart from it (p ≈ ${d.p.toFixed(2)}) — <b>no reliable edge</b>, just seed luck.`
+          : `The agent is statistically distinguishable from buy-&-hold (p ≈ ${d.p.toFixed(2)}).`);
+    }
+  }
+
   function setMarket(market) {
     explorer.market = market;
     explorer.sel = null;
@@ -481,6 +543,7 @@
     renderLab(market);
     const ins = document.getElementById("insight");
     if (ins) ins.innerHTML = marketInsight(market);
+    renderSeedDist(market);
     const v = document.getElementById("verdict");
     if (v) v.innerHTML = `<strong>How this is evaluated.</strong> ${VERDICT[market]}${VERDICT_TAIL}`;
     const ms = document.getElementById("live-market");

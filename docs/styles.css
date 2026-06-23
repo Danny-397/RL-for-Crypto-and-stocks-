@@ -97,6 +97,19 @@ h2 {
 }
 .btn-ghost:hover { border-color: var(--volt); color: var(--volt); transform: translateY(-2px); }
 
+/* ── Accessibility: skip link + keyboard focus rings ────── */
+.skip-link {
+  position: absolute; left: 12px; top: -52px; z-index: 100;
+  background: var(--volt); color: #06210f; font-weight: 700;
+  padding: 10px 16px; border-radius: 10px; text-decoration: none;
+  transition: top .15s ease;
+}
+.skip-link:focus { top: 12px; }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.chip:focus-visible, .navtab:focus-visible, .btn:focus-visible, .tg:focus-visible {
+  outline: 2px solid var(--cyan); outline-offset: 3px;
+}
+
 /* ── Nav ────────────────────────────────────────────────── */
 .nav {
   position: sticky; top: 0; z-index: 50;
