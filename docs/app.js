@@ -440,6 +440,10 @@
     renderSelection();
     renderTable(explorer.market);
     if (explorer.sel) syncLiveTicker(explorer.market, explorer.sel.ticker);
+    // keep the URL shareable: #stocks/AAPL deep-links to this asset's backtest
+    const view = explorer.market === "stock" ? "stocks" : "crypto";
+    const tk = explorer.sel ? explorer.sel.ticker : "";
+    history.replaceState(null, "", "#" + view + (tk ? "/" + encodeURIComponent(tk) : ""));
     if (scroll) {
       const eq = document.getElementById("dashEquity");
       if (eq) eq.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -637,7 +641,7 @@
   }
 
   // ── top-level routing: Home / Stocks / Crypto tabs ──────────
-  function showView(view) {
+  function showView(view, ticker) {
     const isMarket = view === "stocks" || view === "crypto";
     const home = document.getElementById("view-home");
     const market = document.getElementById("view-market");
@@ -648,8 +652,21 @@
       a.classList.toggle("active", on);
       if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
-    if (isMarket) setMarket(view === "stocks" ? "stock" : "crypto");
+    if (isMarket) {
+      setMarket(view === "stocks" ? "stock" : "crypto");
+      if (ticker) {
+        const pt = currentMarket().per_ticker || [];
+        const idx = pt.findIndex((t) => t.ticker.toLowerCase() === ticker.toLowerCase());
+        if (idx >= 0) selectTicker(idx);
+      }
+    }
     window.scrollTo(0, 0);
+  }
+
+  function parseHash() {
+    const raw = (location.hash || "#home").replace(/^#/, "");
+    const [view, tk] = raw.split("/");
+    return { view, ticker: tk ? decodeURIComponent(tk) : null };
   }
 
   function initRouter() {
@@ -666,8 +683,8 @@
     if (brand) brand.addEventListener("click", (e) => {
       e.preventDefault(); history.replaceState(null, "", "#home"); showView("home");
     });
-    const initial = (location.hash || "#home").replace("#", "");
-    showView(valid.includes(initial) ? initial : "home");
+    const { view, ticker } = parseHash();
+    showView(valid.includes(view) ? view : "home", ticker);
   }
 
   // ── live inference widget (optional Render backend) ─────────
