@@ -179,8 +179,8 @@
   const currentMarket = () => DATA.markets[explorer.market];
 
   const VERDICT = {
-    stock: "Every figure here is the <b>real held-out backtest</b> for the asset you picked — out-of-sample, costs included, no cherry-picking. On equities the agent trails a historic mega-cap bull: the honest, expected outcome.",
-    crypto: "Every figure here is the <b>real held-out backtest</b> for the asset you picked — out-of-sample and costs included. A single seed can look spectacular on crypto, so the agent is judged across many seeds, not one lucky run.",
+    stock: "Every figure here is the <b>real held-out backtest</b> for the asset you picked — out-of-sample, costs included, no cherry-picking. Held to a multi-seed bar, the stock agent trails the mega-cap bull: across <b>5 seeds</b> it averages <b>−19%</b> (95% CI [−29%, −7%]), significantly worse than buy-&amp;-hold (p ≈ 0.002).",
+    crypto: "Every figure here is the <b>real held-out backtest</b> for the asset you picked. A single seed can look spectacular (this dashboard run is +275%), but across <b>5 seeds</b> the crypto agent is <b>statistically tied</b> with buy-&amp;-hold — mean <b>−2.7%</b>, 95% CI [−31%, +27%], p ≈ 0.97. The single run sits in the lucky tail, not the centre.",
   };
   const VERDICT_TAIL = ' <b>The methodology is the point:</b> a multi-seed permutation study (<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>) holds the model to a real statistical bar — the rigor a quant or researcher would actually demand, rather than a cherry-picked backtest.';
 
@@ -189,10 +189,8 @@
     const m = currentMarket();
     const sel = explorer.sel;          // null => whole-basket aggregate
     const d = sel || m;
-    lineChart(document.getElementById("dashEquity"), [
-      { data: d.equity_bench, color: BENCH, width: 2 },
-      { data: d.equity_agent, color: VOLT, width: 2.6, glow: true, fill: true, head: true },
-    ]);
+    explorer.eq = { agent: d.equity_agent, bench: d.equity_bench, dates: d.dates || [] };
+    paintEquity(null);
     renderScorecard(d);
     drawdownChart(document.getElementById("dashDD"), d.drawdown);
     // per-ticker: bin its position-over-time; basket: pooled action distribution
@@ -215,6 +213,49 @@
     if (beh) beh.innerHTML = behaviorSummary(actsForBehavior);
 
     renderScrubber(sel);
+  }
+
+  // ── equity chart with hover (value + date at the cursor) ───
+  function paintEquity(idx) {
+    const eq = explorer.eq;
+    const cv = document.getElementById("dashEquity");
+    if (!eq || !cv) return;
+    lineChart(cv, [
+      { data: eq.bench, color: BENCH, width: 2 },
+      { data: eq.agent, color: VOLT, width: 2.6, glow: true, fill: true, head: true },
+    ]);
+    const hov = document.getElementById("equityHover");
+    if (idx == null) { if (hov) hov.innerHTML = ""; return; }
+    const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, pad = { l: 10, r: 10, t: 12, b: 12 };
+    const a = eq.agent, b = eq.bench, n = Math.max(a.length, b.length);
+    let lo = Infinity, hi = -Infinity;
+    [a, b].forEach((s) => s.forEach((v) => { if (v < lo) lo = v; if (v > hi) hi = v; }));
+    const span = (hi - lo) || 1; lo -= span * 0.08; hi += span * 0.08;
+    const X = (i) => pad.l + (i / (n - 1)) * (W - pad.l - pad.r);
+    const Y = (v) => pad.t + (1 - (v - lo) / (hi - lo)) * (H - pad.t - pad.b);
+    const cx = X(idx);
+    ctx.strokeStyle = "rgba(54,224,255,0.85)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, H - pad.b); ctx.stroke();
+    [[a, VOLT], [b, BENCH]].forEach(([s, c]) => {
+      const v = s[Math.min(idx, s.length - 1)];
+      ctx.fillStyle = c; ctx.beginPath(); ctx.arc(cx, Y(v), 3.6, 0, Math.PI * 2); ctx.fill();
+    });
+    if (hov) {
+      const ar = a[Math.min(idx, a.length - 1)] / a[0] - 1;
+      const br = b[Math.min(idx, b.length - 1)] / b[0] - 1;
+      const dt = eq.dates && eq.dates[Math.min(idx, eq.dates.length - 1)];
+      hov.innerHTML = `${dt ? "<b>" + fmtDay(dt) + "</b> &middot; " : ""}agent <b>${sgn(ar)}</b> &middot; buy-&amp;-hold ${sgn(br)}`;
+    }
+  }
+
+  function equityIndexFromEvent(e, cv) {
+    if (!explorer.eq) return null;
+    const rect = cv.getBoundingClientRect();
+    const n = Math.max(explorer.eq.agent.length, explorer.eq.bench.length);
+    const pad = 10;
+    const dataX = ((e.clientX - rect.left) / rect.width) * cv.width;
+    const idx = Math.round(((dataX - pad) / (cv.width - 2 * pad)) * (n - 1));
+    return Math.max(0, Math.min(n - 1, idx));
   }
 
   // ── "watch the agent act": price + the position the agent held ──
@@ -462,6 +503,12 @@
         updateScrubReadout(document.getElementById("scrubReadout"), sel, explorer.cursor);
       }
     });
+    // hover the equity chart to read value + date at any point
+    const eqc = document.getElementById("dashEquity");
+    if (eqc) {
+      eqc.addEventListener("mousemove", (e) => paintEquity(equityIndexFromEvent(e, eqc)));
+      eqc.addEventListener("mouseleave", () => paintEquity(null));
+    }
   }
 
   // ── top-level routing: Home / Stocks / Crypto tabs ──────────
@@ -509,6 +556,10 @@
     const signalEl = document.getElementById("live-signal");
     const scoreEl = document.getElementById("live-scorecard");
     const canvas = document.getElementById("live-chart");
+    const spinEl = document.getElementById("live-spin");
+
+    // pre-warm the free-tier backend so the first real run isn't a cold start
+    fetch(`${API}/health`).catch(() => {});
 
     const FALLBACK = {
       stock: ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "SPY", "QQQ"],
@@ -559,6 +610,7 @@
       if (!ticker) { statusEl.textContent = "Type a ticker symbol first (e.g. TSLA or DOGE-USD)."; return; }
       tickerSel.value = ticker;  // show the normalised symbol back to the user
       runBtn.disabled = true;
+      if (spinEl) spinEl.hidden = false;
       statusEl.textContent = `fetching ${ticker} + running agent… (first call can take ~30s on a cold backend)`;
       signalEl.innerHTML = ""; scoreEl.innerHTML = "";
       try {
@@ -576,6 +628,7 @@
         statusEl.textContent = "Error: " + (e && e.message ? e.message : "request failed");
       } finally {
         runBtn.disabled = false;
+        if (spinEl) spinEl.hidden = true;
       }
     }
     runBtn.addEventListener("click", run);

@@ -14,6 +14,10 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="RL·Trader — Deep-RL Trading System for Stocks & Crypto" />
   <meta name="twitter:description" content="From-scratch PPO, dual market environments, cross-asset features, a live interactive demo, and multi-seed statistical evaluation." />
+  <meta property="og:image" content="https://rl-for-crypto-and-stocks.vercel.app/assets/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:image" content="https://rl-for-crypto-and-stocks.vercel.app/assets/og.png" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -194,6 +198,19 @@
         <div class="step"><div class="step-n">04</div><h3>Backtest</h3><p>Run the trained agent deterministically on the held-out test split and score return, Sharpe, and drawdown.</p></div>
       </div>
     </section>
+
+    <!-- ─────────────────────── ABOUT ─────────────────────── -->
+    <section id="about" class="section">
+      <div class="section-head">
+        <div class="kicker">ABOUT</div>
+        <h2>Why I built this.</h2>
+      </div>
+      <div class="about">
+        <p>I wanted to learn modern reinforcement learning by <em>building</em> it, not importing it. So I implemented <strong>PPO from scratch</strong> in PyTorch, wrote two custom market environments, engineered the whole data pipeline, and set out to answer an honest question: can one agent learn to trade two very different markets?</p>
+        <p>The hardest — and most valuable — part wasn't the algorithm; it was the <strong>evaluation</strong>. An early run made the crypto agent look like it crushed the market. Instead of shipping that, I built a <strong>multi-seed significance test</strong> — and it showed the "win" was mostly luck of the random seed, statistically tied with buy-&amp;-hold. Learning to distrust a good-looking backtest and to <em>prove</em> it with statistics taught me more than any single training run.</p>
+        <p>What it demonstrates: I can take a non-trivial ML system end to end — algorithm, data, training, evaluation, and a live deployment — and hold my own results to a real scientific standard.</p>
+      </div>
+    </section>
     </div><!-- /view-home -->
 
     <!-- ═══════════════════════ MARKET VIEW (Stocks / Crypto) ═══════════════════════ -->
@@ -220,6 +237,7 @@
           </div>
           <canvas id="dashEquity" width="760" height="300"></canvas>
           <div class="axis-dates" id="equityDates"></div>
+          <div class="scrub-readout" id="equityHover"></div>
         </div>
 
         <div class="panel panel-scorecard">
@@ -284,6 +302,7 @@
                  placeholder="Type any ticker — e.g. TSLA or DOGE-USD" autocomplete="off" spellcheck="false" />
           <datalist id="ticker-suggestions"></datalist>
           <button id="live-run" class="btn btn-primary">Run live →</button>
+          <span id="live-spin" class="spinner" hidden aria-hidden="true"></span>
           <span id="live-status" class="muted-sub"></span>
         </div>
         <div class="live-signal" id="live-signal"></div>

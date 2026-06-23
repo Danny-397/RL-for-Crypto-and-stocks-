@@ -357,12 +357,24 @@ h2 {
 .live-select:focus { outline: none; border-color: var(--volt); }
 .live-input { cursor: text; min-width: 240px; }
 .live-input::placeholder { color: var(--faint); }
+.spinner {
+  width: 16px; height: 16px; border-radius: 50%; display: inline-block;
+  border: 2px solid rgba(212,255,63,0.25); border-top-color: var(--volt);
+  animation: spin 0.7s linear infinite; vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 .live-signal { font-family: var(--font-display); font-size: 20px; color: var(--muted); margin: 6px 0 4px; min-height: 26px; }
 .sig-long { color: var(--volt); font-weight: 700; }
 .sig-short { color: var(--neg); font-weight: 700; }
 .sig-flat { color: var(--faint); font-weight: 700; }
 #live-chart { width: 100%; height: auto; display: block; }
 .live-card .scorecard { margin-top: 12px; max-width: 420px; }
+
+/* ── About ──────────────────────────────────────────────── */
+.about { max-width: 760px; }
+.about p { color: var(--muted); font-size: 17px; line-height: 1.7; margin-bottom: 18px; }
+.about strong { color: var(--text); }
+.about em { color: var(--volt); font-style: normal; }
 
 /* ── Top-level views (Home / Stocks / Crypto tabs) ──────── */
 .view { display: none; }
@@ -469,22 +481,26 @@ h2 {
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 40px; }
   .hero-visual { order: -1; }
-  .nav-links { display: none; }
+  /* nav-links are the primary Home/Stocks/Crypto tabs — keep them visible,
+     just tighten spacing and drop the secondary GitHub button to make room. */
+  .nav { gap: 14px; flex-wrap: wrap; }
+  .nav-links { gap: 16px; font-size: 14px; }
+  .nav-cta { display: none; }
   .grid { grid-template-columns: 1fr 1fr; }
   .steps { grid-template-columns: 1fr 1fr; }
   .stats { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 900px) {
   .dash-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
   .grid, .steps, .stats, .arch-split { grid-template-columns: 1fr; }
-  .section { padding: 64px 20px; }
+  .section { padding: 56px 18px; }
   .foot-meta { margin-right: 0; width: 100%; }
   .chart-foot { gap: 6px; }
   .chart-foot .v { font-size: 15px; }
-  .dash-toggle { display: flex; width: 100%; }
-  .tg { flex: 1; }
+  h1 { font-size: clamp(30px, 8vw, 40px); }
+  .basket { gap: 6px; }
+  .chip { padding: 6px 11px; font-size: 12px; }
+  .hero-cta { flex-wrap: wrap; }
 }
 
 /* Respect users who prefer reduced motion. */
