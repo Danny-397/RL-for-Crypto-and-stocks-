@@ -514,6 +514,7 @@
     const cap = document.getElementById("seedDistCaption");
     if (cap) {
       const tie = d.p >= 0.05;
+      const worse = d.mean < d.bh;
       cap.innerHTML =
         `Each dot is one independently-seeded training run. They scatter from ` +
         `<b>${sgn(Math.min.apply(null, d.seed_returns))}</b> to ` +
@@ -521,7 +522,7 @@
         `the shaded band is the 95% CI. Buy-&-hold is ${sgn(d.bh)}. ` +
         (tie
           ? `The band ${d.ci_low < 0 && d.ci_high > 0 ? "straddles zero" : "overlaps buy-&-hold"} and the permutation test can't tell the agent apart from it (p ≈ ${d.p.toFixed(2)}) — <b>no reliable edge</b>, just seed luck.`
-          : `The agent is statistically distinguishable from buy-&-hold (p ≈ ${d.p.toFixed(2)}).`);
+          : `Across seeds it is <b>distinguishably ${worse ? "worse than" : "better than"}</b> buy-&-hold (p ≈ ${d.p.toFixed(2)})${worse ? " — active trading lost to a one-way bull" : ""}.`);
     }
   }
 
@@ -581,8 +582,11 @@
     const market = document.getElementById("view-market");
     if (home) home.classList.toggle("active", view === "home");
     if (market) market.classList.toggle("active", isMarket);
-    document.querySelectorAll(".navtab").forEach(
-      (a) => a.classList.toggle("active", a.dataset.view === view));
+    document.querySelectorAll(".navtab").forEach((a) => {
+      const on = a.dataset.view === view;
+      a.classList.toggle("active", on);
+      if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
     if (isMarket) setMarket(view === "stocks" ? "stock" : "crypto");
     window.scrollTo(0, 0);
   }
