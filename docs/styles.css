@@ -494,6 +494,9 @@ h2 {
 .restable tbody tr.sel { background: rgba(212,255,63,0.08); }
 .restable td.win { color: var(--volt); }
 .restable td.lose { color: #ff6b6b; }
+.restable td.muted-cell { color: var(--muted); font-family: var(--font-mono); }
+.restable.ablation tbody tr { cursor: default; }
+.restable.ablation tbody tr:hover { background: none; }
 .restable .pill {
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.03em;
   padding: 2px 8px; border-radius: 999px;

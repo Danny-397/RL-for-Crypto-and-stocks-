@@ -277,6 +277,35 @@
       </div>
     </section>
 
+    <!-- ablation: why domain randomization (overfitting caught in the act) -->
+    <section class="section">
+      <div class="section-head">
+        <div class="kicker">OVERFITTING, CAUGHT</div>
+        <h2>Why train across many tickers, not one.</h2>
+        <p>Train the agent on a <b>single</b> asset and it posts absurd returns on the data it trained on — then loses money on data it has never seen. It memorised one price path. Training across many tickers (<b>domain randomization</b>) forces it to learn something transferable: in-sample and held-out returns line up.</p>
+      </div>
+      <div class="panel">
+        <div class="table-scroll">
+          <table class="restable ablation">
+            <thead>
+              <tr>
+                <th class="num-l" scope="col">Training setup</th>
+                <th scope="col">In-sample return</th>
+                <th scope="col">Held-out return</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="num-l">Stocks &middot; single asset</td><td class="muted-cell">+14,600%</td><td class="lose">&minus;39%</td></tr>
+              <tr><td class="num-l">Stocks &middot; across tickers</td><td class="muted-cell">+34%</td><td class="win">+35%</td></tr>
+              <tr><td class="num-l">Crypto &middot; single asset</td><td class="muted-cell">+1,956,000%</td><td class="lose">&minus;57%</td></tr>
+              <tr><td class="num-l">Crypto &middot; across tickers</td><td class="muted-cell">+267%</td><td class="win">+250%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="lab-caption">Those astronomical in-sample figures aren't a win — they're the <b>overfitting tell</b>: a single-asset agent memorises the exact training path, so it "earns" impossible returns there and then collapses out of sample. The honest column is <b>held-out</b>, and only domain randomization keeps it positive. (Mean across seeds; reproduced by <code>tools/ablation.py</code>.)</p>
+      </div>
+    </section>
+
     <!-- the honest part -->
     <section class="section">
       <div class="section-head">
