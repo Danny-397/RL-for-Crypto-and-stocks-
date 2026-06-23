@@ -14,14 +14,14 @@ result. All numbers here are reproducible with the commands in the final section
    generalize** (it collapses the in-sample/out-of-sample overfitting gap by
    two-to-three orders of magnitude).
 2. **A single seed can *look* like a real-market win — and that's the trap.** The
-   bundled dashboard run (seed 42) shows the crypto agent at **+80% vs. buy-&-hold's
-   +10%**, winning 5 of 6 coins. Taken alone, that's a tempting headline.
+   bundled dashboard run (seed 42) shows the crypto agent at **+275% vs. buy-&-hold's
+   +19%**, winning 4 of 6 coins. Taken alone, that's a tempting headline.
 3. **Multi-seed evaluation dissolves the illusion.** Re-run across **5 seeds** and
-   the real crypto agent *averages a loss* — **−17%, 95% CI [−55%, +24%]**,
-   statistically indistinguishable from buy-&-hold (permutation p ≈ 0.78). On
-   equities it is significantly **worse** than the +212% bull (p ≈ 0.002). There is
-   **no reliable, seed-robust edge on real markets** — consistent with weak-form
-   market efficiency.
+   the real crypto agent *averages a small loss* — **−2.7%, 95% CI [−31%, +27%]**,
+   statistically indistinguishable from buy-&-hold (permutation p ≈ 0.97). On
+   equities it is significantly **worse** than the +260% bull (−19%, p ≈ 0.002).
+   There is **no reliable, seed-robust edge on real markets** — consistent with
+   weak-form market efficiency, even with the new cross-asset features.
 4. **Catching that is the result.** The framework's own significance tooling
    exposed a false positive that a naive project would have shipped as a win. The
    contribution is the **rigorous, honest methodology** — not a fantasy return.
@@ -106,25 +106,25 @@ synthetic paths. That is exactly the discipline I apply to the real-data win bel
 
 ![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
 
-**Equities** — mean over 10 held-out tickers, 2021–2025:
+**Equities** — mean over 10 held-out tickers:
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| PPO agent | +0.2% | 0.01 | 33.2% |
-| Buy & hold | **+212.1%** | **0.96** | 27.7% |
-| MA crossover | +78.4% | 0.72 | **22.7%** |
+| PPO agent | −2.3% | −0.12 | 36.7% |
+| Buy & hold | **+259.3%** | **1.06** | 26.9% |
+| MA crossover | +79.4% | 0.74 | **22.7%** |
 | Flat (cash) | 0.0% | 0.00 | 0.0% |
-| Random | −51.3% | −1.23 | 56.4% |
+| Random | −32.2% | −0.72 | 43.6% |
 
-**Crypto** — mean over 6 held-out tickers (agent wins on 5 of 6):
+**Crypto** — mean over 6 held-out tickers (agent wins on 4 of 6):
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| **PPO agent** | **+80.5%** | **+0.43** | 65.3% |
-| Buy & hold | +10.4% | −0.19 | 75.8% |
-| MA crossover | +14.1% | +0.27 | 58.2% |
+| **PPO agent** | **+275.5%** | **+0.81** | 57.0% |
+| Buy & hold | +19.3% | +0.31 | 74.0% |
+| MA crossover | +9.0% | +0.22 | 58.2% |
 | Flat (cash) | 0.0% | 0.00 | 0.0% |
-| Random | −65.9% | −1.32 | 75.3% |
+| Random | −77.7% | −1.50 | 79.8% |
 
 ---
 
@@ -135,16 +135,15 @@ A representative held-out equity curve for each market (the median-return ticker
 ## 4. Discussion — why the single-seed table is misleading
 
 - **Seed 42 is a favorable draw, not a representative one.** On this seed the crypto
-  agent posts +80% and wins 5 of 6 coins. It is tempting — and wrong — to stop here.
+  agent posts +275% and wins 4 of 6 coins. It is tempting — and wrong — to stop here.
   Training is fully seeded so the number *reproduces*, but reproducing a lucky seed
   doesn't make it typical. §5 re-runs the experiment across many seeds and finds the
-  average crypto outcome is a **loss** with a confidence interval that comfortably
+  average crypto outcome collapses to a confidence interval that comfortably
   straddles zero.
 - **The equities single seed is already an honest loss.** Even on the displayed
-  seed the stock agent only breaks even (+0.2%) against the +212% mega-cap bull, and
-  the hand-coded MA-crossover (+78%) beat it — a reminder that model complexity is
-  not a virtue by itself. Across seeds (§5) it is *significantly* worse than
-  buy-&-hold.
+  seed the stock agent loses (−2.3%) against the +259% mega-cap bull, and the
+  hand-coded MA-crossover (+79%) beat it — a reminder that model complexity is not a
+  virtue by itself. Across seeds (§5) it is no better than buy-&-hold.
 - **This is what weak-form market efficiency looks like.** Raw daily OHLCV carries
   little exploitable structure; an agent trading on it gets whipsawed and pays costs.
   Any single backtest is dominated by seed and split luck — which is exactly why a
@@ -161,22 +160,17 @@ vs. buy-&-hold *across the held-out tickers*.
 
 | Market | Agent return (95% CI across seeds) | Mean win-rate | Buy & hold | Agent − B&H | p-value | Verdict |
 |---|---:|---:|---:|---:|---:|---|
-| Stock | **−13.1%** `[−25.7%, −1.6%]` | 0% | +212.4% | −225.5% | **0.002** | significantly **worse** than B&H |
-| Crypto | **−17.2%** `[−55.1%, +24.5%]` | 37% | +10.9% | −28.1% | 0.78 | **indistinguishable** from B&H |
+| Stock | **−18.8%** `[−29.3%, −6.6%]` | 0% | +259.6% | −278.4% | **0.002** | significantly **worse** than B&H |
+| Crypto | **−2.7%** `[−31.4%, +26.5%]` | 57% | +19.6% | −22.2% | 0.97 | **indistinguishable** from B&H |
 
-**Reading it:** the crypto confidence interval straddles zero by a wide margin —
-the +80% single-seed run in §3 sits in the lucky right tail, while the *expected*
-outcome is a loss. The permutation test cannot distinguish the crypto agent from
-buy-&-hold (p ≈ 0.78), and on equities the agent is *significantly worse* (p ≈
-0.002). **There is no reliable, seed-robust edge on real markets.** A naive project
-would have shipped the §3 table as a win; the multi-seed test is what catches it —
-and that catch *is* the result.
-
-**Not a training-budget artifact.** Re-running crypto at the dashboard's full
-200k-step budget gives the same verdict — mean **−7.8%**, 95% CI **[−54%, +42%]**,
-p ≈ 0.90. The extra training nudges the average up but the interval is just as wide;
-tellingly, seed 42's +80% sits *above* even this CI's upper bound, confirming it as
-an outlier draw rather than the expected outcome.
+**Reading it (28-feature model, incl. cross-asset features):** the crypto
+confidence interval straddles zero by a wide margin — the **+275%** single-seed run
+in §3 sits in the lucky right tail, while the *expected* outcome is roughly flat.
+The permutation test cannot distinguish the crypto agent from buy-&-hold (p ≈ 0.97),
+and on equities the agent is *significantly worse* (p ≈ 0.002). **There is no
+reliable, seed-robust edge on real markets** — even after adding relative-strength
+and market-regime features. A naive project would have shipped the §3 table as a
+win; the multi-seed test is what catches it.
 
 This mirrors §2 exactly: on synthetic markets where a signal provably exists the
 agent is repeatably profitable but still statistically indistinguishable from

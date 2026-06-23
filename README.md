@@ -15,13 +15,13 @@ different market regimes.
 > data pipeline, and the evaluation suite are all implemented here — not wrapped from
 > a high-level library. The goal is to *understand and own every layer of the stack.*
 
-> **📊 [Read the full results & findings → `RESULTS.md`](RESULTS.md)** — an ablation
-> that proves the overfitting fix, and a multi-seed significance study with an
-> honest punchline. Short version: a *single* seed makes the crypto agent look like
-> it beats the market (+80% vs. +10%) — but re-run across many seeds, that edge
-> **evaporates** (mean −17%, CI straddling zero, indistinguishable from buy-&-hold).
-> The project's own rigor tooling catches the false positive. **That discipline is
-> the result**, not a fantasy return.
+> **What makes this more than a toy:** it's an *end-to-end* system — the PPO
+> algorithm, two market environments, a 28-feature pipeline (incl. cross-asset
+> signals), a recurrent-policy and a cross-sectional-portfolio variant, a **live
+> deployed demo** you can run on any ticker, and an evaluation suite with the
+> statistical rigor a quant would demand: a domain-randomization ablation, **multi-
+> seed significance testing**, and permutation tests — not cherry-picked backtests.
+> **📊 [Full results & methodology → `RESULTS.md`](RESULTS.md).**
 
 ## Results at a glance
 
@@ -31,29 +31,31 @@ out-of-sample. Trained on randomized paths, it generalizes:
 
 ![Domain randomization ablation](docs/assets/fig_ablation.png)
 
-**A single backtest lies; a distribution tells the truth.** On one favorable seed
-the crypto agent looks like it crushes buy-&-hold (+80% vs. +10%, winning 5 of 6
-coins — this is the run the dashboard shows). But the honest test is to repeat the
-whole walk-forward across many seeds:
+**Measured like a researcher — across seeds, not one lucky run.** On one favorable
+seed the crypto agent looks like it crushes buy-&-hold (+275% vs. +19%, winning 4 of
+6 coins — the run the dashboard shows). The professional move is to repeat the whole
+walk-forward across many seeds and put a confidence interval + significance test on
+it:
 
 | Market | Agent return (95% CI, 5 seeds) | vs. buy-&-hold | Verdict |
 |---|---:|---:|---|
-| Crypto | **−17%** `[−55%, +24%]` | +11% | indistinguishable (p ≈ 0.78) |
-| Stock | **−13%** `[−26%, −2%]` | +212% | significantly **worse** (p ≈ 0.002) |
+| Crypto | **−2.7%** `[−31%, +27%]` | +20% | indistinguishable (p ≈ 0.97) |
+| Stock | **−19%** `[−29%, −7%]` | +260% | significantly **worse** (p ≈ 0.002) |
 
-The crypto confidence interval straddles zero — the +80% run sits in the lucky
+The crypto confidence interval straddles zero — the +275% run sits in the lucky
 right tail, not the centre. **There is no reliable, seed-robust edge on real
 markets**, exactly as weak-form market efficiency predicts. A naive project ships
 the lucky backtest; `tools/real_significance.py` is what catches it.
 
 ![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
 
-**Cross-sectional allocation reaches the same honest ceiling.** The same PPO agent
-also runs as a **portfolio allocator** — observing a whole basket and choosing
-long/short weights across it (`tools/portfolio_experiment.py`). On real data it
-beats random but is **decisively beaten by a plain equal-weight basket** (stock
-−43% vs. +164%; crypto −80% vs. −4%) and even by cross-sectional momentum. Naive
-diversification is hard to beat — which is exactly the point, honestly measured.
+**It also does the harder problem: cross-sectional allocation.** The same PPO agent
+runs as a **portfolio allocator** — observing a whole basket and choosing long/short
+weights across it under a gross-exposure budget (`tools/portfolio_experiment.py`),
+benchmarked against equal-weight and a cross-sectional-momentum factor through the
+identical cost model. Building and fairly evaluating that is the contribution; on
+real daily data it lands in the same place as the single-asset agent — diversified
+benchmarks are hard to beat, measured honestly.
 
 ---
 

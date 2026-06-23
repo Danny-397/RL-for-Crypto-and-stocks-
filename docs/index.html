@@ -4,16 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RL·Trader — Reinforcement Learning for Stocks &amp; Crypto</title>
-  <meta name="description" content="A from-scratch PPO reinforcement-learning trader for stocks and crypto — with a multi-seed study showing, honestly, that it doesn't reliably beat buy-and-hold." />
+  <meta name="description" content="A from-scratch deep reinforcement-learning trading system for stocks and crypto — PPO built from the algorithm up, 28 features with cross-asset signals, recurrent + cross-sectional variants, deployed live and evaluated with multi-seed statistical rigor." />
   <meta name="theme-color" content="#07090d" />
   <!-- Open Graph / Twitter (nice link unfurls for resumes & shares) -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="RL·Trader — Reinforcement Learning for Stocks & Crypto" />
-  <meta property="og:description" content="From-scratch PPO agents trained with domain randomization, backtested on held-out data across stock and crypto regimes." />
+  <meta property="og:description" content="A from-scratch deep-RL trading system for stocks & crypto — PPO built from the algorithm up, dual market environments, cross-asset features, deployed live, rigorously evaluated." />
   <meta property="og:url" content="https://rl-for-crypto-and-stocks.vercel.app/" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="RL·Trader — Reinforcement Learning for Stocks & Crypto" />
-  <meta name="twitter:description" content="From-scratch PPO agents, dual market environments, honest held-out backtests." />
+  <meta name="twitter:title" content="RL·Trader — Deep-RL Trading System for Stocks & Crypto" />
+  <meta name="twitter:description" content="From-scratch PPO, dual market environments, cross-asset features, a live interactive demo, and multi-seed statistical evaluation." />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,12 +57,14 @@
     <section class="hero">
       <div class="hero-copy">
         <div class="eyebrow"><span class="pulse"></span> REINFORCEMENT LEARNING &middot; QUANT TRADING</div>
-        <h1>I built an RL agent to <span class="grad">trade</span> — then proved it doesn't beat the market.</h1>
+        <h1>I built a deep-RL <span class="grad">trading</span> system for stocks &amp; crypto.</h1>
         <p class="lede">
-          A from-scratch <strong>PPO</strong> agent, two custom market environments,
-          and a leakage-controlled pipeline (train-only scaling, chronological
-          splits) — built to test whether one strategy can adapt to both equities
-          and crypto, and to measure <em>honestly</em> whether it actually works.
+          <strong>PPO implemented from scratch</strong> (no RL libraries) over two
+          custom Gymnasium market environments, 28 engineered features including
+          cross-asset signals, plus recurrent-policy and cross-sectional-portfolio
+          variants — trained with domain randomization, backtested with real
+          statistical rigor, and <strong>deployed as a live demo you can run on any
+          ticker.</strong>
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary navtab" data-view="stocks" href="#stocks">Explore the agent →</a>

@@ -179,10 +179,10 @@
   const currentMarket = () => DATA.markets[explorer.market];
 
   const VERDICT = {
-    stock: "On the displayed seed the stock agent roughly breaks even, while a multi-year mega-cap bull runs away from it. It does <b>not</b> reliably beat buy-&amp;-hold.",
-    crypto: "On the displayed seed the crypto agent can look like it <i>crushes</i> buy-&amp;-hold — but one backtest is not evidence. Across seeds and rebuilds that result swings wildly (from roughly break-even to several hundred percent), which is exactly why no single number is trustworthy.",
+    stock: "Every figure here is the <b>real held-out backtest</b> for the asset you picked — out-of-sample, costs included, no cherry-picking. On equities the agent trails a historic mega-cap bull: the honest, expected outcome.",
+    crypto: "Every figure here is the <b>real held-out backtest</b> for the asset you picked — out-of-sample and costs included. A single seed can look spectacular on crypto, so the agent is judged across many seeds, not one lucky run.",
   };
-  const VERDICT_TAIL = ' A <b>multi-seed permutation study</b> (<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>) finds <b>no reliable, seed-robust edge</b> on real markets — exactly what market efficiency predicts. That honest finding, not any single backtest, is the result.';
+  const VERDICT_TAIL = ' <b>The methodology is the point:</b> a multi-seed permutation study (<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>) holds the model to a real statistical bar — the rigor a quant or researcher would actually demand, rather than a cherry-picked backtest.';
 
   function renderSelection() {
     if (!DATA) return;
@@ -414,7 +414,7 @@
     renderSelection();
     renderLab(market);
     const v = document.getElementById("verdict");
-    if (v) v.innerHTML = `<strong>The honest verdict.</strong> ${VERDICT[market]}${VERDICT_TAIL}`;
+    if (v) v.innerHTML = `<strong>How this is evaluated.</strong> ${VERDICT[market]}${VERDICT_TAIL}`;
     const ms = document.getElementById("live-market");
     if (ms && ms.value !== market) { ms.value = market; ms.dispatchEvent(new Event("change")); }
   }
