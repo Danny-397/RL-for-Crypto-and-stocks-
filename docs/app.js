@@ -426,15 +426,61 @@
       '<button class="chip active" data-idx="-1">Whole basket</button>' +
       tickers.map((t, i) => `<button class="chip" data-idx="${i}">${t.ticker}</button>`).join("");
     wrap.querySelectorAll(".chip").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        const idx = parseInt(btn.dataset.idx, 10);
-        explorer.sel = idx < 0 ? null : currentMarket().per_ticker[idx];
-        explorer.cursor = (explorer.sel && explorer.sel.price) ? explorer.sel.price.length - 1 : 159;
-        renderSelection();
-        if (explorer.sel) syncLiveTicker(explorer.market, explorer.sel.ticker);
-      });
+      btn.addEventListener("click", () => selectTicker(parseInt(btn.dataset.idx, 10)));
+    });
+  }
+
+  // Select a ticker (idx < 0 = whole basket) from either a chip or a table row,
+  // and keep both views' highlight in sync so they never disagree.
+  function selectTicker(idx, scroll) {
+    explorer.sel = idx < 0 ? null : currentMarket().per_ticker[idx];
+    explorer.cursor = (explorer.sel && explorer.sel.price) ? explorer.sel.price.length - 1 : 159;
+    document.querySelectorAll("#basket .chip").forEach((b) =>
+      b.classList.toggle("active", parseInt(b.dataset.idx, 10) === idx));
+    renderSelection();
+    renderTable(explorer.market);
+    if (explorer.sel) syncLiveTicker(explorer.market, explorer.sel.ticker);
+    if (scroll) {
+      const eq = document.getElementById("dashEquity");
+      if (eq) eq.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
+  // ── full-basket results table (sortable, click a row to load it) ──
+  const tableState = { key: "diff", dir: "desc" };
+
+  function renderTable(market) {
+    const body = document.getElementById("resTableBody");
+    if (!body) return;
+    const pt = (DATA.markets[market] || {}).per_ticker || [];
+    const rows = pt.map((r, i) => {
+      const a = r.metrics.total_return, b = r.bench_metrics.total_return;
+      return { i, ticker: r.ticker, agent: a, bench: b, diff: a - b,
+               sharpe: r.metrics.sharpe, dd: r.metrics.max_drawdown };
+    });
+    const { key, dir } = tableState;
+    rows.sort((x, y) => {
+      const c = key === "ticker" ? x.ticker.localeCompare(y.ticker) : x[key] - y[key];
+      return dir === "asc" ? c : -c;
+    });
+    const selTicker = explorer.sel && explorer.sel.ticker;
+    body.innerHTML = rows.map((r) => {
+      const beat = r.diff >= 0;
+      const dpfx = r.diff >= 0 ? "+" : "";
+      return `<tr data-idx="${r.i}" class="rt-row${r.ticker === selTicker ? " sel" : ""}">
+        <td class="num-l">${r.ticker}</td>
+        <td class="${beat ? "win" : "lose"}">${sgn(r.agent)}</td>
+        <td>${sgn(r.bench)}</td>
+        <td class="${beat ? "win" : "lose"}">${dpfx}${(r.diff * 100).toFixed(1)}%</td>
+        <td>${f2(r.sharpe)}</td>
+        <td>${pct(r.dd)}</td>
+        <td>${beat ? '<span class="pill win">beat</span>' : '<span class="pill lose">lagged</span>'}</td>
+      </tr>`;
+    }).join("");
+    document.querySelectorAll("#resTable th[data-sort]").forEach((th) => {
+      const on = th.dataset.sort === key;
+      th.classList.toggle("sorted", on);
+      th.setAttribute("aria-sort", on ? (dir === "asc" ? "ascending" : "descending") : "none");
     });
   }
 
@@ -541,6 +587,7 @@
       : `Explore the agent on ${n} real crypto pairs.`;
     buildBasket();
     renderSelection();
+    renderTable(market);
     renderLab(market);
     const ins = document.getElementById("insight");
     if (ins) ins.innerHTML = marketInsight(market);
@@ -573,6 +620,20 @@
       eqc.addEventListener("mousemove", (e) => paintEquity(equityIndexFromEvent(e, eqc)));
       eqc.addEventListener("mouseleave", () => paintEquity(null));
     }
+    // results table: click a header to sort, click a row to load that ticker
+    document.querySelectorAll("#resTable th[data-sort]").forEach((th) => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.sort;
+        if (tableState.key === key) tableState.dir = tableState.dir === "asc" ? "desc" : "asc";
+        else { tableState.key = key; tableState.dir = key === "ticker" ? "asc" : "desc"; }
+        renderTable(explorer.market);
+      });
+    });
+    const tbody = document.getElementById("resTableBody");
+    if (tbody) tbody.addEventListener("click", (e) => {
+      const tr = e.target.closest("tr[data-idx]");
+      if (tr) selectTicker(parseInt(tr.dataset.idx, 10), true);
+    });
   }
 
   // ── top-level routing: Home / Stocks / Crypto tabs ──────────

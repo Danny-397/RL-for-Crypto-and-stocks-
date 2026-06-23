@@ -285,6 +285,29 @@
       <!-- what the agent learned, per market (populated by app.js) -->
       <div class="insight" id="insight"></div>
 
+      <!-- every held-out ticker at once: sortable, click a row to load it -->
+      <div class="panel" id="tablePanel">
+        <div class="panel-head">
+          <h3>Every held-out result <span class="muted-sub">click a row to load it &middot; click a header to sort</span></h3>
+        </div>
+        <div class="table-scroll">
+          <table class="restable" id="resTable">
+            <thead>
+              <tr>
+                <th data-sort="ticker" class="num-l" scope="col">Ticker</th>
+                <th data-sort="agent" scope="col">Agent</th>
+                <th data-sort="bench" scope="col">Buy &amp; hold</th>
+                <th data-sort="diff" scope="col">&Delta; vs B&amp;H</th>
+                <th data-sort="sharpe" scope="col">Sharpe</th>
+                <th data-sort="dd" scope="col">Max DD</th>
+                <th data-sort="diff" scope="col">Result</th>
+              </tr>
+            </thead>
+            <tbody id="resTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- multi-seed return distribution: is the edge real, or seed luck? -->
       <div class="panel" id="seedDistPanel" hidden>
         <div class="panel-head">

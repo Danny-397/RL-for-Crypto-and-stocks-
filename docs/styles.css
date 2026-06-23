@@ -463,6 +463,37 @@ h2 {
 }
 .lab-caption b { color: var(--volt); font-family: var(--font-mono); }
 
+/* ── full-basket results table ───────────────────────────── */
+.table-scroll { overflow-x: auto; }
+.restable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.restable th, .restable td {
+  padding: 9px 12px; text-align: right; white-space: nowrap;
+}
+.restable thead th {
+  color: var(--muted); cursor: pointer; user-select: none;
+  border-bottom: 1px solid var(--border-2);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.restable th.num-l, .restable td.num-l { text-align: left; }
+.restable th.num-l { font-weight: 700; }
+.restable thead th:hover { color: var(--text); }
+.restable thead th.sorted { color: var(--volt); }
+.restable thead th.sorted::after { content: " \25BE"; }
+.restable thead th.sorted[aria-sort="ascending"]::after { content: " \25B4"; }
+.restable td.num-l { font-family: var(--font-mono); color: var(--text); }
+.restable tbody tr { cursor: pointer; border-bottom: 1px solid var(--border); }
+.restable tbody tr:hover { background: rgba(255,255,255,0.035); }
+.restable tbody tr.sel { background: rgba(212,255,63,0.08); }
+.restable td.win { color: var(--volt); }
+.restable td.lose { color: #ff6b6b; }
+.restable .pill {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.03em;
+  padding: 2px 8px; border-radius: 999px;
+}
+.restable .pill.win { color: var(--volt); background: rgba(212,255,63,0.12); }
+.restable .pill.lose { color: #ff6b6b; background: rgba(255,107,107,0.12); }
+
 /* ── CTA ────────────────────────────────────────────────── */
 .cta {
   max-width: 860px; margin: 40px auto 96px; padding: 64px 32px; text-align: center;
