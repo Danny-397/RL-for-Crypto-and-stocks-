@@ -397,6 +397,31 @@
     });
   }
 
+  // "What the agent learned" — a defensive, short-capable policy, evidenced from
+  // the per-ticker results (wins cluster on assets that FELL; it lags ones that ripped).
+  function marketInsight(market) {
+    const pt = (DATA.markets[market] || {}).per_ticker || [];
+    if (!pt.length) return "";
+    const n = pt.length;
+    let wins = 0, bestDef = null, bestRip = null;
+    pt.forEach((r) => {
+      const a = r.metrics.total_return, b = r.bench_metrics.total_return;
+      if (a > b) wins++;
+      if (a > b && b < 0 && (!bestDef || (a - b) > (bestDef.a - bestDef.b))) bestDef = { t: r.ticker, a, b };
+      if (b > 0 && (!bestRip || b > bestRip.b)) bestRip = { t: r.ticker, a, b };
+    });
+    const lead = "<strong>What the agent learned:</strong> a <b>defensive, short-capable</b> policy — " +
+      "it adds value when an asset <i>falls</i> (going short or to cash) and gives up upside when one melts up.";
+    if (market === "crypto") {
+      const eg = bestDef
+        ? ` Its biggest wins are exactly where the coin crashed — e.g. <b>${bestDef.t}</b>: buy-&amp;-hold ${sgn(bestDef.b)} → agent <b>${sgn(bestDef.a)}</b>.`
+        : "";
+      return `${lead} Crypto's violent draw-downs give it room to work: it beat buy-&amp;-hold on <b>${wins}/${n}</b> coins.${eg} On coins that only rose, it trails.`;
+    }
+    const eg = bestRip ? ` (e.g. <b>${bestRip.t}</b> ${sgn(bestRip.b)} buy-&amp;-hold vs ${sgn(bestRip.a)} agent)` : "";
+    return `${lead} But 2021&ndash;2026 equities were a one-way mega-cap bull — nearly every name rose${eg}, leaving little to defend against, so trimming and exiting mostly bled upside + costs. It beat buy-&amp;-hold on only <b>${wins}/${n}</b> names; the policy's edge needs a market that falls <i>sometimes</i> — as crypto did.`;
+  }
+
   function setMarket(market) {
     explorer.market = market;
     explorer.sel = null;
@@ -413,6 +438,8 @@
     buildBasket();
     renderSelection();
     renderLab(market);
+    const ins = document.getElementById("insight");
+    if (ins) ins.innerHTML = marketInsight(market);
     const v = document.getElementById("verdict");
     if (v) v.innerHTML = `<strong>How this is evaluated.</strong> ${VERDICT[market]}${VERDICT_TAIL}`;
     const ms = document.getElementById("live-market");

@@ -421,6 +421,15 @@ h2 {
 .lg-short::before { background: var(--neg); }
 .lg-flat::before { background: var(--faint); }
 
+/* "what the agent learned" insight callout */
+.insight {
+  margin-top: 22px; padding: 18px 20px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(212,255,63,0.06), rgba(212,255,63,0.02));
+  border: 1px solid rgba(212,255,63,0.25); border-left: 3px solid var(--volt);
+  color: var(--text); font-size: 15px; line-height: 1.65;
+}
+.insight b { color: var(--volt); font-family: var(--font-mono); }
+
 /* learning-curve caption + live widget spacing */
 #live { margin-top: 22px; }
 .lab-caption {
