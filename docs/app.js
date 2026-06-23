@@ -644,8 +644,10 @@
   function showView(view, ticker) {
     const isMarket = view === "stocks" || view === "crypto";
     const home = document.getElementById("view-home");
+    const method = document.getElementById("view-method");
     const market = document.getElementById("view-market");
     if (home) home.classList.toggle("active", view === "home");
+    if (method) method.classList.toggle("active", view === "how");
     if (market) market.classList.toggle("active", isMarket);
     document.querySelectorAll(".navtab").forEach((a) => {
       const on = a.dataset.view === view;
@@ -670,7 +672,7 @@
   }
 
   function initRouter() {
-    const valid = ["home", "stocks", "crypto"];
+    const valid = ["home", "how", "stocks", "crypto"];
     document.querySelectorAll(".navtab").forEach((a) => {
       a.addEventListener("click", (e) => {
         e.preventDefault();

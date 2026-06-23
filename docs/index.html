@@ -46,6 +46,7 @@
     </a>
     <nav class="nav-links" id="nav-tabs">
       <a href="#home" class="navtab active" data-view="home">Home</a>
+      <a href="#how" class="navtab" data-view="how">How it works</a>
       <a href="#stocks" class="navtab" data-view="stocks">Stocks</a>
       <a href="#crypto" class="navtab" data-view="crypto">Crypto</a>
     </nav>
@@ -64,16 +65,15 @@
         <div class="eyebrow"><span class="pulse"></span> REINFORCEMENT LEARNING &middot; QUANT TRADING</div>
         <h1>I built a deep-RL <span class="grad">trading</span> system for stocks &amp; crypto.</h1>
         <p class="lede">
-          <strong>PPO implemented from scratch</strong> (no RL libraries) over two
-          custom Gymnasium market environments, 28 engineered features including
-          cross-asset signals, plus recurrent-policy and cross-sectional-portfolio
-          variants — trained with domain randomization, backtested with real
-          statistical rigor, and <strong>deployed as a live demo you can run on any
-          ticker.</strong>
+          <strong>PPO implemented from scratch</strong> — no RL libraries — learning to
+          trade two markets through trial and error over millions of simulated steps.
+          Two custom market environments, 28 engineered features, recurrent and
+          cross-sectional variants, and an <strong>honest, multi-seed evaluation</strong>
+          of whether it actually works.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary navtab" data-view="stocks" href="#stocks">Explore the agent →</a>
-          <a class="btn btn-ghost" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">View on GitHub</a>
+          <a class="btn btn-ghost navtab" data-view="how" href="#how">How it works</a>
         </div>
         <div class="hero-tags">
           <span>PPO from scratch</span><span>Cross-asset features</span><span>Recurrent + portfolio</span><span>Live inference</span><span>Multi-seed tested</span>
@@ -146,7 +146,84 @@
       </div>
     </section>
 
-    <!-- ─────────────────────── ARCHITECTURE ─────────────────────── -->
+    <!-- ─────────────────────── ABOUT ─────────────────────── -->
+    <section id="about" class="section">
+      <div class="section-head">
+        <div class="kicker">ABOUT</div>
+        <h2>Why I built this.</h2>
+      </div>
+      <div class="about">
+        <p>I wanted to learn modern reinforcement learning by <em>building</em> it, not importing it. So I implemented <strong>PPO from scratch</strong> in PyTorch, wrote two custom market environments, engineered the whole data pipeline, and set out to answer an honest question: can one agent learn to trade two very different markets?</p>
+        <p>The hardest — and most valuable — part wasn't the algorithm; it was the <strong>evaluation</strong>. An early run made the crypto agent look like it crushed the market. Instead of shipping that, I built a <strong>multi-seed significance test</strong> — and it showed the "win" was mostly luck of the random seed, statistically tied with buy-&amp;-hold. Learning to distrust a good-looking backtest and to <em>prove</em> it with statistics taught me more than any single training run.</p>
+        <p>What it demonstrates: I can take a non-trivial ML system end to end — algorithm, data, training, evaluation, and a live deployment — and hold my own results to a real scientific standard.</p>
+      </div>
+    </section>
+    </div><!-- /view-home -->
+
+    <!-- ═══════════════════════ HOW IT WORKS VIEW ═══════════════════════ -->
+    <div class="view" id="view-method">
+    <section class="section">
+      <div class="section-head">
+        <div class="kicker">HOW IT WORKS</div>
+        <h2>Trading as a reinforcement-learning problem.</h2>
+        <p>There's no labelled "right answer" for what to do on a given day — only the consequences of what you did. That's the exact setting reinforcement learning is built for: an <strong>agent</strong> takes <strong>actions</strong> in an <strong>environment</strong>, collects a <strong>reward</strong>, and learns a policy that maximises reward over the long run. Here the environment is a market, the action is a position, and the reward is risk-adjusted profit.</p>
+      </div>
+    </section>
+
+    <!-- the loop: state → action → reward -->
+    <section class="section">
+      <div class="section-head">
+        <div class="kicker">THE LOOP</div>
+        <h2>Observe, act, get rewarded — millions of times.</h2>
+        <p>Every simulated trading day, the agent runs the same three-step loop. Repeat it over millions of steps and a strategy emerges from the consequences alone — no one ever tells it the "correct" trade.</p>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <span class="card-tag">STATE</span>
+          <h3>What it sees</h3>
+          <p>A rolling window of <b>28 features</b> — multi-horizon momentum, RSI, MACD, Bollinger&nbsp;%B, ATR and a volatility-regime flag, plus <b>cross-asset signals</b> (its strength relative to the SPY/BTC index) — concatenated with its own account state: position, cash, and normalised equity.</p>
+        </article>
+        <article class="card">
+          <span class="card-tag">ACTION</span>
+          <h3>What it does</h3>
+          <p>One continuous number in <b>[&minus;1, +1]</b> — the target position. +1 is fully long, &minus;1 fully short, 0 is flat. The environment moves the book toward that target and charges <b>transaction costs and slippage</b> on every change.</p>
+        </article>
+        <article class="card">
+          <span class="card-tag">REWARD</span>
+          <h3>What it optimises</h3>
+          <p>Not raw profit — a <b>risk-adjusted</b> signal (differential Sharpe) net of costs, with drawdown and turnover penalties. That's what keeps it from chasing returns by over-leveraging or churning the account into the ground.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- the algorithm -->
+    <section class="section">
+      <div class="section-head">
+        <div class="kicker">THE ALGORITHM</div>
+        <h2>What PPO actually does.</h2>
+        <p>Proximal Policy Optimization is the learning rule — implemented here from the math up, no <code>stable-baselines</code>.</p>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <h3>Try, then nudge</h3>
+          <p>It gathers a batch of experience under the current policy, estimates which actions did better than expected — the <b>advantage</b>, via GAE — and shifts the policy toward those.</p>
+        </article>
+        <article class="card">
+          <h3>But not too far</h3>
+          <p>A <b>clipped surrogate objective</b> caps how much the policy can move in one update — the "proximal" part. It's what makes PPO stable instead of collapsing, the classic failure of naive policy gradients.</p>
+        </article>
+        <article class="card">
+          <h3>Stay curious</h3>
+          <p>An <b>entropy bonus</b> keeps it exploring early instead of locking onto one strategy too soon; orthogonal initialisation and gradient clipping keep the optimisation well-behaved.</p>
+        </article>
+        <article class="card">
+          <h3>Two heads, one network</h3>
+          <p>An <b>actor</b> picks the position; a <b>critic</b> estimates how good the current state is. The critic's value is the baseline the advantage is measured against.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- architecture (moved from home) -->
     <section id="architecture" class="section">
       <div class="section-head">
         <div class="kicker">ARCHITECTURE</div>
@@ -186,33 +263,29 @@
       </div>
     </section>
 
-    <!-- ─────────────────────── PIPELINE ─────────────────────── -->
+    <!-- pipeline (moved from home) -->
     <section id="pipeline" class="section">
       <div class="section-head">
-        <div class="kicker">HOW IT WORKS</div>
-        <h2>From raw prices to a trained trader.</h2>
+        <div class="kicker">END TO END</div>
+        <h2>From raw prices to a trader you can trust.</h2>
       </div>
       <div class="steps">
-        <div class="step"><div class="step-n">01</div><h3>Ingest &amp; engineer</h3><p>Load OHLCV (or generate synthetic data), build returns, RSI, MACD, moving-average ratios and volatility features.</p></div>
-        <div class="step"><div class="step-n">02</div><h3>Observe</h3><p>The agent sees a rolling window of features plus its own account state — position, cash, and normalised equity.</p></div>
-        <div class="step"><div class="step-n">03</div><h3>Act &amp; learn</h3><p>It outputs a target position in [-1, 1], the env applies costs &amp; slippage, and PPO updates the policy from advantages.</p></div>
-        <div class="step"><div class="step-n">04</div><h3>Backtest</h3><p>Run the trained agent deterministically on the held-out test split and score return, Sharpe, and drawdown.</p></div>
+        <div class="step"><div class="step-n">01</div><h3>Ingest &amp; engineer</h3><p>Load real OHLCV (or generate synthetic data) and build the 28 features — returns, RSI, MACD, MA ratios, volatility, and cross-asset context.</p></div>
+        <div class="step"><div class="step-n">02</div><h3>Split without leakage</h3><p>Chronological train / validation / test splits, with scalers fit on the training slice only — so the agent is scored purely on data it has never seen.</p></div>
+        <div class="step"><div class="step-n">03</div><h3>Train with PPO</h3><p>Run the loop above over millions of steps, with domain randomization across tickers so the policy can't memorise one asset's path.</p></div>
+        <div class="step"><div class="step-n">04</div><h3>Evaluate honestly</h3><p>Backtest deterministically on the held-out split, then repeat across 5 seeds and run a permutation test to see whether the edge is real.</p></div>
       </div>
     </section>
 
-    <!-- ─────────────────────── ABOUT ─────────────────────── -->
-    <section id="about" class="section">
+    <!-- the honest part -->
+    <section class="section">
       <div class="section-head">
-        <div class="kicker">ABOUT</div>
-        <h2>Why I built this.</h2>
-      </div>
-      <div class="about">
-        <p>I wanted to learn modern reinforcement learning by <em>building</em> it, not importing it. So I implemented <strong>PPO from scratch</strong> in PyTorch, wrote two custom market environments, engineered the whole data pipeline, and set out to answer an honest question: can one agent learn to trade two very different markets?</p>
-        <p>The hardest — and most valuable — part wasn't the algorithm; it was the <strong>evaluation</strong>. An early run made the crypto agent look like it crushed the market. Instead of shipping that, I built a <strong>multi-seed significance test</strong> — and it showed the "win" was mostly luck of the random seed, statistically tied with buy-&amp;-hold. Learning to distrust a good-looking backtest and to <em>prove</em> it with statistics taught me more than any single training run.</p>
-        <p>What it demonstrates: I can take a non-trivial ML system end to end — algorithm, data, training, evaluation, and a live deployment — and hold my own results to a real scientific standard.</p>
+        <div class="kicker">THE HONEST PART</div>
+        <h2>And then: does it actually work?</h2>
+        <p>A single training run can look brilliant by luck. So every result is held to a <strong>multi-seed permutation test</strong> — the whole thing is retrained under 5 independent random seeds, and the edge only counts if it survives. Watch it play out per market on the <a href="#stocks" class="navtab" data-view="stocks">Stocks</a> and <a href="#crypto" class="navtab" data-view="crypto">Crypto</a> tabs, or read the full methodology in <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>.</p>
       </div>
     </section>
-    </div><!-- /view-home -->
+    </div><!-- /view-method -->
 
     <!-- ═══════════════════════ MARKET VIEW (Stocks / Crypto) ═══════════════════════ -->
     <div class="view" id="view-market">
