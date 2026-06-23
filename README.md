@@ -1,9 +1,17 @@
-# RL-Trader — Reinforcement Learning for Stocks & Crypto
+# RL-Trader — a Deep-RL Trading System for Stocks & Crypto
 
 [![CI](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/ci.yml/badge.svg)](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-d4ff3f.svg)](LICENSE)
+
+### 🔗 Live demo → **[rl-for-crypto-and-stocks.vercel.app](https://rl-for-crypto-and-stocks.vercel.app/)**
+
+Explore the agent on real stocks & crypto, watch it trade through the held-out
+period, see the multi-seed significance and overfitting studies, and **run the
+policy live on any ticker you type.**
+
+[![RL-Trader live demo](docs/assets/og.png)](https://rl-for-crypto-and-stocks.vercel.app/)
 
 A modular, research-grade framework for training **Proximal Policy Optimization (PPO)**
 agents to trade financial markets. A single, unified agent architecture is trained
@@ -320,11 +328,17 @@ cost-and-slippage environment — so any edge has to be real.
 
 ## Web prototype
 
-A self-contained landing page lives in [`docs/`](docs/) (dark cyber-fintech
-theme). Crucially, it is **data-driven**: an interactive dashboard renders
-*real* backtest output — agent-vs-benchmark equity curves, a drawdown chart, an
-action-distribution histogram, and a metric scorecard you can toggle between
-stock and crypto.
+A self-contained, **data-driven** site lives in [`docs/`](docs/) (dark
+cyber-fintech theme) and is deployed at
+**[rl-for-crypto-and-stocks.vercel.app](https://rl-for-crypto-and-stocks.vercel.app/)**.
+It's an interactive **markets explorer**, not a screenshot: separate **Stocks**
+and **Crypto** tabs, clickable per-ticker backtests (each a real held-out run), a
+time **scrubber** that replays the agent's position day by day, a sortable
+all-tickers results table, and the honest-evaluation visuals — the **multi-seed
+significance** distribution, the **does-more-compute-help** curve, and the
+**domain-randomization overfitting** ablation. A **How it works** tab explains the
+RL loop end to end, and the **Run live** widget executes the exported policy on any
+ticker you type. Every number is a real backtest — no mock data.
 
 ```bash
 python tools/build_site_data.py --timesteps 200000   # regenerates docs/results.js from a real run
