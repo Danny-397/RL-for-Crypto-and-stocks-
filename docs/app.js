@@ -576,6 +576,71 @@
     }
   }
 
+  // ── does more compute help? in-sample vs held-out equity as compute grows ──
+  // Log scale, because in-sample equity balloons by orders of magnitude (memorising
+  // the training path) while held-out equity barely leaves break-even — that gap is
+  // the overfitting. Plotted as a final-equity multiple (1 + return) so it's > 0.
+  function drawComputeCurve(cv, d) {
+    const ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+    const pad = { l: 58, r: 16, t: 16, b: 14 };
+    ctx.clearRect(0, 0, W, H);
+    const n = d.budgets.length;
+    const mult = (r) => Math.max(0.05, 1 + r);
+    const ins = d.insample.map(mult), oos = d.oos.map(mult), bh = mult(d.bh);
+    const all = ins.concat(oos, [bh]);
+    let lo = Math.floor(Math.log10(Math.min.apply(null, all)) - 0.1);
+    let hi = Math.ceil(Math.log10(Math.max.apply(null, all)) + 0.1);
+    const X = (i) => pad.l + (n === 1 ? 0.5 : i / (n - 1)) * (W - pad.l - pad.r);
+    const Y = (m) => pad.t + (1 - (Math.log10(m) - lo) / (hi - lo)) * (H - pad.t - pad.b);
+
+    // decade gridlines + axis labels (1×, 10×, 100× …) with a break-even line at 1×
+    ctx.font = "10px JetBrains Mono, monospace"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for (let e = lo; e <= hi; e++) {
+      const y = Y(Math.pow(10, e)), zero = e === 0;
+      ctx.strokeStyle = zero ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.07)";
+      ctx.setLineDash(zero ? [4, 3] : []);
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = zero ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.32)";
+      ctx.fillText(zero ? "break-even" : Math.pow(10, e).toLocaleString() + "×", pad.l - 7, y);
+    }
+    // buy & hold reference (flat dashed line)
+    ctx.strokeStyle = BENCH; ctx.lineWidth = 1.8; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(X(0), Y(bh)); ctx.lineTo(X(n - 1), Y(bh)); ctx.stroke(); ctx.setLineDash([]);
+
+    const line = (arr, color, glow) => {
+      ctx.strokeStyle = color; ctx.lineWidth = 2.6;
+      if (glow) { ctx.shadowColor = color; ctx.shadowBlur = 10; }
+      ctx.beginPath(); arr.forEach((m, i) => (i ? ctx.lineTo(X(i), Y(m)) : ctx.moveTo(X(i), Y(m)))); ctx.stroke();
+      ctx.shadowBlur = 0;
+      arr.forEach((m, i) => { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(i), Y(m), 3.3, 0, 7); ctx.fill(); });
+    };
+    line(ins, "#ff6b6b", false);   // in-sample: the seductive, fake number
+    line(oos, VOLT, true);         // held-out: the honest one
+  }
+
+  function renderLearningDynamics(market) {
+    const panel = document.getElementById("ldPanel");
+    if (!panel) return;
+    const LD = window.RL_LEARNING;
+    const d = LD && LD[market];
+    if (!d || !d.budgets || !d.budgets.length) { panel.hidden = true; return; }
+    panel.hidden = false;
+    const n = d.budgets.length;
+    drawComputeCurve(document.getElementById("ldChart"), d);
+    const dates = document.getElementById("ldDates");
+    if (dates) dates.innerHTML = d.budgets.map((b) => `<span>${Math.round(b / 1000)}k steps</span>`).join("");
+    const cap = document.getElementById("ldCaption");
+    if (cap) {
+      cap.innerHTML =
+        `Each point retrains the agent from scratch at that budget, then scores the basket on both splits. ` +
+        `<b>In-sample</b> return balloons from <b>${sgn(d.insample[0])}</b> to <b>${sgn(d.insample[n - 1])}</b> ` +
+        `as compute grows — the agent is memorising the training path. <b>Held-out</b> return stays stuck near ` +
+        `break-even and below buy-&-hold (${sgn(d.bh)}); that widening gap is <b>overfitting, not skill</b>. ` +
+        `(Single seed per budget, so the held-out line is noisy — the multi-seed study above is the reliable ` +
+        `read, and it finds no durable edge.)`;
+    }
+  }
+
   function setMarket(market) {
     explorer.market = market;
     explorer.sel = null;
@@ -596,6 +661,7 @@
     const ins = document.getElementById("insight");
     if (ins) ins.innerHTML = marketInsight(market);
     renderSeedDist(market);
+    renderLearningDynamics(market);
     const v = document.getElementById("verdict");
     if (v) v.innerHTML = `<strong>How this is evaluated.</strong> ${VERDICT[market]}${VERDICT_TAIL}`;
     const ms = document.getElementById("live-market");

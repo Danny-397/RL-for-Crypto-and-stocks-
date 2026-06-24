@@ -203,6 +203,7 @@ h2 {
 .lg::before { content: ""; width: 14px; height: 3px; border-radius: 2px; }
 .lg-agent::before { background: var(--volt); }
 .lg-bench::before { background: var(--faint); }
+.lg-insample::before { background: #ff6b6b; }
 #equityChart { width: 100%; height: auto; display: block; }
 .chart-foot {
   display: flex; justify-content: space-between; gap: 12px;

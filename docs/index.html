@@ -420,6 +420,17 @@
         <p class="lab-caption" id="seedDistCaption"></p>
       </div>
 
+      <!-- does more compute help? in-sample vs held-out equity as compute grows -->
+      <div class="panel" id="ldPanel" hidden>
+        <div class="panel-head">
+          <h3>Does more training help? <span class="muted-sub">final equity multiple vs. compute (log scale)</span></h3>
+          <span class="chart-legend"><span class="lg lg-insample">in-sample</span><span class="lg lg-agent">held-out</span><span class="lg lg-bench">buy &amp; hold</span></span>
+        </div>
+        <canvas id="ldChart" width="980" height="240"></canvas>
+        <div class="axis-dates" id="ldDates"></div>
+        <p class="lab-caption" id="ldCaption"></p>
+      </div>
+
       <!-- honest verdict, per market (populated by app.js) -->
       <div class="honest-note" id="verdict"></div>
 
@@ -475,6 +486,7 @@ python -m rl_trader.scripts.compare_markets --plot</code></pre>
   <script src="config.js"></script>
   <script src="results.js"></script>
   <script src="significance.js"></script>
+  <script src="learning.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
