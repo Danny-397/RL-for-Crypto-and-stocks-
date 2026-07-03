@@ -1,0 +1,273 @@
+\documentclass[10pt,twocolumn]{article}
+
+% --- Minimal, Overleaf-friendly preamble (no exotic packages) --------------
+\usepackage[margin=0.75in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage[hidelinks]{hyperref}
+\captionsetup{font=small,labelfont=bf}
+
+% Put the PNGs from docs/assets/ next to this file (or in paper/figures/).
+\graphicspath{{figures/}{../docs/assets/}}
+
+\newcommand{\pc}{\%}  % readable percent in text
+
+\title{\vspace{-2.5em}\textbf{Generalization and Evaluation Rigor in Deep\\
+Reinforcement Learning: A From-Scratch Study on a\\
+Financial-Market Testbed}}
+\author{Daniel Lichtenberger\\
+\small\texttt{github.com/Danny-397/RL-for-Crypto-and-stocks-}}
+\date{\vspace{-1.2em}\small 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Deep reinforcement learning is unusually easy to fool yourself with:
+agents memorize their training trajectory, and a single lucky random seed can
+masquerade as a real result. We study both failure modes from scratch --- a
+PyTorch implementation of Proximal Policy Optimization (PPO), two custom
+Gymnasium environments, and a full evaluation suite --- using financial markets
+as a deliberately hard testbed: non-stationary, partially observable, with a
+noisy reward and near--random-walk signal. We ask (RQ1) whether one fixed recipe
+generalizes across two market regimes; (RQ2) how severely an agent overfits a
+single price trajectory and whether \emph{domain randomization} repairs it;
+(RQ3) whether an apparent out-of-sample edge survives multi-seed significance
+testing; and (RQ4) whether the same holds for cross-sectional allocation. Our
+headline result is negative, and that is the point: on real markets the agent
+has \emph{no seed-robust edge} over buy-and-hold, and our own significance
+tooling catches a single-seed ``$+275\pc$'' run as a false positive. We further
+introduce a \textbf{surrogate-data falsification test} that separates ``the agent
+is weak'' from ``there is no signal to find,'' and validate it with a positive
+control on synthetic data with known structure. In doing so the project
+reproduces, in a new domain, the central methodological finding of
+Henderson~et~al.\ (2018) --- that single-run RL evaluation is unreliable --- and
+quantifies the memorization gap that domain randomization closes by two-to-three
+orders of magnitude.
+\end{abstract}
+
+\section{Introduction}
+Reinforcement learning (RL) research has a reproducibility problem: reported
+performance swings wildly across random seeds, implementation details, and
+evaluation choices \cite{henderson2018}. Trading is a domain where these hazards
+are especially acute --- the data-generating process drifts (non-stationarity),
+price alone hides the true state (partial observability), the reward is noisy,
+and a single historical path is trivial to memorize. That makes markets an
+excellent \emph{stress test} for the general RL questions of generalization and
+honest evaluation, rather than a get-rich scheme.
+
+We build the entire stack from the algorithm up --- PPO \cite{ppo} with
+Generalized Advantage Estimation \cite{gae}, two market environments, a
+28-feature pipeline, and the evaluation harness --- so that every experiment can
+be instrumented and trusted. Our contributions are:
+\begin{itemize}\itemsep2pt
+  \item A controlled study showing an RL agent memorizes a single price path
+  catastrophically, and that \textbf{domain randomization}
+  \cite{tobin2017,cobbe2019} collapses the in-sample/out-of-sample gap by
+  $100$--$1000\times$ (\S\ref{sec:ablation}).
+  \item A \textbf{multi-seed significance protocol} (bootstrap CIs + paired
+  permutation tests) that reproduces the Henderson~et~al.\ \cite{henderson2018} finding in a new
+  domain: a favorable single-seed ``win'' does not survive resampling
+  (\S\ref{sec:sig}).
+  \item An original \textbf{surrogate-data falsification test} that distinguishes
+  agent weakness from signal absence, with a synthetic positive control that
+  confirms the test has statistical power (\S\ref{sec:surrogate}).
+\end{itemize}
+
+\section{Method}
+\paragraph{Algorithm.} A single \texttt{PPOAgent} (shared-trunk actor--critic)
+implements the clipped surrogate objective, GAE advantages, entropy
+regularization, orthogonal initialization, gradient clipping, and a Welford
+\cite{welford1962} running observation normalizer that is exported and reused at
+serving time. A recurrent (LSTM) actor--critic trains through the same machinery
+with truncated backpropagation through time.
+
+\paragraph{Environments.} \texttt{StockTradingEnv} and \texttt{CryptoTradingEnv}
+subclass one \texttt{BaseTradingEnv} so accounting, transaction costs, slippage,
+and reward can never silently diverge. The action is a continuous target position
+in $[-1,1]$ (fraction of equity; negative $=$ short). The observation is a rolling
+window of 28 stationary features spanning multi-horizon momentum, moving-average
+ratios, RSI/MACD, Bollinger \%B, Donchian position, ATR and volatility-regime
+signals, drawdown-from-high, volume microstructure, and cross-asset context
+(relative strength vs.\ SPY/BTC and the index's own trend).
+
+\paragraph{Reward.} Two selectable forms: a risk-aware return net of transaction
+costs with drawdown and turnover penalties, or the Differential Sharpe Ratio
+\cite{moody2001}, an online per-step approximation to the change in the Sharpe
+ratio.
+
+\paragraph{Evaluation protocol.} Data are split chronologically; feature scalers
+are fit on the training slice only. Agents are scored on an untouched test split
+by total return, annualized Sharpe, and maximum drawdown, against buy-and-hold,
+random, and moving-average-crossover baselines run through the identical cost
+model. Every headline claim is repeated across independent seeds and reported as a
+bootstrap 95\pc\ confidence interval, with a paired permutation test against
+buy-and-hold.
+
+\section{Experiments}
+
+\subsection{RQ1: Regime transfer}
+Holding the architecture and hyperparameters fixed, we train one agent per market
+using only market-specific environment dynamics (cost, slippage, volatility). The
+same recipe produces coherent, market-appropriate behavior on both equities and
+crypto, confirming the unified agent is genuinely market-agnostic and that
+downstream differences are attributable to the environments, not the code.
+
+\subsection{RQ2: Overfitting and domain randomization}
+\label{sec:ablation}
+Training on a \emph{single} price series is a trap: the agent memorizes it. We
+train two otherwise-identical agents --- one on a fixed synthetic path, one drawing
+a fresh path every episode (domain randomization) --- and measure in-sample vs.\
+out-of-sample (30 unseen paths) return (Table~\ref{tab:ablation}).
+
+\begin{table}[t]\centering\small
+\caption{Domain-randomization ablation. Single-path agents post astronomical
+in-sample returns by memorization, then lose out-of-sample; domain randomization
+collapses the gap by orders of magnitude.}
+\label{tab:ablation}
+\begin{tabular}{@{}llrr@{}}
+\toprule
+Market & Training & In-sample & Out-of-sample\\
+\midrule
+Stock  & single-path   & $+5821\pc$   & $-41\pc$\\
+Stock  & domain-random & $-12\pc$     & $\mathbf{+30\pc}$\\
+Crypto & single-path   & $+18709\pc$  & $-71\pc$\\
+Crypto & domain-random & $+63\pc$     & $\mathbf{+99\pc}$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The astronomical in-sample figures are not a win --- they are the overfitting
+signature. Domain randomization is the single change that turns a memorizer into a
+generalizer, echoing sim-to-real transfer \cite{tobin2017} and RL generalization
+benchmarks \cite{cobbe2019}.
+
+\subsection{RQ3: Does the edge survive multiple seeds?}
+\label{sec:sig}
+A single backtest is an anecdote. On synthetic markets where a signal provably
+exists, the agent is repeatably profitable across 5 seeds (stock
+$+18.3\pc$, 95\pc\ CI $[+9.2,+29.9]$; crypto $+63.0\pc$, $[+37.5,+88.5]$) yet
+remains statistically indistinguishable from buy-and-hold (permutation
+$p{=}0.53$ and $0.96$). On \emph{real} markets the picture is starker
+(Table~\ref{tab:real}): a favorable single seed shows the crypto agent at
+$+275\pc$ vs.\ buy-and-hold's $+19\pc$, but across 5 seeds the expected outcome is
+a small loss whose confidence interval straddles zero, and on equities the agent
+is significantly \emph{worse} than a $+260\pc$ bull market.
+
+\begin{table}[t]\centering\small
+\caption{Real-market multi-seed significance (5 seeds, held-out walk-forward). The
+lucky single-seed crypto ``win'' does not survive resampling.}
+\label{tab:real}
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+Market & Agent (95\pc\ CI) & vs.\ B\&H & Verdict\\
+\midrule
+Crypto & $-2.7\pc$ $[-31,+27]$ & $-22\pc$ & indist.\ ($p{\approx}0.97$)\\
+Stock  & $-19\pc$ $[-29,-7]$   & $-278\pc$ & worse ($p{\approx}0.002$)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This is exactly the warning of Henderson~et~al.\ \cite{henderson2018}: a single run is not evidence.
+A naive project ships the $+275\pc$ table; the significance test is what catches
+it. \emph{Reporting the catch is the contribution.}
+
+\subsection{RQ (original): A surrogate-data falsification test}
+\label{sec:surrogate}
+The results above show the agent does not beat the market --- but is that because
+the agent is weak, or because there is no exploitable structure to find? We adapt
+\textbf{surrogate-data testing} from nonlinear time-series analysis
+\cite{theiler1992}. A \emph{return-shuffled surrogate} randomly permutes a series'
+daily log-returns and re-integrates them. Because a sum is permutation-invariant,
+the surrogate ends at the identical price --- \emph{buy-and-hold is unchanged} ---
+but momentum, autocorrelation, and volatility clustering are destroyed. We then
+train and evaluate the same recipe on structured data and on its surrogate and
+compare the agent's edge over buy-and-hold.
+
+The logic is a controlled falsification. On synthetic data with a \emph{known}
+AR(1) momentum signal, a valid test must find $\text{edge}_{\text{structured}} \gg
+\text{edge}_{\text{surrogate}}$: the agent should exploit the signal and lose that
+edge once shuffling removes it. This is our positive control
+(Table~\ref{tab:surrogate}), and it confirms the test has power. Applying the
+identical lens to real markets, an indistinguishable $\Delta$ (large $p$) would
+mean real prices offer the agent no more exploitable structure than pure noise ---
+the null this project argues for, now stated as a falsifiable prediction rather
+than an appeal to market efficiency.
+
+\begin{table}[t]\centering\small
+\caption{Surrogate-data test, synthetic positive control (edge $=$ agent $-$
+buy-and-hold return, mean over 10 held-out paths, 3 seeds, 30k steps; $p$ from a
+paired permutation test of structured vs.\ surrogate edge). When a known signal
+exists the agent earns a positive edge; destroying it by shuffling collapses the
+edge sharply negative --- the test has power.}
+\label{tab:surrogate}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Market & Structured & Surrogate & $\Delta$ & $p$\\
+\midrule
+Stock  & $+5.0\pc$  & $-32.1\pc$ & $+37.1\pc$ & $0.017$\\
+Crypto & $+33.6\pc$ & $-36.7\pc$ & $+70.3\pc$ & $0.059$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{RQ4: Cross-sectional allocation}
+Single-asset timing is only half the problem. The same PPO agent generalizes to a
+\texttt{PortfolioTradingEnv} that observes a whole basket and emits an
+$N$-dimensional long/short weight vector under a gross-exposure budget, benchmarked
+against an equal-weight ($1/N$) portfolio and a cross-sectional momentum factor. On
+both markets the learned allocator beats random but is decisively beaten by
+equal-weight (stock: $-43\pc$ vs.\ $+164\pc$; crypto: $-80\pc$ vs.\ $-4\pc$). The
+contribution is the working, budget-constrained RL allocator and its
+apples-to-apples evaluation --- the same lesson at a harder problem: naive
+diversification is hard to beat when the per-asset signal is weak.
+
+\section{Related Work}
+This project reproduces and cross-domain stress-tests results the field already
+considers important. Henderson~et~al.\ \cite{henderson2018} document the unreliability of
+single-run deep-RL evaluation; \S\ref{sec:sig} reproduces it on markets.
+Tobin~et~al.\ \cite{tobin2017} introduce domain randomization for sim-to-real transfer and
+Cobbe~et~al.\ \cite{cobbe2019} formalize train/test generalization in RL; \S\ref{sec:ablation}
+measures the gap domain randomization closes. The algorithm is PPO \cite{ppo} with
+GAE \cite{gae}; the Differential Sharpe Ratio reward is due to
+Moody and Saffell \cite{moody2001}. The negative real-market result is consistent with weak-form
+market efficiency \cite{fama1970}, and surrogate-data testing follows
+Theiler~et~al.\ \cite{theiler1992}.
+
+\section{Limitations and Conclusion}
+The bottleneck is signal, not the agent: raw daily OHLCV carries little
+exploitable structure, so richer exogenous data (macro series, sentiment) --- not a
+bigger network --- is the natural next lever. Multi-fold walk-forward and a
+head-to-head feed-forward-vs-LSTM study are supported by the codebase and left as
+future work. Our conclusion is deliberately unglamorous and, we argue, more
+valuable than a suspicious backtest: built and evaluated honestly, a from-scratch
+deep-RL trader finds no reliable edge on real markets --- and the methodology that
+establishes this rigorously is the actual result.
+
+\begin{thebibliography}{9}\small
+\bibitem{henderson2018} P.~Henderson, R.~Islam, P.~Bachman, J.~Pineau, D.~Precup,
+  D.~Meger. Deep Reinforcement Learning that Matters. \emph{AAAI}, 2018.
+\bibitem{ppo} J.~Schulman, F.~Wolski, P.~Dhariwal, A.~Radford, O.~Klimov.
+  Proximal Policy Optimization Algorithms. \emph{arXiv:1707.06347}, 2017.
+\bibitem{gae} J.~Schulman, P.~Moritz, S.~Levine, M.~Jordan, P.~Abbeel.
+  High-Dimensional Continuous Control Using GAE. \emph{ICLR}, 2016.
+\bibitem{tobin2017} J.~Tobin et al. Domain Randomization for Transferring Deep
+  Neural Networks from Simulation to the Real World. \emph{IROS}, 2017.
+\bibitem{cobbe2019} K.~Cobbe, O.~Klimov, C.~Hesse, T.~Kim, J.~Schulman.
+  Quantifying Generalization in Reinforcement Learning. \emph{ICML}, 2019.
+\bibitem{moody2001} J.~Moody, M.~Saffell. Learning to Trade via Direct
+  Reinforcement. \emph{IEEE Trans.\ Neural Networks}, 2001.
+\bibitem{theiler1992} J.~Theiler et al. Testing for Nonlinearity in Time Series:
+  The Method of Surrogate Data. \emph{Physica D}, 1992.
+\bibitem{fama1970} E.~Fama. Efficient Capital Markets. \emph{J.\ Finance}, 1970.
+\bibitem{welford1962} B.~P.~Welford. Note on a Method for Calculating Corrected
+  Sums of Squares and Products. \emph{Technometrics}, 1962.
+\end{thebibliography}
+
+\end{document}
