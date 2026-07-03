@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use this software or its findings, please cite it as below."
+title: "RL-Trader: Generalization and Evaluation Rigor in Deep Reinforcement Learning"
+abstract: >-
+  A from-scratch study of two deep-RL failure modes — trajectory memorization and
+  single-seed unreliability — using financial markets as a hard, non-stationary
+  testbed. Implements PPO, two Gymnasium market environments, and an evaluation
+  suite (domain-randomization ablation, multi-seed significance testing, and a
+  surrogate-data falsification test) that finds no seed-robust market edge, in line
+  with weak-form efficiency, and reproduces Henderson et al. (2018) in a new domain.
+type: software
+authors:
+  - family-names: Lichtenberger
+    given-names: Daniel
+    # NOTE: confirm/correct this author line before sharing.
+repository-code: "https://github.com/Danny-397/RL-for-Crypto-and-stocks-"
+keywords:
+  - reinforcement-learning
+  - proximal-policy-optimization
+  - generalization
+  - domain-randomization
+  - reproducibility
+  - quantitative-finance
+license: MIT
+date-released: "2026-07-03"
+references:
+  - type: conference-paper
+    title: "Deep Reinforcement Learning that Matters"
+    authors:
+      - family-names: Henderson
+        given-names: Peter
+    year: 2018
+  - type: conference-paper
+    title: "Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World"
+    authors:
+      - family-names: Tobin
+        given-names: Josh
+    year: 2017
