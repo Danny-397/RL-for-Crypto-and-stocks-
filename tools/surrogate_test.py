@@ -227,6 +227,11 @@ def run_real(market, seeds, timesteps, data_dir, log) -> dict:
     if not real:
         raise SystemExit(f"No CSVs in {os.path.join(data_dir, market)} — run tools/fetch_data.py.")
     surr = load_basket(data_dir, market, surrogate=True, rng=np.random.default_rng(2_024))
+    # Pair ticker-by-ticker: restrict both baskets to the same tickers, same order,
+    # so the surrogate is a like-for-like counterfactual of each real series.
+    common = sorted(set(real) & set(surr))
+    real = {t: real[t] for t in common}
+    surr = {t: surr[t] for t in common}
     edge_real = _basket_edge(market, real, seeds, timesteps, 300, log, "real")
     edge_surr = _basket_edge(market, surr, seeds, timesteps, 600, log, "surrogate")
     diff, p = paired_permutation_test(edge_real, edge_surr)
