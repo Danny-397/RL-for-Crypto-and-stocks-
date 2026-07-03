@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RL·Trader — Deep-RL Trading System for Stocks &amp; Crypto</title>
-  <meta name="description" content="A from-scratch deep reinforcement-learning trading system for stocks and crypto — PPO built from the algorithm up, 28 features with cross-asset signals, recurrent + cross-sectional variants, deployed live and evaluated with multi-seed statistical rigor." />
+  <title>RL·Trader — Generalization &amp; Evaluation Rigor in Deep RL</title>
+  <meta name="description" content="A from-scratch deep-RL research study of overfitting, generalization, and honest evaluation — PPO built from the algorithm up, domain randomization, and multi-seed significance testing, with financial markets as a hard non-stationary testbed." />
   <meta name="theme-color" content="#07090d" />
   <!-- Open Graph / Twitter (nice link unfurls for resumes & shares) -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="RL·Trader — Deep-RL Trading System for Stocks & Crypto" />
-  <meta property="og:description" content="A from-scratch deep-RL trading system for stocks & crypto — PPO built from the algorithm up, dual market environments, cross-asset features, deployed live, rigorously evaluated." />
+  <meta property="og:title" content="RL·Trader — Generalization & Evaluation Rigor in Deep RL" />
+  <meta property="og:description" content="A from-scratch deep-RL study of overfitting, generalization, and honest evaluation — PPO from the algorithm up, domain randomization, and multi-seed significance testing on a financial-market testbed." />
   <meta property="og:url" content="https://rl-for-crypto-and-stocks.vercel.app/" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="RL·Trader — Deep-RL Trading System for Stocks & Crypto" />
-  <meta name="twitter:description" content="From-scratch PPO, dual market environments, cross-asset features, a live interactive demo, and multi-seed statistical evaluation." />
+  <meta name="twitter:title" content="RL·Trader — Generalization & Evaluation Rigor in Deep RL" />
+  <meta name="twitter:description" content="From-scratch PPO, domain randomization, and multi-seed significance testing — a deep-RL research study on a financial-market testbed." />
   <meta property="og:image" content="https://rl-for-crypto-and-stocks.vercel.app/assets/og.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -62,21 +62,22 @@
     <div class="view active" id="view-home">
     <section class="hero">
       <div class="hero-copy">
-        <div class="eyebrow"><span class="pulse"></span> REINFORCEMENT LEARNING &middot; QUANT TRADING</div>
-        <h1>I built a deep-RL <span class="grad">trading</span> system for stocks &amp; crypto.</h1>
+        <div class="eyebrow"><span class="pulse"></span> DEEP REINFORCEMENT LEARNING &middot; RESEARCH STUDY</div>
+        <h1>How do deep-RL agents <span class="grad">generalize</span> — and how do you tell a real result from luck?</h1>
         <p class="lede">
-          <strong>PPO implemented from scratch</strong> — no RL libraries — learning to
-          trade two markets through trial and error over millions of simulated steps.
-          Two custom market environments, 28 engineered features, recurrent and
-          cross-sectional variants, and an <strong>honest, multi-seed evaluation</strong>
-          of whether it actually works.
+          A from-scratch study of two ways RL fools you: <strong>memorising the
+          training path</strong>, and <strong>a single lucky seed</strong>. I built
+          <strong>PPO from the algorithm up</strong>, used domain randomization to fix
+          overfitting, and ran <strong>multi-seed significance tests</strong> to check
+          whether any edge is real. The testbed — deliberately hard — is financial
+          markets: non-stationary, noisy, near-random-walk.
         </p>
         <div class="hero-cta">
-          <a class="btn btn-primary navtab" data-view="stocks" href="#stocks">Explore the agent →</a>
-          <a class="btn btn-ghost navtab" data-view="how" href="#how">How it works</a>
+          <a class="btn btn-primary navtab" data-view="how" href="#how">The research →</a>
+          <a class="btn btn-ghost navtab" data-view="stocks" href="#stocks">See the experiments</a>
         </div>
         <div class="hero-tags">
-          <span>PPO from scratch</span><span>Cross-asset features</span><span>Recurrent + portfolio</span><span>Live inference</span><span>Multi-seed tested</span>
+          <span>PPO from scratch</span><span>Domain randomization</span><span>Multi-seed significance</span><span>Reproduces Henderson et&nbsp;al. 2018</span><span>Honest negative result</span>
         </div>
       </div>
 
@@ -153,9 +154,9 @@
         <h2>Why I built this.</h2>
       </div>
       <div class="about">
-        <p>I wanted to learn modern reinforcement learning by <em>building</em> it, not importing it. So I implemented <strong>PPO from scratch</strong> in PyTorch, wrote two custom market environments, engineered the whole data pipeline, and set out to answer an honest question: can one agent learn to trade two very different markets?</p>
-        <p>The hardest — and most valuable — part wasn't the algorithm; it was the <strong>evaluation</strong>. An early run made the crypto agent look like it crushed the market. Instead of shipping that, I built a <strong>multi-seed significance test</strong> — and it showed the "win" was mostly luck of the random seed, statistically tied with buy-&amp;-hold. Learning to distrust a good-looking backtest and to <em>prove</em> it with statistics taught me more than any single training run.</p>
-        <p>What it demonstrates: I can take a non-trivial ML system end to end — algorithm, data, training, evaluation, and a live deployment — and hold my own results to a real scientific standard.</p>
+        <p>I wanted to understand modern reinforcement learning by <em>building</em> it, not importing it — so I implemented <strong>PPO from scratch</strong> in PyTorch, wrote two custom environments, and engineered the whole data pipeline. But the real question I set out to study is a general one in RL: <strong>how do you know an agent has learned something real, rather than memorised its data or gotten lucky?</strong></p>
+        <p>The hardest — and most valuable — part wasn't the algorithm; it was the <strong>evaluation</strong>. An early run made the crypto agent look like it crushed the market. Instead of shipping that, I built a <strong>multi-seed significance test</strong> — and it showed the "win" was mostly luck of the random seed, statistically tied with buy-&amp;-hold. That's exactly the warning of Henderson et&nbsp;al.'s <em>Deep Reinforcement Learning that Matters</em> (2018), and I reproduced it in a domain of my own.</p>
+        <p>What it demonstrates: I can take a non-trivial ML research question end to end — algorithm, environment, training, and an evaluation held to a real scientific standard — and report the honest answer even when it's a negative result.</p>
       </div>
     </section>
     </div><!-- /view-home -->
@@ -479,7 +480,7 @@ python -m rl_trader.scripts.compare_markets --plot</code></pre>
 
   <footer class="footer">
     <div class="foot-brand">RL<span class="dot">·</span>TRADER</div>
-    <div class="foot-meta">Deep-RL trading for stocks &amp; crypto · PyTorch &amp; Gymnasium · <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">methodology &amp; results</a></div>
+    <div class="foot-meta">A deep-RL study of generalization &amp; evaluation rigor · PyTorch &amp; Gymnasium · <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">methodology &amp; results</a></div>
     <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">github.com/Danny-397</a>
   </footer>
 

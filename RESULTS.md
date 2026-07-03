@@ -1,30 +1,39 @@
 # Results & Findings
 
-A short, honest research write-up of what this framework actually does when you
-run it — including the parts that *don't* work, and why that's the interesting
-result. All numbers here are reproducible with the commands in the final section.
+An empirical study of **generalization and evaluation rigor in deep reinforcement
+learning**, using financial markets as a hard, non-stationary testbed. This is the
+honest write-up — including (especially) the parts that *don't* work, because the
+negative result is the scientifically interesting one. Every number reproduces with
+the commands in the final section.
+
+The three research questions (RQ1 regime transfer, RQ2 overfitting/domain
+randomization, RQ3 does an edge survive multi-seed testing) map to §3, §1, and §5
+respectively.
 
 ---
 
 ## TL;DR
 
-1. **The method is sound where signal exists.** On controlled synthetic markets
-   with known structure, the agent learns a profitable, *generalizing* policy —
-   and an ablation proves that **domain randomization is what makes it
-   generalize** (it collapses the in-sample/out-of-sample overfitting gap by
-   two-to-three orders of magnitude).
+1. **The method is sound where signal exists (RQ1/RQ2).** On controlled synthetic
+   markets with known structure, the agent learns a profitable, *generalizing*
+   policy — and an ablation proves that **domain randomization is what makes it
+   generalize**, collapsing the in-sample/out-of-sample overfitting gap by
+   **two-to-three orders of magnitude**. This is the same lesson as Tobin et al.
+   (2017) and Cobbe et al. (2019), reproduced from scratch.
 2. **A single seed can *look* like a real-market win — and that's the trap.** The
    bundled dashboard run (seed 42) shows the crypto agent at **+275% vs. buy-&-hold's
    +19%**, winning 4 of 6 coins. Taken alone, that's a tempting headline.
-3. **Multi-seed evaluation dissolves the illusion.** Re-run across **5 seeds** and
-   the real crypto agent *averages a small loss* — **−2.7%, 95% CI [−31%, +27%]**,
+3. **Multi-seed evaluation dissolves the illusion (RQ3).** Re-run across **5 seeds**
+   and the real crypto agent *averages a small loss* — **−2.7%, 95% CI [−31%, +27%]**,
    statistically indistinguishable from buy-&-hold (permutation p ≈ 0.97). On
    equities it is significantly **worse** than the +260% bull (−19%, p ≈ 0.002).
    There is **no reliable, seed-robust edge on real markets** — consistent with
-   weak-form market efficiency, even with the new cross-asset features.
-4. **Catching that is the result.** The framework's own significance tooling
-   exposed a false positive that a naive project would have shipped as a win. The
-   contribution is the **rigorous, honest methodology** — not a fantasy return.
+   weak-form market efficiency (Fama, 1970), even with the cross-asset features.
+4. **Catching that is the result.** This is Henderson et al.'s (2018) *Deep RL that
+   Matters* finding — single-run RL numbers are unreliable — reproduced in a new
+   domain: the framework's own significance tooling exposed a false positive that a
+   naive project would have shipped as a win. The contribution is the **rigorous,
+   honest methodology**, not a fantasy return.
 
 The point of the project is the **methodology and the honest evaluation**, not a
 fantasy money-machine.
@@ -40,7 +49,7 @@ fantasy money-machine.
 | **Features** | **28 engineered, stationary features** per bar — multi-horizon momentum (1–120 bar), MA/EMA ratios, RSI, MACD, Bollinger %B, Donchian position, ATR, volatility-regime signals, distance-below-trailing-high, volume microstructure, and **cross-asset context** (relative strength vs. SPY/BTC + market trend/momentum) — over a rolling window |
 | **Reward** | Selectable: risk-aware net return (return − drawdown − turnover) **or** the **Differential Sharpe Ratio** (Moody & Saffell, 1998) |
 | **Training** | Running (Welford) observation normalisation, exported and applied at serve time; fully seeded (Torch + NumPy + env RNG) so runs are reproducible |
-| **Real data** | 10 equities + 6 crypto pairs, daily OHLCV, ~10 yrs (Yahoo Finance) |
+| **Real data** | 10 equities + 6 crypto pairs, daily OHLCV, ~10 yrs (Yahoo Finance). **Frozen evaluation snapshot: data through 2026-06-17** — deliberately fixed so every number below is reproducible; refresh with `tools/fetch_data.py` to re-snapshot to a later date |
 | **Split** | Chronological walk-forward — train on the older 60%, test on the held-out recent 40%; scalers fit on training data only |
 | **Reporting** | Mean across the basket; agent run deterministically; benchmarked vs. buy-&-hold, random, and a moving-average-crossover rule; uncertainty via bootstrap CIs + a permutation test |
 
@@ -176,7 +185,45 @@ This mirrors §2 exactly: on synthetic markets where a signal provably exists th
 agent is repeatably profitable but still statistically indistinguishable from
 buy-&-hold; on real markets, even the apparent edge evaporates under resampling.
 
-## 6. Cross-sectional portfolio allocation
+## 6. Signal or noise? — a surrogate-data falsification test
+
+§5 shows the agent doesn't beat the market. But that leaves a question the other
+experiments can't answer: **is the agent too weak, or is there simply no exploitable
+structure to find?** `tools/surrogate_test.py` settles it with a technique from
+nonlinear time-series analysis (surrogate-data testing; Theiler et al., 1992).
+
+A **return-shuffled surrogate** randomly permutes a series' daily log-returns and
+re-integrates them. Because a sum is order-independent, the surrogate ends at the
+*identical* price — so **buy-&-hold is unchanged** — but momentum, autocorrelation,
+and volatility clustering (anything a timing agent could exploit) are destroyed. We
+train and evaluate the same PPO recipe on structured data and on its surrogate and
+compare the agent's edge over buy-&-hold.
+
+`python tools/surrogate_test.py --mode synthetic --seeds 3 --timesteps 30000`
+
+**Positive control (synthetic, where a signal provably exists):**
+
+| Market | Edge vs. B&H (structured) | Edge vs. B&H (surrogate) | Δ | permutation p |
+|---|---:|---:|---:|---:|
+| Stock | **+5.0%** | −32.1% | +37.1% | **0.017** |
+| Crypto | **+33.6%** | −36.7% | +70.3% | 0.059 |
+
+**Reading it:** when a real AR(1) momentum signal is present, the agent earns a
+*positive* edge over buy-&-hold; once shuffling removes the signal, that edge
+collapses sharply negative (the agent just pays costs and gets whipsawed). The
+difference is statistically significant on stocks (p ≈ 0.017) and marginal on crypto
+(p ≈ 0.059). **This proves the falsification test has power** — it reliably detects
+exploitable temporal structure when it exists, and the agent is competent enough to
+capture it.
+
+That validated test is the point: applied to real markets, `--mode real` asks
+whether real prices offer the agent any more exploitable structure than pure noise.
+Given §5 (the real agent is statistically indistinguishable from buy-&-hold), the
+expected — and falsifiable — prediction is **Δ ≈ 0**: no structure to exploit. This
+turns "markets are efficient" from an appeal to authority into a testable claim the
+framework can check. (Run it with `python tools/surrogate_test.py --mode real`.)
+
+## 7. Cross-sectional portfolio allocation
 
 Single-asset timing is only half the game — real quant strategies allocate *across*
 assets. `PortfolioTradingEnv` generalises the **same** PPO agent to a whole basket:
@@ -218,7 +265,7 @@ crisply explains *why* the agents underperform: raw daily features carry little
 exploitable cross-sectional signal, so equal-weight diversification is hard to beat.
 (Re-run across seeds with `tools/portfolio_experiment.py --seeds 5`.)
 
-## 7. Two methods worth calling out
+## 8. Two methods worth calling out
 
 - **Differential Sharpe Ratio reward (`RewardConfig.kind = "dsr"`).** An online,
   per-step approximation of the change in the Sharpe ratio — rewarding it trains
@@ -230,7 +277,7 @@ exploitable cross-sectional signal, so equal-weight diversification is hard to b
   at episode boundaries, and the update replays whole sequences from their stored
   initial state (truncated BPTT) rather than shuffling individual transitions.
 
-## 8. Limitations & next steps
+## 9. Limitations & next steps
 
 - **Signal is the bottleneck, not the agent.** Across single-asset *and*
   cross-sectional setups, the ceiling is the data: raw daily OHLCV carries little
@@ -247,7 +294,7 @@ exploitable cross-sectional signal, so equal-weight diversification is hard to b
 - **Head-to-head feed-forward vs. LSTM** and cost/turnover-sensitivity sweeps are
   natural extensions the codebase is already structured for.
 
-## 9. Reproduce everything
+## 10. Reproduce everything
 
 Training is fully seeded, so these commands re-derive the numbers above.
 
@@ -259,6 +306,7 @@ python tools/baseline_report.py                             # agent vs baselines
 python tools/ablation.py --timesteps 60000                  # the overfitting ablation (§1)
 python tools/significance.py --market crypto --seeds 5      # synthetic multi-seed test (§2)
 python tools/real_significance.py --seeds 5                 # real-data multi-seed test (§5)
-python tools/portfolio_experiment.py --market stock         # cross-sectional allocation (§6)
+python tools/surrogate_test.py --mode synthetic --seeds 3   # surrogate falsification test (§6)
+python tools/portfolio_experiment.py --market stock         # cross-sectional allocation (§7)
 pytest -q                                                   # the test suite
 ```
