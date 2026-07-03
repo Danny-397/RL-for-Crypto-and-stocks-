@@ -216,12 +216,28 @@ difference is statistically significant on stocks (p ≈ 0.017) and marginal on 
 exploitable temporal structure when it exists, and the agent is competent enough to
 capture it.
 
-That validated test is the point: applied to real markets, `--mode real` asks
-whether real prices offer the agent any more exploitable structure than pure noise.
-Given §5 (the real agent is statistically indistinguishable from buy-&-hold), the
-expected — and falsifiable — prediction is **Δ ≈ 0**: no structure to exploit. This
-turns "markets are efficient" from an appeal to authority into a testable claim the
-framework can check. (Run it with `python tools/surrogate_test.py --mode real`.)
+**Applying the validated test to real markets:**
+
+`python tools/surrogate_test.py --mode real --seeds 3 --timesteps 80000`
+
+| Market | Edge vs. B&H (real) | Edge vs. B&H (surrogate) | Δ | permutation p |
+|---|---:|---:|---:|---:|
+| Stock | −297% | −197% | −100% | 0.50 |
+| Crypto | −6% | −1309%\* | +1304%\* | 0.16 |
+
+**Reading it:** unlike the synthetic positive control, the test finds **no
+statistically significant difference** between real and return-shuffled data on
+either market (both p > 0.05). For **stocks** this is the clean predicted null — the
+agent does no better on real prices than on structure-free surrogates (Δ p ≈ 0.50):
+there is no exploitable temporal structure for it to capture, exactly what §5's "no
+seed-robust edge" implies. For **crypto** the point estimate favours real data, but
+the gap is *not* significant (p ≈ 0.16) and the surrogate mean (\*) is inflated by
+pathological blow-ups — reshuffling crypto's fat-tailed returns occasionally creates
+paths on which a leveraged agent loses catastrophically, dominating the mean — so the
+crypto arm is **inconclusive** (a median-based or exposure-capped variant is the
+natural fix). Net: the surrogate test corroborates §5 from a fresh angle — real
+markets show the agent no *demonstrable* exploitable structure beyond noise — while
+honestly flagging that heavy tails confound the crypto surrogate.
 
 ## 7. Cross-sectional portfolio allocation
 
