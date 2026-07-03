@@ -194,11 +194,16 @@ The logic is a controlled falsification. On synthetic data with a \emph{known}
 AR(1) momentum signal, a valid test must find $\text{edge}_{\text{structured}} \gg
 \text{edge}_{\text{surrogate}}$: the agent should exploit the signal and lose that
 edge once shuffling removes it. This is our positive control
-(Table~\ref{tab:surrogate}), and it confirms the test has power. Applying the
-identical lens to real markets, an indistinguishable $\Delta$ (large $p$) would
-mean real prices offer the agent no more exploitable structure than pure noise ---
-the null this project argues for, now stated as a falsifiable prediction rather
-than an appeal to market efficiency.
+(Table~\ref{tab:surrogate}), and it confirms the test has power. Applied to real
+markets, the test finds \emph{no} significant difference between real and
+return-shuffled data: on equities the agent does no better on real prices than on
+structure-free surrogates ($\Delta$ not significant, $p{\approx}0.50$), the clean
+null predicted by \S\ref{sec:sig}. The crypto arm is inconclusive --- heavy-tailed
+returns produce occasional blow-ups on reshuffled paths that inflate the surrogate
+loss and dominate the mean ($p{\approx}0.16$); a median-based or exposure-capped
+statistic is the natural remedy. Neither market shows demonstrable exploited
+structure, corroborating \S\ref{sec:sig} from a fresh angle and turning ``markets
+are efficient'' from an appeal to authority into a falsifiable test.
 
 \begin{table}[t]\centering\small
 \caption{Surrogate-data test, synthetic positive control (edge $=$ agent $-$
