@@ -419,9 +419,8 @@ python tools/build_site_data.py --timesteps 200000   # regenerates docs/results.
 
 That script trains both agents, backtests them on held-out data, and writes the
 results the page loads — so the site never shows mock numbers. Open
-`docs/index.html` locally, or enable **GitHub Pages → Deploy from branch →
-`main` / `docs`** to publish it at
-`https://danny-397.github.io/RL-for-Crypto-and-stocks-/`.
+`docs/index.html` locally, or view the deployed version at
+**[rl-for-crypto-and-stocks.vercel.app](https://rl-for-crypto-and-stocks.vercel.app/)**.
 
 ## Deploy (Render + Vercel)
 
