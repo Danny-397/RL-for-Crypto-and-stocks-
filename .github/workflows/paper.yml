@@ -1,0 +1,47 @@
+name: Build paper PDF
+
+# The paper lives in the repo as LaTeX source, which GitHub renders as raw
+# markup — unreadable to anyone who isn't going to compile it themselves.
+# This builds paper/rl_trader.pdf on every change and commits it back, so the
+# repository always carries a readable version.
+
+on:
+  push:
+    paths:
+      - 'paper/**.tex'
+      - '.github/workflows/paper.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile LaTeX
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: rl_trader.tex
+          working_directory: paper
+
+      - name: Upload PDF as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rl_trader-pdf
+          path: paper/rl_trader.pdf
+          if-no-files-found: error
+
+      - name: Commit the PDF back to the repo
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f paper/rl_trader.pdf
+          if git diff --staged --quiet; then
+            echo "PDF unchanged — nothing to commit."
+          else
+            git commit -m "Build paper PDF from rl_trader.tex [skip ci]"
+            git push
+          fi
