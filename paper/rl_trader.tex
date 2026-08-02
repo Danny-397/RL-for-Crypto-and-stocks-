@@ -47,9 +47,10 @@ introduce a \textbf{surrogate-data falsification test} that separates ``the agen
 is weak'' from ``there is no signal to find,'' and validate it with a positive
 control on synthetic data with known structure. In doing so the project
 reproduces, in a new domain, the central methodological finding of
-Henderson~et~al.\ (2018) --- that single-run RL evaluation is unreliable --- and
-quantifies the memorization gap that domain randomization closes by two-to-three
-orders of magnitude.
+Henderson~et~al.\ (2018) --- that single-run RL evaluation is unreliable. We then
+apply that finding to our own ablation, whose domain-randomized arm is unseeded by
+construction and so cannot be reproduced from a single run: we report both arms as
+distributions over five seeds, where all four confidence intervals exclude zero.
 \end{abstract}
 
 \section{Introduction}
@@ -69,8 +70,9 @@ be instrumented and trusted. Our contributions are:
 \begin{itemize}\itemsep2pt
   \item A controlled study showing an RL agent memorizes a single price path
   catastrophically, and that \textbf{domain randomization}
-  \cite{tobin2017,cobbe2019} collapses the in-sample/out-of-sample gap by
-  $100$--$1000\times$ (\S\ref{sec:ablation}).
+  \cite{tobin2017,cobbe2019} is the single change that flips held-out return from
+  reliably negative to reliably positive --- across five seeds all four confidence
+  intervals exclude zero, in both markets (\S\ref{sec:ablation}).
   \item A \textbf{multi-seed significance protocol} (bootstrap CIs + paired
   permutation tests) that reproduces the Henderson~et~al.\ \cite{henderson2018} finding in a new
   domain: a favorable single-seed ``win'' does not survive resampling
@@ -126,27 +128,54 @@ train two otherwise-identical agents --- one on a fixed synthetic path, one draw
 a fresh path every episode (domain randomization) --- and measure in-sample vs.\
 out-of-sample (30 unseen paths) return (Table~\ref{tab:ablation}).
 
-\begin{table}[t]\centering\small
-\caption{Domain-randomization ablation. Single-path agents post astronomical
-in-sample returns by memorization, then lose out-of-sample; domain randomization
-collapses the gap by orders of magnitude.}
+\begin{table}[t]\centering\footnotesize
+\caption{Domain-randomization ablation, 5 seeds $\times$ 60k steps; all cells are
+percent returns. Held-out is the mean over 30 unseen paths --- identical for every
+arm and seed --- with a bootstrap 95\pc\ CI across seeds. In-sample is a
+\emph{range} over seeds, not a mean: it is one leveraged compounding return on a
+memorized path and spans orders of magnitude. The domain-randomized arm's in-sample
+figure is its return on the very path the single-path agent memorized.}
 \label{tab:ablation}
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{@{}llrr@{}}
 \toprule
-Market & Training & In-sample & Out-of-sample\\
+Market & Train & In-sample & Held-out [95\pc\ CI]\\
 \midrule
-Stock  & single-path   & $+5821\pc$   & $-41\pc$\\
-Stock  & domain-random & $-12\pc$     & $\mathbf{+30\pc}$\\
-Crypto & single-path   & $+18709\pc$  & $-71\pc$\\
-Crypto & domain-random & $+63\pc$     & $\mathbf{+99\pc}$\\
+Stock  & single & $+$17k--30k   & $-26$ {\scriptsize$[-37,-9]$}\\
+Stock  & domain & $-6$--$139$   & $\mathbf{+36}$ {\scriptsize$[+27,+46]$}\\
+Crypto & single & $+$322k--4.0M & $-51$ {\scriptsize$[-62,-39]$}\\
+Crypto & domain & $-19$--$292$  & $\mathbf{+132}$ {\scriptsize$[+69,+219]$}\\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[t]\centering
+\includegraphics[width=\columnwidth]{fig_ablation}
+\caption{Held-out return by training regime. Bars are the mean over seeds, whiskers
+the bootstrap 95\pc\ CI, and dots the individual seeds --- so the reader sees $n$
+and the spread rather than a bar alone. The in-sample range is annotated rather
+than plotted: it spans several orders of magnitude and would flatten everything
+else to a line.}
+\label{fig:ablation}
+\end{figure}
 
 The astronomical in-sample figures are not a win --- they are the overfitting
 signature. Domain randomization is the single change that turns a memorizer into a
 generalizer, echoing sim-to-real transfer \cite{tobin2017} and RL generalization
 benchmarks \cite{cobbe2019}.
+
+Across five seeds all four intervals exclude zero: single-path training is
+reliably unprofitable out-of-sample and domain randomization is reliably
+profitable, in both markets. The effect is therefore robust to seed choice, which
+is the property the rest of this paper spends its time showing that real-market
+edges lack.
+
+Two caveats the distribution makes visible and a single run would hide. Equities
+are the weaker case --- one of five single-path seeds returned $+8\pc$ rather than
+a loss, and the interval reaches to $-9\pc$, so ``reliably negative'' there rests
+on a margin, not a chasm. And the crypto domain-randomized mean is inflated by one
+seed at $+307\pc$ against a cluster near $+60\pc$; the interval is correspondingly
+wide. Figure~\ref{fig:ablation} plots the individual seeds for exactly this reason.
 
 \subsection{RQ3: Does the edge survive multiple seeds?}
 \label{sec:sig}
@@ -207,17 +236,17 @@ are efficient'' from an appeal to authority into a falsifiable test.
 
 \begin{table}[t]\centering\small
 \caption{Surrogate-data test, synthetic positive control (edge $=$ agent $-$
-buy-and-hold return, mean over 10 held-out paths, 3 seeds, 30k steps; $p$ from a
+buy-and-hold return, mean over 10 held-out paths, 5 seeds, 60k steps; $p$ from a
 paired permutation test of structured vs.\ surrogate edge). When a known signal
 exists the agent earns a positive edge; destroying it by shuffling collapses the
-edge sharply negative --- the test has power.}
+edge sharply negative --- the test has power in both markets.}
 \label{tab:surrogate}
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
 Market & Structured & Surrogate & $\Delta$ & $p$\\
 \midrule
-Stock  & $+5.0\pc$  & $-32.1\pc$ & $+37.1\pc$ & $0.017$\\
-Crypto & $+33.6\pc$ & $-36.7\pc$ & $+70.3\pc$ & $0.059$\\
+Stock  & $+3.4\pc$  & $-42.7\pc$ & $+46.1\pc$ & $0.0006$\\
+Crypto & $+99.0\pc$ & $-65.3\pc$ & $+164.3\pc$ & $0.0032$\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -250,7 +279,30 @@ The bottleneck is signal, not the agent: raw daily OHLCV carries little
 exploitable structure, so richer exogenous data (macro series, sentiment) --- not a
 bigger network --- is the natural next lever. Multi-fold walk-forward and a
 head-to-head feed-forward-vs-LSTM study are supported by the codebase and left as
-future work. Our conclusion is deliberately unglamorous and, we argue, more
+future work.
+
+A second limitation concerns the ablation of \S\ref{sec:ablation}, and we state it
+plainly because we found it in our own results. The two arms are not equally
+reproducible, and the asymmetry is structural rather than incidental. The
+single-path arm draws its training series with an explicit seed, and repeated
+invocations reproduce it exactly. The domain-randomized arm, by construction,
+draws a \emph{fresh unseeded} series every episode --- that is what domain
+randomization means --- so the run seed does not determine its data stream and no
+single run of it is reproducible even in principle. Any comparison between the
+arms that quotes one run of each is therefore not a controlled comparison.
+
+This is why \S\ref{sec:ablation} reports each arm as a distribution over seeds
+with bootstrap intervals, and why its conclusion is stated in terms of held-out
+return --- a mean over 30 fixed evaluation paths --- rather than the single-path
+in-sample figure, which averages nothing and compounds along one memorized
+trajectory. Training additionally does not run under
+\texttt{torch.use\_deterministic\_algorithms}, so exact bitwise reproducibility is
+not guaranteed for either arm across machines. An earlier version of this table
+quoted a single run per cell; that version was also stale with respect to a change
+in the observation feature set, which is the ordinary way such numbers rot and an
+argument for regenerating them from a script rather than transcribing them.
+
+Our conclusion is deliberately unglamorous and, we argue, more
 valuable than a suspicious backtest: built and evaluated honestly, a from-scratch
 deep-RL trader finds no reliable edge on real markets --- and the methodology that
 establishes this rigorously is the actual result.

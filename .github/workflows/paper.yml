@@ -8,7 +8,10 @@ name: Build paper PDF
 on:
   push:
     paths:
-      - 'paper/**.tex'
+      # 'paper/**' rather than 'paper/**.tex': the paper now includes a figure,
+      # and a rebuild triggered only by source changes would let the committed
+      # PDF go stale whenever a figure is regenerated.
+      - 'paper/**'
       - '.github/workflows/paper.yml'
   workflow_dispatch:
 

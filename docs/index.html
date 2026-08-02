@@ -291,19 +291,19 @@
             <thead>
               <tr>
                 <th class="num-l" scope="col">Training setup</th>
-                <th scope="col">In-sample return</th>
-                <th scope="col">Held-out return</th>
+                <th scope="col">In-sample (range over 5 seeds)</th>
+                <th scope="col">Held-out return (mean, 95% CI)</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td class="num-l">Stocks &middot; single asset</td><td class="muted-cell">+14,600%</td><td class="lose">&minus;39%</td></tr>
-              <tr><td class="num-l">Stocks &middot; across tickers</td><td class="muted-cell">+34%</td><td class="win">+35%</td></tr>
-              <tr><td class="num-l">Crypto &middot; single asset</td><td class="muted-cell">+1,956,000%</td><td class="lose">&minus;57%</td></tr>
-              <tr><td class="num-l">Crypto &middot; across tickers</td><td class="muted-cell">+267%</td><td class="win">+250%</td></tr>
+              <tr><td class="num-l">Stocks &middot; single asset</td><td class="muted-cell">+17k% to +30k%</td><td class="lose">&minus;26% <small>[&minus;37%, &minus;9%]</small></td></tr>
+              <tr><td class="num-l">Stocks &middot; across tickers</td><td class="muted-cell">&minus;6% to +139%</td><td class="win">+36% <small>[+27%, +46%]</small></td></tr>
+              <tr><td class="num-l">Crypto &middot; single asset</td><td class="muted-cell">+322k% to +4.0M%</td><td class="lose">&minus;51% <small>[&minus;62%, &minus;39%]</small></td></tr>
+              <tr><td class="num-l">Crypto &middot; across tickers</td><td class="muted-cell">&minus;19% to +292%</td><td class="win">+132% <small>[+69%, +219%]</small></td></tr>
             </tbody>
           </table>
         </div>
-        <p class="lab-caption">Those astronomical in-sample figures aren't a win — they're the <b>overfitting tell</b>: a single-asset agent memorises the exact training path, so it "earns" impossible returns there and then collapses out of sample. The honest column is <b>held-out</b>, and only domain randomization keeps it positive. (Mean across seeds; reproduced by <code>tools/ablation.py</code>.)</p>
+        <p class="lab-caption">Those astronomical in-sample figures aren't a win — they're the <b>overfitting tell</b>: a single-asset agent memorises the exact training path, so it "earns" impossible returns there and then collapses out of sample. The honest column is <b>held-out</b>, and only domain randomization keeps it positive — across 5 seeds all four intervals exclude zero. In-sample is shown as a <b>range</b> rather than a number because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that isn't there. (5 seeds &times; 60k steps, bootstrap 95% CI, 30 held-out paths held identical across arms; reproduced by <code>tools/ablation_multiseed.py</code>.)</p>
       </div>
     </section>
 

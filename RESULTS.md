@@ -17,9 +17,10 @@ respectively.
 1. **The method is sound where signal exists (RQ1/RQ2).** On controlled synthetic
    markets with known structure, the agent learns a profitable, *generalizing*
    policy — and an ablation proves that **domain randomization is what makes it
-   generalize**, collapsing the in-sample/out-of-sample overfitting gap by
-   **two-to-three orders of magnitude**. This is the same lesson as Tobin et al.
-   (2017) and Cobbe et al. (2019), reproduced from scratch.
+   generalize**: across 5 seeds it flips held-out return from reliably negative to
+   reliably positive — **all four bootstrap CIs exclude zero**, in both markets.
+   This is the same lesson as Tobin et al. (2017) and Cobbe et al. (2019),
+   reproduced from scratch.
 2. **A single seed can *look* like a real-market win — and that's the trap.** The
    bundled dashboard run (seed 42) shows the crypto agent at **+275% vs. buy-&-hold's
    +19%**, winning 4 of 6 coins. Taken alone, that's a tempting headline.
@@ -62,22 +63,60 @@ one path. To show this concretely, we train two otherwise-identical agents on
 synthetic data (where a real, known signal exists) and measure performance on
 the training path ("in-sample") vs. 30 unseen paths ("out-of-sample").
 
-`python tools/ablation.py --timesteps 60000`
+`python tools/ablation_multiseed.py --seeds 42 43 44 45 46 --timesteps 60000`
 
-| Market | Training | In-sample | Out-of-sample | Gap |
-|---|---|---:|---:|---:|
-| Stock | single-path | **+5821%** | **−41%** | +5862% |
-| Stock | domain-random | −12% | **+30%** | **−42%** |
-| Crypto | single-path | **+18709%** | **−71%** | +18780% |
-| Crypto | domain-random | +63% | **+99%** | **−36%** |
+5 seeds, 60k steps. Out-of-sample is the mean over 30 held-out paths (identical for
+every arm and seed) with a bootstrap 95% CI across seeds. In-sample is given as a
+**range** over seeds, not a mean — it is one leveraged compounding return on a
+memorized path and spans orders of magnitude.
+
+| Market | Training | In-sample (range over seeds) | Out-of-sample (mean, 95% CI) |
+|---|---|---|---|
+| Stock | single-path | +17k% to +30k% | **−26%** [−37%, −9%] |
+| Stock | domain-random | −6% to +139% | **+36%** [+27%, +46%] |
+| Crypto | single-path | +322k% to +4.0M% | **−51%** [−62%, −39%] |
+| Crypto | domain-random | −19% to +292% | **+132%** [+69%, +219%] |
 
 ![Domain randomization ablation](docs/assets/fig_ablation.png)
 
-**Reading it:** the single-path agents post absurd in-sample returns by
-memorising their training sequence — then **lose money** on unseen data. Domain
-randomization (a fresh path every episode) collapses that gap by orders of
-magnitude and produces agents whose out-of-sample return is actually *positive*.
-This is the project's core methodological result.
+**Reading it:** the single-path agents post absurd in-sample returns by memorising
+their training sequence, then **lose money** on unseen data. Domain randomization
+(a fresh path every episode) is the single change that flips held-out return
+positive — and across five seeds every one of these four intervals excludes zero.
+
+All four intervals exclude zero, so the effect is robust to seed choice — which is
+precisely the property §5 shows real-market edges *lack*. Two caveats the
+distribution makes visible and a single run would hide:
+
+- **Equities are the weaker case.** One of five single-path seeds returned **+8%**
+  instead of a loss, and the interval reaches to −9%. "Reliably negative" there
+  rests on a margin, not a chasm.
+- **The crypto domain-random mean is inflated by one seed** at +307% against a
+  cluster near +60%, which is why its interval is so wide. The figure plots the
+  individual seeds rather than bars alone so this is visible rather than averaged
+  away.
+
+**What multi-seed reporting actually changed.** The out-of-sample conclusion
+survived; the in-sample column did not. Single-path in-sample ranges from +17,000%
+to +30,000% on equities and from +322,000% to +4,000,000% on crypto across seeds —
+quoting any one of those as *the* memorization figure, as the earlier version of
+this table did, communicates a precision that does not exist. Worth noting for
+honesty: at three seeds the equity single-path interval still straddled zero, and
+two further seeds resolved it. The seed count was fixed at 5 to match §2's protocol
+before the arm was run, not raised until the interval cooperated.
+
+Two further notes on reproducibility, both stated in the paper:
+
+- The **domain-randomized arm cannot be reproduced from a single run.** In
+  `tools/ablation.py` it calls `synthetic_market_data(market)` with **no seed** —
+  fresh unseeded data every episode, which is what domain randomization *means*.
+  `--seed` controls the network init, not that data stream. The single-path arm, by
+  contrast, is seeded and reproduces exactly. Comparing one run of each is
+  therefore not a controlled comparison, which is why this table is a distribution.
+- An earlier version of this table was **stale**: its numbers predate commit
+  `d4c0ef9`, which took the observation space from 19 to 28 features, so they
+  described a model this repository no longer ships. Regenerate from
+  `docs/assets/ablation_multiseed.json`; do not transcribe cells by hand.
 
 ---
 
@@ -199,22 +238,29 @@ and volatility clustering (anything a timing agent could exploit) are destroyed.
 train and evaluate the same PPO recipe on structured data and on its surrogate and
 compare the agent's edge over buy-&-hold.
 
-`python tools/surrogate_test.py --mode synthetic --seeds 3 --timesteps 30000`
+`python tools/surrogate_test.py --mode synthetic --seeds 5 --timesteps 60000`
 
 **Positive control (synthetic, where a signal provably exists):**
 
 | Market | Edge vs. B&H (structured) | Edge vs. B&H (surrogate) | Δ | permutation p |
 |---|---:|---:|---:|---:|
-| Stock | **+5.0%** | −32.1% | +37.1% | **0.017** |
-| Crypto | **+33.6%** | −36.7% | +70.3% | 0.059 |
+| Stock | **+3.4%** | −42.7% | +46.1% | **0.0006** |
+| Crypto | **+99.0%** | −65.3% | +164.3% | **0.0032** |
 
 **Reading it:** when a real AR(1) momentum signal is present, the agent earns a
 *positive* edge over buy-&-hold; once shuffling removes the signal, that edge
 collapses sharply negative (the agent just pays costs and gets whipsawed). The
-difference is statistically significant on stocks (p ≈ 0.017) and marginal on crypto
-(p ≈ 0.059). **This proves the falsification test has power** — it reliably detects
-exploitable temporal structure when it exists, and the agent is competent enough to
-capture it.
+difference is significant in **both** markets. **This proves the falsification test
+has power** — it reliably detects exploitable temporal structure when it exists, and
+the agent is competent enough to capture it.
+
+An earlier version of this table ran 3 seeds at 30k steps and put crypto at
+p ≈ 0.059 — marginal, and not enough to claim the control had passed there. Raising
+the budget to 5 seeds / 60k steps moved it to p ≈ 0.0032. Worth stating explicitly
+because it cuts the way one would prefer: the earlier number is the one that
+happened to be borderline, and reporting a positive control as "marginal" is exactly
+the situation where it is tempting to quietly re-run until it looks better. The
+budget was chosen to match §2's protocol, not chosen after seeing this p-value.
 
 **Applying the validated test to real markets:**
 
@@ -322,7 +368,7 @@ python tools/baseline_report.py                             # agent vs baselines
 python tools/ablation.py --timesteps 60000                  # the overfitting ablation (§1)
 python tools/significance.py --market crypto --seeds 5      # synthetic multi-seed test (§2)
 python tools/real_significance.py --seeds 5                 # real-data multi-seed test (§5)
-python tools/surrogate_test.py --mode synthetic --seeds 3   # surrogate falsification test (§6)
+python tools/surrogate_test.py --mode synthetic --seeds 5 --timesteps 60000  # surrogate test (§6)
 python tools/portfolio_experiment.py --market stock         # cross-sectional allocation (§7)
 pytest -q                                                   # the test suite
 ```

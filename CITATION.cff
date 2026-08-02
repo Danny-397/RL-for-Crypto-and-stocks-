@@ -12,7 +12,6 @@ type: software
 authors:
   - family-names: Lichtenberger
     given-names: Daniel
-    # NOTE: confirm/correct this author line before sharing.
 repository-code: "https://github.com/Danny-397/RL-for-Crypto-and-stocks-"
 keywords:
   - reinforcement-learning

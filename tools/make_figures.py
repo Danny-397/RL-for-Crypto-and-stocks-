@@ -64,26 +64,53 @@ def _basket(market, data_dir="data/raw"):
 
 # --------------------------------------------------------------------------- #
 def fig_ablation():
-    """Out-of-sample return: single-path vs domain-randomized (the money chart)."""
-    with open(os.path.join(ASSETS, "ablation.json"), encoding="utf-8") as fh:
-        data = json.load(fh)
+    """Out-of-sample return: single-path vs domain-randomized (the money chart).
 
+    Reads the MULTI-SEED result (tools/ablation_multiseed.py), not the old
+    single-seed ablation.json. A single run of the domain-randomized arm is not
+    reproducible -- it draws a fresh unseeded path every episode -- so a chart of
+    one run per arm was never a controlled comparison. Error bars are the
+    bootstrap CI of the mean across seeds, and the seeds are drawn individually.
+    """
+    src = os.path.join(ASSETS, "ablation_multiseed.json")
+    if not os.path.exists(src):
+        raise SystemExit(f"missing {src} -- run tools/ablation_multiseed.py first")
+    with open(src, encoding="utf-8") as fh:
+        data = json.load(fh)["summary"]
+
+    n = len(data["seeds"])
     fig, axes = plt.subplots(1, 2, figsize=(10, 4.2))
     for ax, market in zip(axes, ("stock", "crypto")):
-        d = data[market]
+        d = data["markets"][market]
+        xs = [0, 1]
         means = [d["single"]["oos_mean"] * 100, d["domain"]["oos_mean"] * 100]
-        errs = [d["single"]["oos_std"] * 100, d["domain"]["oos_std"] * 100]
-        ax.bar(["single-path", "domain-random"], means, yerr=errs,
-               color=[RED, VOLT], capsize=6, width=0.6, edgecolor="none")
+        colors = [RED, VOLT]
+        for x, key, c in zip(xs, ("single", "domain"), colors):
+            mu = d[key]["oos_mean"] * 100
+            lo, hi = (v * 100 for v in d[key]["oos_ci"])
+            ax.bar(x, mu, width=0.6, color=c, edgecolor="none", alpha=0.55)
+            ax.plot([x, x], [lo, hi], color=c, linewidth=2, solid_capstyle="butt")
+            pts = np.array(d[key]["oos_per_seed"]) * 100
+            ax.plot(x + np.linspace(-0.14, 0.14, len(pts)), pts, "o",
+                    ms=5, color=c, mew=0, zorder=3)
         ax.axhline(0, color="#3a434f", linewidth=1)
+        ax.set_xticks(xs)
+        ax.set_xticklabels(["single-path", "domain-random"])
         ax.set_title(market.capitalize())
         ax.set_ylabel("Out-of-sample return (%)")
         ax.grid(axis="y", alpha=0.3)
-        # Annotate the absurd in-sample numbers above the single-path bar.
-        ax.annotate(f"in-sample:\n+{d['single']['in'] * 100:,.0f}%",
-                    xy=(0, means[0]), xytext=(0, max(means) + 60),
-                    ha="center", fontsize=9, color=GREY)
-    fig.suptitle("Domain randomization fixes overfitting (out-of-sample return)",
+        # Headroom first, then annotate in axes coords -- placing this in DATA
+        # coords pushes it outside the axes and into the title.
+        lo_y, hi_y = ax.get_ylim()
+        ax.set_ylim(lo_y, hi_y + 0.22 * (hi_y - lo_y))
+        s = d["single"]
+        ax.text(0.5, 0.97,
+                f"single-path in-sample spans "
+                f"{s['in_min'] * 100:,.0f}% to {s['in_max'] * 100:,.0f}%",
+                transform=ax.transAxes, ha="center", va="top",
+                fontsize=8, color=GREY)
+    fig.suptitle(f"Domain randomization fixes overfitting "
+                 f"(held-out return, {n} seeds, bootstrap 95% CI)",
                  fontsize=13, color=FG)
     fig.tight_layout()
     out = os.path.join(ASSETS, "fig_ablation.png")

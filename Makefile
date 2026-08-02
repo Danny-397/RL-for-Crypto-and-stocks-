@@ -4,7 +4,7 @@
 PY ?= python
 TIMESTEPS ?= 200000
 
-.PHONY: help install test lint fetch build build-synth ablation baselines portfolio figures all
+.PHONY: help install test lint fetch build build-synth ablation ablation1 baselines portfolio figures all
 
 help:
 	@echo "install     install runtime + dev dependencies"
@@ -13,7 +13,8 @@ help:
 	@echo "fetch       download the real OHLCV basket"
 	@echo "build       train + backtest on REAL data -> docs/results.js"
 	@echo "build-synth train + backtest on synthetic data -> docs/results.js"
-	@echo "ablation    run the domain-randomization ablation -> docs/assets/ablation.json"
+	@echo "ablation    5-seed domain-randomization ablation -> docs/assets/ablation_multiseed.json"
+	@echo "ablation1   single-seed ablation (superseded; see RESULTS.md section 1)"
 	@echo "baselines   print agent vs baselines on the real test data"
 	@echo "portfolio   train the cross-sectional portfolio agent vs quant baselines"
 	@echo "figures     render docs/assets/*.png from results"
@@ -38,7 +39,12 @@ build: fetch
 build-synth:
 	$(PY) tools/build_site_data.py --timesteps $(TIMESTEPS)
 
+# The 5-seed sweep is the canonical one: the domain-randomized arm draws fresh
+# unseeded data every episode, so a single run of it is not reproducible.
 ablation:
+	$(PY) tools/ablation_multiseed.py --seeds 42 43 44 45 46 --timesteps 60000
+
+ablation1:
 	$(PY) tools/ablation.py --timesteps 60000
 
 baselines:
