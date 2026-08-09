@@ -87,7 +87,7 @@ def rolling_walk_forward(
     """
     # Imported lazily: this pulls in torch, which the pure splitter above must
     # not require.
-    from ..data.data_loader import add_technical_indicators, FEATURE_COLUMNS, MarketData
+    from ..data.data_loader import FEATURE_COLUMNS, MarketData, add_technical_indicators
     from ..envs import make_env
     from ..evaluation.evaluate_agent import ANNUALISATION, backtest, compute_metrics
     from ..training.utils import run_ppo_training

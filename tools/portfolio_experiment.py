@@ -18,7 +18,6 @@ from __future__ import annotations
 import argparse
 import os
 
-
 from rl_trader.config.training_config import crypto_config, stock_config
 from rl_trader.data.portfolio_data import load_portfolio, synthetic_portfolio
 from rl_trader.envs.portfolio_env import PortfolioTradingEnv

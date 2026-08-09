@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 
 from rl_trader.config.training_config import stock_config
-from rl_trader.data.portfolio_data import build_portfolio_data, synthetic_portfolio
 from rl_trader.data.data_loader import generate_synthetic_ohlcv
+from rl_trader.data.portfolio_data import build_portfolio_data, synthetic_portfolio
 from rl_trader.envs.portfolio_env import PortfolioTradingEnv
 from rl_trader.evaluation.portfolio_eval import evaluate_portfolio_baselines, portfolio_backtest
 
