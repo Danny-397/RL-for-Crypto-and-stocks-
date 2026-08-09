@@ -518,6 +518,9 @@ h2 {
   display: inline-block; text-align: left; background: #06080c;
   border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px;
   font-family: var(--font-mono); font-size: 13.5px; color: var(--volt); line-height: 1.8;
+  /* The longest command is wider than a phone screen — scroll it inside its own
+     box rather than letting it widen the page. */
+  max-width: 100%; overflow-x: auto;
 }
 
 /* ── Footer ─────────────────────────────────────────────── */
