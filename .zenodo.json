@@ -1,0 +1,39 @@
+{
+  "title": "RL-Trader: Generalization and Evaluation Rigor in Deep Reinforcement Learning",
+  "upload_type": "publication",
+  "publication_type": "preprint",
+  "access_right": "open",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Lichtenberger, Daniel",
+      "affiliation": "Independent researcher"
+    }
+  ],
+  "description": "<p>Deep reinforcement learning is unusually easy to fool yourself with: agents memorize their training trajectory, and a single lucky random seed can masquerade as a real result. This work studies both failure modes from scratch &mdash; a PyTorch implementation of Proximal Policy Optimization (PPO), two custom Gymnasium environments, and a full evaluation suite &mdash; using financial markets as a deliberately hard testbed: non-stationary, partially observable, with a noisy reward and near&ndash;random-walk signal.</p><p>The headline result is negative, and that is the point: on real markets the agent has <em>no seed-robust edge</em> over buy-and-hold, and the project's own significance tooling catches a single-seed &ldquo;+275%&rdquo; run as a false positive. The work introduces a <strong>surrogate-data falsification test</strong> that separates &ldquo;the agent is weak&rdquo; from &ldquo;there is no signal to find,&rdquo; validated with a positive control on synthetic data with known structure.</p><p>In doing so it reproduces, in a new domain, the central methodological finding of Henderson et al. (2018) &mdash; that single-run RL evaluation is unreliable &mdash; and then applies that finding to its own ablation, reporting both arms as distributions over five seeds where all four confidence intervals exclude zero.</p>",
+  "keywords": [
+    "reinforcement learning",
+    "proximal policy optimization",
+    "generalization",
+    "domain randomization",
+    "reproducibility",
+    "negative results",
+    "quantitative finance",
+    "significance testing"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/Danny-397/RL-for-Crypto-and-stocks-",
+      "relation": "isSupplementTo",
+      "resource_type": "software",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://rl-for-crypto-and-stocks.vercel.app",
+      "relation": "isDocumentedBy",
+      "resource_type": "other",
+      "scheme": "url"
+    }
+  ],
+  "notes": "Source, figures, and the full evaluation suite are in the linked repository. All reported results are reproducible with the seeds and commands documented in the README."
+}
