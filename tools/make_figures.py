@@ -83,7 +83,6 @@ def fig_ablation():
     for ax, market in zip(axes, ("stock", "crypto")):
         d = data["markets"][market]
         xs = [0, 1]
-        means = [d["single"]["oos_mean"] * 100, d["domain"]["oos_mean"] * 100]
         colors = [RED, VOLT]
         for x, key, c in zip(xs, ("single", "domain"), colors):
             mu = d[key]["oos_mean"] * 100
