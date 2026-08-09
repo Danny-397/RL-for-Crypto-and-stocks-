@@ -12,7 +12,7 @@
   --border-2:  rgba(255, 255, 255, 0.14);
   --text:      #e7edf5;
   --muted:     #8a97a8;
-  --faint:     #5b6573;
+  --faint:     #6d7989;
 
   --volt:   #d4ff3f;   /* athletic / terminal accent */
   --cyan:   #36e0ff;   /* fintech accent */
@@ -532,7 +532,8 @@ h2 {
 }
 .foot-brand { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.05em; }
 .foot-meta { margin-right: auto; }
-.footer a { color: var(--cyan); text-decoration: none; }
+/* Underlined: inside a text block, colour alone doesn't distinguish a link. */
+.footer a { color: var(--cyan); text-decoration: underline; text-underline-offset: 2px; }
 .footer a:hover { color: var(--volt); }
 
 /* ── Responsive ─────────────────────────────────────────── */
