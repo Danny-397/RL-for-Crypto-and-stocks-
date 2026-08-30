@@ -1,0 +1,250 @@
+/* ============================================================
+   RL·Trader LAB — interactive research laboratory
+   Extends the tokens in styles.css; defines no new palette.
+   Aesthetic: instrument panel. Dense, aligned, monospaced
+   numerals, no decoration that isn't carrying information.
+   ============================================================ */
+
+#view-lab { display: none; }
+#view-lab.active { display: block; }
+
+.lab-wrap { max-width: var(--maxw); margin: 0 auto; padding: 40px 24px 96px; }
+
+/* ── Masthead ────────────────────────────────────────────── */
+.lab-head {
+  display: flex; flex-wrap: wrap; align-items: flex-end;
+  justify-content: space-between; gap: 20px;
+  padding-bottom: 24px; margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.lab-head h1 {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.6vw, 38px);
+  font-weight: 700; letter-spacing: -0.02em; line-height: 1.05;
+}
+.lab-head .lab-sub { color: var(--muted); margin-top: 8px; max-width: 56ch; }
+
+/* Backend status: a real readout, never decorative. */
+.api-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 7px 12px; border-radius: 999px;
+  border: 1px solid var(--border-2); color: var(--muted);
+  background: var(--surface); white-space: nowrap;
+}
+.api-pill .dot-led {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--faint); flex: none;
+}
+.api-pill.is-live { color: var(--pos); border-color: rgba(93, 242, 160, 0.4); }
+.api-pill.is-live .dot-led { background: var(--pos); box-shadow: 0 0 8px var(--pos); }
+.api-pill.is-down { color: var(--neg); border-color: rgba(255, 107, 107, 0.4); }
+.api-pill.is-down .dot-led { background: var(--neg); }
+
+/* ── Sub navigation ──────────────────────────────────────── */
+.lab-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border); margin-bottom: 28px;
+}
+.lab-tab {
+  appearance: none; background: none; border: 0; cursor: pointer;
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+  padding: 12px 16px; border-bottom: 2px solid transparent;
+  transition: color .15s ease, border-color .15s ease;
+}
+.lab-tab:hover { color: var(--text); }
+.lab-tab[aria-selected="true"] { color: var(--volt); border-bottom-color: var(--volt); }
+.lab-tab:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+
+.lab-panel { display: none; }
+.lab-panel.active { display: block; }
+
+/* ── Two-column instrument layout ────────────────────────── */
+.lab-grid {
+  display: grid; gap: 20px;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  align-items: start;
+}
+@media (max-width: 900px) { .lab-grid { grid-template-columns: 1fr; } }
+
+.panel-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.panel-card + .panel-card { margin-top: 20px; }
+.panel-card > h3 {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--cyan); margin-bottom: 16px; font-weight: 500;
+}
+.panel-note {
+  font-size: 12.5px; color: var(--faint); line-height: 1.5;
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+}
+
+/* ── Controls ────────────────────────────────────────────── */
+.ctl { margin-bottom: 16px; }
+.ctl:last-of-type { margin-bottom: 0; }
+.ctl > label {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 7px;
+}
+.ctl .ctl-val { color: var(--volt); font-size: 12px; letter-spacing: 0; }
+
+.ctl select, .ctl input[type="text"], .ctl input[type="number"] {
+  width: 100%; padding: 9px 11px;
+  background: var(--bg-soft); color: var(--text);
+  border: 1px solid var(--border-2); border-radius: 9px;
+  font-family: var(--font-mono); font-size: 13px;
+}
+.ctl select:focus-visible, .ctl input:focus-visible {
+  outline: 2px solid var(--cyan); outline-offset: 1px; border-color: transparent;
+}
+.ctl input[type="range"] { width: 100%; accent-color: var(--volt); }
+
+/* Segmented control — for short, mutually exclusive choices. */
+.seg { display: flex; gap: 3px; background: var(--bg-soft);
+       border: 1px solid var(--border-2); border-radius: 9px; padding: 3px; }
+.seg button {
+  flex: 1; appearance: none; background: none; border: 0; cursor: pointer;
+  color: var(--muted); font-family: var(--font-mono); font-size: 12px;
+  padding: 7px 6px; border-radius: 6px; transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--volt); }
+.seg button:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+
+.run-btn {
+  width: 100%; margin-top: 18px; padding: 13px 16px;
+  font-family: var(--font-mono); font-size: 13px;
+  letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;
+  color: #07090d; background: var(--grad);
+  border: 0; border-radius: 10px; cursor: pointer;
+}
+.run-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.run-btn:disabled { opacity: .5; cursor: not-allowed; }
+.run-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* ── Progress + status ───────────────────────────────────── */
+.lab-status {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+  margin-top: 14px; min-height: 20px;
+}
+.bar { height: 6px; border-radius: 3px; background: var(--surface-2);
+       overflow: hidden; margin-top: 10px; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--grad);
+           transition: width .2s ease; }
+.spinner {
+  width: 13px; height: 13px; flex: none; border-radius: 50%;
+  border: 2px solid var(--border-2); border-top-color: var(--volt);
+  animation: labspin .7s linear infinite;
+}
+@keyframes labspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
+  .bar > i { transition: none; }
+}
+
+.lab-error {
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  background: rgba(255, 107, 107, 0.07);
+  color: #ffb4b4; border-radius: 10px; padding: 12px 14px;
+  font-size: 13px; margin-top: 14px;
+}
+.lab-empty {
+  border: 1px dashed var(--border-2); border-radius: var(--radius);
+  padding: 44px 24px; text-align: center; color: var(--faint);
+  font-family: var(--font-mono); font-size: 13px; line-height: 1.7;
+}
+
+/* ── Charts ──────────────────────────────────────────────── */
+.chart-block { margin-bottom: 6px; }
+.chart-block:last-child { margin-bottom: 0; }
+.chart-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 12px; margin-bottom: 6px;
+}
+.chart-title {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+}
+.chart-read {
+  font-family: var(--font-mono); font-size: 12px; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.chart-canvas { width: 100%; display: block; cursor: crosshair; touch-action: none; }
+.chart-canvas:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap;
+          font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 2px; border-radius: 1px; display: inline-block; }
+
+/* ── Scrubber ────────────────────────────────────────────── */
+.scrub-row {
+  display: flex; align-items: center; gap: 12px;
+  margin: 16px 0 4px; padding-top: 16px; border-top: 1px solid var(--border);
+}
+.scrub-row input[type="range"] { flex: 1; accent-color: var(--cyan); }
+.scrub-row .step-lbl {
+  font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+
+/* ── Metric readouts ─────────────────────────────────────── */
+.metric-grid {
+  display: grid; gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 11px; overflow: hidden;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+}
+.metric {
+  background: var(--surface); padding: 13px 14px;
+}
+.metric .k {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--faint); display: block; margin-bottom: 5px;
+}
+.metric .v {
+  font-family: var(--font-mono); font-size: 17px; font-weight: 700;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+}
+.metric .cmp {
+  display: block; font-family: var(--font-mono); font-size: 11px;
+  color: var(--faint); margin-top: 3px; font-variant-numeric: tabular-nums;
+}
+.pos { color: var(--pos); } .neg { color: var(--neg); } .neutral { color: var(--text); }
+
+/* ── Provenance / receipt ────────────────────────────────── */
+.receipt {
+  font-family: var(--font-mono); font-size: 12px;
+  display: grid; grid-template-columns: auto 1fr; gap: 7px 18px;
+  align-items: baseline;
+}
+.receipt dt { color: var(--faint); letter-spacing: 0.06em; text-transform: uppercase;
+              font-size: 10px; white-space: nowrap; }
+.receipt dd { color: var(--text); word-break: break-all; font-variant-numeric: tabular-nums; }
+
+.tag-synthetic, .tag-real, .tag-precomputed {
+  display: inline-block; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 5px; vertical-align: middle;
+}
+.tag-real { color: var(--pos); background: rgba(93, 242, 160, 0.11);
+            border: 1px solid rgba(93, 242, 160, 0.3); }
+.tag-synthetic { color: var(--cyan); background: rgba(54, 224, 255, 0.10);
+                 border: 1px solid rgba(54, 224, 255, 0.3); }
+.tag-precomputed { color: var(--muted); background: rgba(255,255,255,0.04);
+                   border: 1px solid var(--border-2); }
+
+/* A caveat the reader must not miss, but which shouldn't shout either. */
+.caveat {
+  border-left: 2px solid var(--cyan); padding: 2px 0 2px 12px;
+  color: var(--muted); font-size: 12.5px; line-height: 1.55; margin-top: 14px;
+}

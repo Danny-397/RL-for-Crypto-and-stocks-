@@ -712,9 +712,11 @@
     const home = document.getElementById("view-home");
     const method = document.getElementById("view-method");
     const market = document.getElementById("view-market");
+    const lab = document.getElementById("view-lab");
     if (home) home.classList.toggle("active", view === "home");
     if (method) method.classList.toggle("active", view === "how");
     if (market) market.classList.toggle("active", isMarket);
+    if (lab) lab.classList.toggle("active", view === "lab");
     document.querySelectorAll(".navtab").forEach((a) => {
       const on = a.dataset.view === view;
       a.classList.toggle("active", on);
@@ -738,7 +740,7 @@
   }
 
   function initRouter() {
-    const valid = ["home", "how", "stocks", "crypto"];
+    const valid = ["home", "how", "stocks", "crypto", "lab"];
     document.querySelectorAll(".navtab").forEach((a) => {
       a.addEventListener("click", (e) => {
         e.preventDefault();
