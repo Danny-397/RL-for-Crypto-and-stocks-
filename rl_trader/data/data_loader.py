@@ -101,6 +101,12 @@ def generate_synthetic_ohlcv(
     for the agent to exploit. Total volatility is preserved regardless of the
     momentum level, so ``annual_vol`` keeps its meaning.
 
+    ``momentum`` is the AR(1) coefficient, so **negative values in (-1, 0) are
+    also valid** and produce *mean-reverting* returns (moves tend to reverse).
+    That makes this one knob span the full range of short-horizon return
+    autocorrelation, which is what the generalization / distribution-shift
+    experiments vary.
+
     ``annual_vol`` remains the main regime knob (higher ≈ crypto-like).
     """
     rng = np.random.default_rng(seed)
@@ -108,9 +114,10 @@ def generate_synthetic_ohlcv(
     mu = (annual_drift - 0.5 * annual_vol**2) * dt
     sigma = annual_vol * np.sqrt(dt)
 
-    if momentum > 0.0:
+    if momentum != 0.0:
         # AR(1) signal carries a fixed fraction of the variance; the remainder is
-        # unpredictable noise. This yields autocorrelated (trending) returns.
+        # unpredictable noise. Positive ``momentum`` yields trending (positively
+        # autocorrelated) returns; negative yields mean-reverting ones.
         # Kept modest so the resulting return autocorrelation stays in a
         # plausible "trending regime" band rather than making the market trivial.
         signal_frac = 0.40
