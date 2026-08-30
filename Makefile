@@ -28,7 +28,7 @@ test:
 	$(PY) -m pytest -q
 
 lint:
-	$(PY) -m ruff check rl_trader tools tests
+	$(PY) -m ruff check rl_trader tools tests server
 
 fetch:
 	$(PY) tools/fetch_data.py
