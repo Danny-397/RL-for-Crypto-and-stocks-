@@ -1,0 +1,104 @@
+{
+ "created_utc": "2026-08-30T23:14:28Z",
+ "files": {
+  "crypto/ADA-USD": {
+   "first_date": "2017-11-09",
+   "last_date": "2026-08-28",
+   "rows": 3215,
+   "sha256": "7000609a9c0892d04a0945cc3788a496c506218e97f9e9d7121921131f13eb7a"
+  },
+  "crypto/BTC-USD": {
+   "first_date": "2014-09-17",
+   "last_date": "2026-08-28",
+   "rows": 4364,
+   "sha256": "4bc47dd7d0315e3d7f4c042f2e45bd40ad54cf36fec67e5faa3101a5998152e6"
+  },
+  "crypto/ETH-USD": {
+   "first_date": "2017-11-09",
+   "last_date": "2026-08-28",
+   "rows": 3215,
+   "sha256": "cc1704bbe831571612fe26238e2af8176316fb06736a4be7be7949e0126a11c1"
+  },
+  "crypto/LTC-USD": {
+   "first_date": "2014-09-17",
+   "last_date": "2026-08-28",
+   "rows": 4364,
+   "sha256": "16c4c4562eea8130fa6186f41c85768d24a26281ef2cf56e9b7e3ca25c845737"
+  },
+  "crypto/SOL-USD": {
+   "first_date": "2020-04-10",
+   "last_date": "2026-08-28",
+   "rows": 2332,
+   "sha256": "a0c80228b2054f8fdfc1d9c07b94d51c7c6ad703ce1355e1f2f17c672fbb0236"
+  },
+  "crypto/XRP-USD": {
+   "first_date": "2017-11-09",
+   "last_date": "2026-08-28",
+   "rows": 3215,
+   "sha256": "ca1055bfa03ebd53fe44322024d996024940f80721b8ae6ae9995c80db05ae41"
+  },
+  "stock/AAPL": {
+   "first_date": "2016-08-29",
+   "last_date": "2026-08-28",
+   "rows": 2514,
+   "sha256": "c69346d039c9023be8bf628a29a90e6233f62c4ca5c279ec2c5a7d22f4084345"
+  },
+  "stock/AMZN": {
+   "first_date": "2016-08-29",
+   "last_date": "2026-08-28",
+   "rows": 2514,
+   "sha256": "23d13c1822a673e40dec453ac50ab86ca170619f4c518cdc89a6bb1f72feeb39"
+  },
+  "stock/GOOGL": {
+   "first_date": "2016-08-29",
+   "last_date": "2026-08-28",
+   "rows": 2514,
+   "sha256": "72e1e5ddb11f90ef24dc038546acff1b191645abd1b4ebb242234621207850cd"
+  },
+  "stock/JNJ": {
+   "first_date": "2016-08-29",
+   "last_date": "2026-08-28",
+   "rows": 2514,
+   "sha256": "1fd81bf6475697257cd651b1011383f6d23aebb8ad5ad2def210a44309df5ed7"
+  },
+  "stock/JPM": {
+   "first_date": "2016-08-29",
+   "last_date": "2026-08-28",
+   "rows": 2514,
+   "sha256": "c5b44e4abe456cc9d55d33e3e5935b1a61415c8ee9183dbe34c5bd32222aae77"
+  },
+  "stock/MSFT": {
+   "first_date": "2016-08-29",
+   "last_date": "2026-08-28",
+   "rows": 2514,
+   "sha256": "c112aef8230da3d51ae1fc6fc232b19ed129c0d7c196120f79375b44a9f87fe4"
+  },
+  "stock/NVDA": {
+   "first_date": "2016-08-29",
+   "last_date": "2026-08-28",
+   "rows": 2514,
+   "sha256": "419a202a9f827d6a46c6f0f3bc28c0ff8137000b5d935748406469e2166d02e4"
+  },
+  "stock/QQQ": {
+   "first_date": "2016-08-29",
+   "last_date": "2026-08-28",
+   "rows": 2514,
+   "sha256": "0c075f900bdfeb1c08771bea8d5b935db18522d610a2385cae70323a8219d404"
+  },
+  "stock/SPY": {
+   "first_date": "2016-08-29",
+   "last_date": "2026-08-28",
+   "rows": 2514,
+   "sha256": "b34fe510367135b1870f59172756de713650ae7b3b7fd8d27c70eb7a4c911e67"
+  },
+  "stock/XOM": {
+   "first_date": "2016-08-29",
+   "last_date": "2026-08-28",
+   "rows": 2514,
+   "sha256": "32a78ce978987b52aeefdef958aa4a37cba020e8a97c9197dbe502fa2a1db29f"
+  }
+ },
+ "pinned_end": "2026-08-28",
+ "pinned_start": null,
+ "root": "data/raw"
+}
