@@ -136,11 +136,13 @@
       ctx.clearRect(0, 0, w, h);
 
       // horizontal gridlines + value labels
+      // A sparkline (grid:false) deliberately shows no axis: in the signal-or-noise
+      // test a y-axis would hand over scale information the design works to remove.
       ctx.font = "10px ui-monospace, monospace";
       ctx.fillStyle = COLORS.text;
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      for (let g = 0; g <= 3; g++) {
+      for (let g = 0; o.grid !== false && g <= 3; g++) {
         const v = lo + ((hi - lo) * g) / 3;
         const y = Y(v);
         ctx.strokeStyle = COLORS.grid;
@@ -275,6 +277,276 @@
       `</div>`
     );
   }
+
+  /* ── Signal or Noise? ───────────────────────────────────── */
+  /* A controlled test of the visitor's own pattern detection.
+   *
+   * The answer key never reaches the browser: charts arrive unlabelled, and the
+   * backend rescores by rebuilding the identical quiz from its seed. Nothing is
+   * graded locally, so there is nothing here to read ahead in — and the verdict
+   * shown is an exact binomial test computed server-side, not a canned message. */
+  const Perception = (function () {
+    let quiz = null;      // { params, meta, charts } as served
+    let answers = [];     // 0 | 1 | null per chart — the visitor's calls
+    let scored = false;
+    let tickers = null;   // lazily fetched, only for the real-data condition
+    const sparks = [];    // Chart instances, kept so a resize can redraw them
+
+    const CLASS_NAMES = {
+      trending: ["Random walk", "Trending"],
+      real: ["Reshuffled", "Real"],
+    };
+
+    function names() {
+      return CLASS_NAMES[(quiz && quiz.meta.positive_class) || "trending"];
+    }
+
+    function difficulty() { return $("pc-difficulty").dataset.value; }
+
+    /* The source control means different things in the two conditions, so its
+     * label and options are rebuilt rather than reused. */
+    async function fillSources() {
+      const sel = $("pc-source");
+      const label = $("pc-source-label");
+      sel.innerHTML = "";
+      if (difficulty() === "synthetic") {
+        label.textContent = "Trained-on regime";
+        [["stock", "Stock agent's regime"], ["crypto", "Crypto agent's regime"]].forEach(
+          ([v, t]) => sel.add(new Option(t, v))
+        );
+        return;
+      }
+      label.textContent = "Ticker";
+      if (!tickers) {
+        try { tickers = await api.get("/api/tickers"); }
+        catch (err) { tickers = { stock: ["SPY"], crypto: ["BTC-USD"] }; }
+      }
+      [].concat(tickers.stock || [], tickers.crypto || []).forEach((t) =>
+        sel.add(new Option(t, t))
+      );
+    }
+
+    function params() {
+      const n = parseInt($("pc-n").value, 10);
+      const src = $("pc-source").value;
+      const p = { difficulty: difficulty(), n_charts: n, seed: quiz ? quiz.params.seed : 0 };
+      if (p.difficulty === "synthetic") p.market = src;
+      else p.ticker = src;
+      return p;
+    }
+
+    async function load() {
+      const p = params();
+      // A fresh seed per quiz, so a visitor can repeat the experiment rather than
+      // re-take the same one and mistake memory for skill.
+      p.seed = Math.floor(Math.random() * 2147483647);
+      const qs = Object.keys(p).map((k) => `${k}=${encodeURIComponent(p[k])}`).join("&");
+
+      showError($("pc-error"), null);
+      $("pc-result").hidden = true;
+      $("pc-actions").hidden = true;
+      $("pc-grid").innerHTML = "";
+      $("pc-receipt").innerHTML = "";
+      setStatus($("pc-status"), "building a fresh quiz…", true);
+
+      try {
+        quiz = await api.get(`/api/perception/quiz?${qs}`);
+      } catch (err) {
+        setStatus($("pc-status"), "");
+        showError($("pc-error"), `Could not build a quiz: ${err.message}`);
+        return;
+      }
+      answers = new Array(quiz.charts.length).fill(null);
+      scored = false;
+      setStatus($("pc-status"), "");
+      $("pc-prompt").textContent = quiz.meta.prompt;
+      render();
+      $("pc-actions").hidden = false;
+      updateProgress();
+    }
+
+    function render() {
+      const grid = $("pc-grid");
+      grid.innerHTML = "";
+      sparks.length = 0;
+      const [negName, posName] = names();
+
+      quiz.charts.forEach((chart, i) => {
+        const card = document.createElement("div");
+        card.className = "pc-card";
+        card.id = `pc-card-${i}`;
+        card.innerHTML =
+          `<div class="pc-card-head"><span class="pc-n">${i + 1}</span>` +
+          `<span class="pc-truth" id="pc-truth-${i}"></span></div>` +
+          `<canvas class="pc-canvas" id="pc-cv-${i}"></canvas>` +
+          `<div class="seg pc-seg" data-chart="${i}">` +
+          `<button type="button" data-val="1">${posName}</button>` +
+          `<button type="button" data-val="0">${negName}</button></div>`;
+        grid.appendChild(card);
+
+        const c = Chart($(`pc-cv-${i}`), {
+          height: 96,
+          grid: false,
+          pad: { l: 4, r: 4, t: 8, b: 8 },
+        });
+        c.setSeries([{ values: chart.prices, color: COLORS.bench, width: 1.4 }]);
+        sparks.push(c);
+      });
+
+      grid.querySelectorAll(".pc-seg button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (scored) return;
+          const seg = btn.parentElement;
+          const idx = parseInt(seg.dataset.chart, 10);
+          answers[idx] = parseInt(btn.dataset.val, 10);
+          seg.querySelectorAll("button").forEach((b) =>
+            b.setAttribute("aria-pressed", String(b === btn))
+          );
+          updateProgress();
+        });
+      });
+    }
+
+    function updateProgress() {
+      const done = answers.filter((a) => a != null).length;
+      $("pc-progress").textContent = `${done} of ${answers.length} called`;
+      $("pc-submit").disabled = done !== answers.length || scored;
+    }
+
+    async function submit() {
+      setStatus($("pc-status"), "scoring against the answer key…", true);
+      $("pc-submit").disabled = true;
+      let out;
+      try {
+        out = await api.post("/api/perception/score", {
+          params: quiz.params,
+          answers: answers,
+        });
+      } catch (err) {
+        setStatus($("pc-status"), "");
+        showError($("pc-error"), `Scoring failed: ${err.message}`);
+        $("pc-submit").disabled = false;
+        return;
+      }
+      setStatus($("pc-status"), "");
+      scored = true;
+      reveal(out);
+      renderResult(out);
+      updateProgress();
+    }
+
+    /* Mark every card with the truth and the number that decided it. */
+    function reveal(out) {
+      const [negName, posName] = names();
+      out.per_chart.forEach((r) => {
+        const card = $(`pc-card-${r.index}`);
+        card.classList.add(r.correct ? "is-right" : "is-wrong");
+        $(`pc-truth-${r.index}`).innerHTML =
+          `<b>${r.truth ? posName : negName}</b> · <span class="pc-ac">ρ₁ = ` +
+          `${fmt.signed(r.autocorr_lag1, 3)}</span>`;
+        card.querySelectorAll(".pc-seg button").forEach((b) => (b.disabled = true));
+      });
+    }
+
+    function renderResult(out) {
+      const m = out.meta;
+      const ref = out.reference;
+      const pw = out.power;
+      const powerRows = pw.power
+        .map(
+          (r) =>
+            `<tr><td>${Math.round(r.true_accuracy * 100)}% accurate</td>` +
+            `<td class="${r.power < 0.5 ? "neg" : "pos"}">${Math.round(r.power * 100)}%</td></tr>`
+        )
+        .join("");
+
+      $("pc-result").hidden = false;
+      $("pc-result").innerHTML =
+        `<div class="pc-score">` +
+        `<div class="pc-score-main"><span class="pc-score-n">${out.correct}` +
+        `<span class="pc-score-d">/${out.n}</span></span>` +
+        `<span class="pc-score-lbl">chance is ${out.expected_by_chance}</span></div>` +
+        metric("p-value", out.p_value.toFixed(4), out.significant_at_05 ? "pos" : "neutral",
+               out.test) +
+        metric("Your accuracy", (out.accuracy * 100).toFixed(0) + "%", "neutral") +
+        `</div>` +
+        `<p class="pc-verdict">${out.verdict}</p>` +
+
+        `<div class="pc-two">` +
+        `<div class="pc-box"><h4>What a statistic saw</h4>` +
+        `<p class="xr-hint">${ref.description}</p>` +
+        `<p class="pc-ref-score">${ref.correct} of ${ref.n} ` +
+        `<span class="pc-ref-sub">(p = ${ref.p_value.toFixed(4)})</span></p>` +
+        `<p class="xr-hint">${ref.caveat}</p></div>` +
+
+        `<div class="pc-box"><h4>Could this test even detect skill?</h4>` +
+        `<table class="pc-power"><thead><tr><th>If you were…</th>` +
+        `<th>chance of proving it</th></tr></thead><tbody>${powerRows}</tbody></table>` +
+        `<p class="xr-hint">${pw.explanation}</p></div>` +
+        `</div>` +
+
+        `<p class="pc-tie">The smallest p-value ${out.n} charts can produce at all is ` +
+        `<b>${pw.min_attainable_p.toFixed(4)}</b> — a hard floor set by the design, not by ` +
+        `the data. The project's seed-level tests hit exactly this wall: with 5 seeds a ` +
+        `sign-flip test cannot go below p = 0.0625, so it can never reach significance ` +
+        `however large the effect.</p>`;
+
+      const overlap = m.realised.classes_overlap
+        ? "yes — at this length the classes are not cleanly separated"
+        : "no — the classes separated cleanly this time";
+      $("pc-receipt").innerHTML =
+        [
+          ["Condition", m.difficulty === "synthetic"
+            ? `synthetic · φ = ${m.signal_phi} vs φ = 0`
+            : `real · ${m.ticker} vs its own reshuffled returns`],
+          ["Design", m.design],
+          ["Normalisation", m.normalisation],
+          ["Measured ρ₁ (signal / control)",
+           `${fmt.signed(m.realised.mean_autocorr_signal, 3)} / ` +
+           `${fmt.signed(m.realised.mean_autocorr_control, 3)}`],
+          ["Classes overlap?", overlap],
+          ["Bars per chart", String(m.bars_per_chart)],
+          ["Quiz seed", String(m.seed)],
+        ]
+          .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
+          .join("");
+    }
+
+    function bindSeg(id, onChange) {
+      const seg = $(id);
+      seg.querySelectorAll("button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          seg.dataset.value = btn.dataset.val;
+          seg.querySelectorAll("button").forEach((b) =>
+            b.setAttribute("aria-pressed", String(b === btn))
+          );
+          onChange(btn.dataset.val);
+        });
+      });
+    }
+
+    async function init() {
+      if (!api.ok) return;
+      bindSeg("pc-difficulty", async () => { await fillSources(); load(); });
+      $("pc-n").addEventListener("input", (e) => {
+        $("pc-n-val").textContent = e.target.value;
+      });
+      $("pc-n").addEventListener("change", load);
+      $("pc-source").addEventListener("change", load);
+      $("pc-new").addEventListener("click", load);
+      $("pc-submit").addEventListener("click", submit);
+      window.addEventListener("resize", () => sparks.forEach((c) => c.redraw()));
+      // A hidden canvas has zero width, so anything drawn while the panel was
+      // inactive comes back blank. Redraw on the way in.
+      window.addEventListener("lab:panel", (e) => {
+        if (e.detail.panel === "perception") sparks.forEach((c) => c.redraw());
+      });
+      await fillSources();
+      await load();
+    }
+
+    return { init, redraw: () => sparks.forEach((c) => c.redraw()) };
+  })();
 
   /* ── Playground ─────────────────────────────────────────── */
   const Playground = (function () {
@@ -1763,7 +2035,7 @@
    * to find it. Keyboard behaviour follows the ARIA tabs pattern: arrows move
    * between tabs, Home/End jump to the ends, and a roving tabindex keeps a
    * single stop in the page's tab order. */
-  const PANELS = ["playground", "xray", "generalization", "seeds", "notebook"];
+  const PANELS = ["perception", "playground", "xray", "generalization", "seeds", "notebook"];
 
   function showPanel(name, updateHash) {
     if (PANELS.indexOf(name) === -1) name = PANELS[0];
@@ -1820,6 +2092,7 @@
     if (!$("view-lab")) return;
     initTabs();
     initStatus();
+    Perception.init();
     Playground.init();
     XRay.init();
     Generalization.init();
@@ -1832,5 +2105,6 @@
   else boot();
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
-  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel, Playground, XRay, Generalization, Seeds, WhatIf, Notebook };
+  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel,
+                   Perception, Playground, XRay, Generalization, Seeds, WhatIf, Notebook };
 })();

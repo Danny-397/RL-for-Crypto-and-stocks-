@@ -426,10 +426,11 @@ cost-and-slippage environment — so any edge has to be real.
 
 The site in [`docs/`](docs/) is a **laboratory**, not a slide deck. It is deployed
 at **[rl-for-crypto-and-stocks.vercel.app](https://rl-for-crypto-and-stocks.vercel.app/)**
-and its five panels are the four research questions made runnable.
+and its panels are the research questions made runnable.
 
 | Panel | What you can do | Live? |
 |---|---|---|
+| **Signal or Noise?** | Before testing the agent, test yourself: tell charts carrying the agent's training-time autocorrelation from pure random walks, under a design where volatility and drift are standardised away. Scored with an exact binomial test, beside a power analysis and a one-line statistical rule run on the same charts. | ✅ live |
 | **Agent Playground** | Configure market, data source, capital, costs, reward, shorting — then run a real episode and scrub it bar by bar against buy-&-hold. | ✅ live |
 | **Agent X-Ray** | At any bar, read the actual observation → policy → action → reward → position chain, all 28 features grouped as the pipeline defines them, plus the 20-bar window as a heatmap. | ✅ live |
 | **Can You Break It?** | The real domain-randomization ablation (Agent A vs Agent B) with per-seed points and CIs, plus a live shift test that drops the deployed policy onto controlled synthetic regimes. | mixed — see below |
@@ -460,6 +461,37 @@ omitted and labelled, never filled in with a plausible number. The clearest
 example: the deployed policy archives contain the actor but **no critic head**,
 so the X-Ray's value slot reads *"not exported"* instead of showing an invented
 estimate.
+
+### Testing the reader, not just the agent
+
+The first panel is the project's thesis turned on the visitor. Half the charts
+are drawn with the AR(1) return autocorrelation the agents were **trained
+against** (`market_regime`); half are the same generator with `momentum = 0`. A
+"real" condition instead pits disjoint slices of a ticker's own history against
+those *same slices with their daily returns permuted* — a surrogate that keeps
+the entire marginal distribution (mean, variance, skew, fat tails) and destroys
+only the ordering, so the only thing left to see is time structure.
+
+Three design choices make the result mean something:
+
+- **Confound control.** Every chart is standardised to an identical return
+  volatility and given a drift drawn from one shared distribution. Standardising
+  is affine, so it leaves autocorrelation exactly intact while erasing every
+  other cue. Classes are exactly balanced, then shuffled.
+- **The key never leaves the server.** A quiz is a deterministic function of
+  `(difficulty, source, seed, n_charts)`; scoring rebuilds it and compares. There
+  is no answer to read out of the page.
+- **The inference is exact and honestly underpowered.** Scoring reports an exact
+  two-sided binomial test, the floor `2 / 2**n` the design can attain at all, and
+  its **power**: at n = 8, a genuinely 70%-accurate observer is detected under
+  10% of the time. Failing to reach significance is not evidence of no skill —
+  the same distinction the seed-level tests below turn on.
+
+The measured effect is the point: the "trending" class has a lag-1 return
+autocorrelation of roughly **+0.11** against **−0.02** for the control. Real,
+exploitable in principle, and invisible to the eye — while the one-line
+autocorrelation rule reported beside your score typically gets 6 of 8. That gap
+is the whole argument for measuring instead of looking.
 
 ### One statistical detail the lab is careful about
 
@@ -492,6 +524,8 @@ paper.
 | `GET /api/regimes` | Synthetic distribution-shift regimes |
 | `GET /api/datasets` | Real committed per-seed and per-ticker datasets, with provenance |
 | `GET /api/generalization` | The real single-path vs domain-randomized ablation |
+| `GET /api/perception/quiz` | A balanced signal-vs-noise chart test, served without its answer key |
+| `POST /api/perception/score` | Exact binomial scoring of a submission, plus power and a statistical reference |
 | `POST /api/statistics` | Live bootstrap / permutation inference over that real data |
 | `POST /api/experiments` | Create an experiment (async; returns an id immediately) |
 | `GET /api/experiments` | Session history |

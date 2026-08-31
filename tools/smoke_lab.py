@@ -148,6 +148,59 @@ def run(api: str, port: int, shot: str | None) -> None:
               "LIVE" in page.inner_text("#lab-api-status").upper(),
               page.inner_text("#lab-api-status").strip())
 
+        # ── Signal or Noise? (the default panel) ───────────────────────────
+        print("\nSignal or Noise?")
+        page.wait_for_function(
+            "() => document.querySelectorAll('.pc-card').length > 0", timeout=60000
+        )
+        n_cards = page.eval_on_selector_all(".pc-card", "els => els.length")
+        check("quiz charts rendered", n_cards == 12, f"{n_cards} charts")
+        check("the prompt comes from the backend",
+              len(page.inner_text("#pc-prompt")) > 20, page.inner_text("#pc-prompt")[:60])
+
+        painted = page.eval_on_selector(
+            "#pc-cv-0",
+            "el => { const c = el.getContext('2d');"
+            "const d = c.getImageData(0,0,el.width,el.height).data;"
+            "let n=0; for (let i=3;i<d.length;i+=4) if (d[i]>0) n++; return n; }",
+        )
+        check("sparklines painted", painted > 100, f"{painted} px")
+        # The answer key must never be in the page — that is the whole design.
+        check("no answers in the served payload",
+              "positive_class" not in page.eval_on_selector(
+                  "#pc-grid", "el => el.innerHTML"))
+        check("submit is blocked until every chart is called",
+              page.eval_on_selector("#pc-submit", "el => el.disabled"))
+
+        # Answer everything "trending" — a fixed strategy, so the score is
+        # deterministic: exactly the n/2 charts that really are trending.
+        page.eval_on_selector_all(
+            '.pc-seg button[data-val="1"]', "els => els.forEach(b => b.click())"
+        )
+        check("progress tracks the answers",
+              "12 of 12" in page.inner_text("#pc-progress"), page.inner_text("#pc-progress"))
+        page.click("#pc-submit")
+        page.wait_for_selector("#pc-result:not([hidden])", timeout=30000)
+        time.sleep(0.4)
+
+        score = page.inner_text(".pc-score-n")
+        check("balanced classes make an all-one-answer sheet score n/2",
+              score.startswith("6"), score.replace("\n", ""))
+        check("a verdict is shown", len(page.inner_text(".pc-verdict")) > 40)
+        check("the power table is rendered",
+              page.eval_on_selector_all(".pc-power tbody tr", "els => els.length") == 3)
+        check("the statistical reference is shown",
+              "of 12" in page.inner_text(".pc-ref-score"), page.inner_text(".pc-ref-score"))
+        check("the truth is revealed per chart",
+              page.eval_on_selector_all(".pc-card.is-right, .pc-card.is-wrong",
+                                        "els => els.length") == 12)
+        check("the design is on the receipt",
+              page.eval_on_selector_all("#pc-receipt dt", "els => els.length") >= 6)
+
+        # ── Agent Playground ───────────────────────────────────────────────
+        print("\nAgent Playground")
+        page.click('.lab-tab[data-panel="playground"]')
+        page.wait_for_selector("#pg-mode", state="visible", timeout=20000)
         page.click('#pg-mode button[data-val="synthetic"]')
         page.wait_for_function(
             "() => document.getElementById('pg-regime').options.length >= 4", timeout=30000
@@ -454,9 +507,9 @@ def run(api: str, port: int, shot: str | None) -> None:
               home.eval_on_selector(".hero-cta .btn-primary", "el => el.getAttribute('href')")
               == "#lab")
         n_cards = home.eval_on_selector_all(".lab-card", "els => els.length")
-        check("every panel is advertised", n_cards == 5, f"{n_cards} cards")
+        check("every panel is advertised", n_cards == 6, f"{n_cards} cards")
         check("each card declares whether it is live",
-              home.eval_on_selector_all(".lab-card-tag", "els => els.length") == 5)
+              home.eval_on_selector_all(".lab-card-tag", "els => els.length") == 6)
         check("the training caveat is on the home page",
               "training" in home.inner_text(".lab-strip-note").lower())
 
@@ -482,7 +535,7 @@ def run(api: str, port: int, shot: str | None) -> None:
         home.keyboard.press("Home")
         time.sleep(0.4)
         check("Home key jumps to the first tab",
-              home.eval_on_selector("#panel-playground", "el => el.classList.contains('active')"))
+              home.eval_on_selector("#panel-perception", "el => el.classList.contains('active')"))
         check("only the selected tab is in the tab order",
               home.eval_on_selector_all(".lab-tab", "els => els.filter(e => e.tabIndex === 0).length")
               == 1)

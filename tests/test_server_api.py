@@ -529,3 +529,66 @@ def test_experiment_listing_carries_questions(client):
     body = client.get("/api/experiments?limit=50").get_json()
     assert any(row.get("question") for row in body["experiments"])
     assert all("question" in row for row in body["experiments"])
+
+
+# --------------------------------------------------------------------------- #
+# Signal-or-noise: the human pattern-detection test                            #
+# --------------------------------------------------------------------------- #
+def test_quiz_endpoint_serves_charts_without_the_answers(client):
+    body = client.get("/api/perception/quiz?seed=5&n_charts=8").get_json()
+    assert len(body["charts"]) == 8
+    assert body["params"]["seed"] == 5
+    # The key must not reach the browser in any form.
+    assert "_key" not in body
+    assert "label" not in str(body["charts"])
+
+
+def test_quiz_endpoint_is_reproducible_from_its_params(client):
+    a = client.get("/api/perception/quiz?seed=77&n_charts=8&market=crypto").get_json()
+    b = client.get("/api/perception/quiz?seed=77&n_charts=8&market=crypto").get_json()
+    assert a["charts"][3]["prices"] == b["charts"][3]["prices"]
+
+
+def test_scoring_rebuilds_the_same_quiz(client):
+    """Scoring must agree with an independent rebuild from the same params.
+
+    A submission of all-ones scores exactly the number of positives, which is
+    n/2 by construction — so this pins both the rebuild and the balance.
+    """
+    quiz = client.get("/api/perception/quiz?seed=21&n_charts=10").get_json()
+    out = client.post(
+        "/api/perception/score", json={"params": quiz["params"], "answers": [1] * 10}
+    ).get_json()
+    assert out["correct"] == 5
+    assert out["n"] == 10
+    assert out["significant_at_05"] is False
+    assert out["power"]["min_attainable_p"] == pytest.approx(2 / 2 ** 10, abs=1e-9)
+    assert out["reference"]["n"] == 10
+
+
+def test_scoring_rejects_a_mismatched_answer_sheet(client):
+    quiz = client.get("/api/perception/quiz?seed=2&n_charts=8").get_json()
+    r = client.post(
+        "/api/perception/score", json={"params": quiz["params"], "answers": [1, 0, 1]}
+    )
+    assert r.status_code == 400
+    assert "expected 8 answers" in r.get_json()["error"]
+
+
+@pytest.mark.parametrize("query", ["n_charts=7", "n_charts=99", "difficulty=magic"])
+def test_quiz_endpoint_validates_its_parameters(client, query):
+    r = client.get(f"/api/perception/quiz?{query}")
+    assert r.status_code == 400
+    assert "error" in r.get_json()
+
+
+def test_real_condition_uses_the_price_fetcher(client):
+    """The real-data condition must go through the same fetcher as everything else."""
+    body = client.get("/api/perception/quiz?difficulty=real&ticker=SPY&n_charts=6").get_json()
+    assert body["meta"]["ticker"] == "SPY"
+    assert body["meta"]["positive_class"] == "real"
+    assert len(body["charts"]) == 6
+
+
+def test_meta_advertises_the_perception_test(client):
+    assert client.get("/api/meta").get_json()["live"]["perception_test"] is True

@@ -113,7 +113,7 @@
       <div class="stat-cell"><div class="num" data-count="16">16</div><div class="lbl">Real tickers backtested</div></div>
       <div class="stat-cell"><div class="num" data-count="5">5</div><div class="lbl">Seeds in the significance study</div></div>
       <div class="stat-cell"><div class="num" data-count="28">28</div><div class="lbl">Engineered features</div></div>
-      <div class="stat-cell"><div class="num" data-count="46">46</div><div class="lbl">Tests passing</div></div>
+      <div class="stat-cell"><div class="num" data-count="155">155</div><div class="lbl">Tests passing</div></div>
     </section>
 
     <!-- ─────────────────────── FEATURES ─────────────────────── -->
@@ -169,13 +169,21 @@
       <div class="section-head">
         <div class="kicker">THE LAB</div>
         <h2>Don't just read the result. Test it.</h2>
-        <p>Five experiments, each one runnable against the deployed agent or the
+        <p>Six experiments, each one runnable against the deployed agent or the
            project's real committed results. Nothing on these pages is a mock-up.</p>
       </div>
 
       <div class="lab-strip">
-        <a class="lab-card" href="#lab/playground" data-view="lab" data-panel="playground">
+        <a class="lab-card" href="#lab/perception" data-view="lab" data-panel="perception">
           <span class="lab-card-n">01</span>
+          <h3>Signal or Noise?</h3>
+          <p>Before you test the agent, test yourself. Tell trending charts from random
+             walks, then see the exact binomial verdict on your score.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/playground" data-view="lab" data-panel="playground">
+          <span class="lab-card-n">02</span>
           <h3>Agent Playground</h3>
           <p>Pick a market, a data source, costs and a reward function. Run a real
              episode and scrub it bar by bar against buy-&amp;-hold.</p>
@@ -183,7 +191,7 @@
         </a>
 
         <a class="lab-card" href="#lab/xray" data-view="lab" data-panel="xray">
-          <span class="lab-card-n">02</span>
+          <span class="lab-card-n">03</span>
           <h3>Agent X-Ray</h3>
           <p>At any bar, see the actual 563-dimensional observation the agent
              consumed, and follow it through to the action and the reward.</p>
@@ -191,7 +199,7 @@
         </a>
 
         <a class="lab-card" href="#lab/generalization" data-view="lab" data-panel="generalization">
-          <span class="lab-card-n">03</span>
+          <span class="lab-card-n">04</span>
           <h3>Can You Break It?</h3>
           <p>One agent memorised a single price path; the other saw a new one every
              episode. Then push the deployed policy onto distributions it never met.</p>
@@ -199,7 +207,7 @@
         </a>
 
         <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
-          <span class="lab-card-n">04</span>
+          <span class="lab-card-n">05</span>
           <h3>Real or Luck?</h3>
           <p>A <b>+275%</b> single-seed headline beside what five seeds actually say.
              Re-run the bootstrap and the permutation test yourself.</p>
@@ -207,7 +215,7 @@
         </a>
 
         <a class="lab-card" href="#lab/notebook" data-view="lab" data-panel="notebook">
-          <span class="lab-card-n">05</span>
+          <span class="lab-card-n">06</span>
           <h3>Research Notebook</h3>
           <p>Every experiment you run, with the exact config that produced it —
              and a button that replays it to the same numbers.</p>
@@ -543,15 +551,65 @@
         </header>
 
         <div class="lab-tabs" role="tablist" aria-label="Laboratory sections">
-          <button class="lab-tab" role="tab" id="tab-playground" data-panel="playground" aria-controls="panel-playground" aria-selected="true" tabindex="0">Agent Playground</button>
+          <button class="lab-tab" role="tab" id="tab-perception" data-panel="perception" aria-controls="panel-perception" aria-selected="true" tabindex="0">Signal or Noise?</button>
+          <button class="lab-tab" role="tab" id="tab-playground" data-panel="playground" aria-controls="panel-playground" aria-selected="false" tabindex="-1">Agent Playground</button>
           <button class="lab-tab" role="tab" id="tab-xray" data-panel="xray" aria-controls="panel-xray" aria-selected="false" tabindex="-1">Agent X-Ray</button>
           <button class="lab-tab" role="tab" id="tab-generalization" data-panel="generalization" aria-controls="panel-generalization" aria-selected="false" tabindex="-1">Can You Break It?</button>
           <button class="lab-tab" role="tab" id="tab-seeds" data-panel="seeds" aria-controls="panel-seeds" aria-selected="false" tabindex="-1">Real or Luck?</button>
           <button class="lab-tab" role="tab" id="tab-notebook" data-panel="notebook" aria-controls="panel-notebook" aria-selected="false" tabindex="-1">Notebook</button>
         </div>
 
+        <!-- SIGNAL OR NOISE -->
+        <section class="lab-panel active" id="panel-perception" role="tabpanel" aria-labelledby="tab-perception" tabindex="0">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Signal or noise?</h2>
+            <p>Before testing the agent, test yourself. Half of the charts below carry the
+               exact return autocorrelation the agent was <b>trained to find</b>. The other
+               half are random walks with no structure at all. Every chart is standardised to
+               the same volatility and given a drift from one shared distribution, so nothing
+               but the pattern itself can give the answer away.</p>
+          </div>
+
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>Take the test <span class="tag-real">Live</span></h3>
+              <div class="seg" id="pc-difficulty" data-value="synthetic">
+                <button type="button" data-val="synthetic" aria-pressed="true">Trend vs random walk</button>
+                <button type="button" data-val="real" aria-pressed="false">Real vs reshuffled</button>
+              </div>
+            </div>
+
+            <div class="shift-controls">
+              <div class="ctl">
+                <label for="pc-source" id="pc-source-label">Trained-on regime</label>
+                <select id="pc-source"></select>
+              </div>
+              <div class="ctl">
+                <label for="pc-n">Charts <span class="ctl-val" id="pc-n-val">12</span></label>
+                <input type="range" id="pc-n" min="4" max="12" step="2" value="12" />
+              </div>
+              <button class="run-btn" id="pc-new" type="button">New quiz</button>
+            </div>
+
+            <p class="xr-hint" id="pc-prompt"></p>
+            <div class="lab-status" id="pc-status"></div>
+            <div id="pc-error" hidden></div>
+
+            <div class="pc-grid" id="pc-grid"></div>
+
+            <div class="pc-actions" id="pc-actions" hidden>
+              <span class="pc-progress" id="pc-progress"></span>
+              <button class="run-btn" id="pc-submit" type="button" disabled>Score my answers</button>
+            </div>
+
+            <div id="pc-result" hidden></div>
+            <dl class="receipt" id="pc-receipt"></dl>
+          </div>
+        </section>
+
         <!-- PLAYGROUND -->
-        <section class="lab-panel active" id="panel-playground" role="tabpanel" aria-labelledby="tab-playground" tabindex="0">
+        <section class="lab-panel" id="panel-playground" role="tabpanel" aria-labelledby="tab-playground" tabindex="0">
           <div class="lab-grid">
 
             <form class="panel-card" id="pg-form" onsubmit="return false">

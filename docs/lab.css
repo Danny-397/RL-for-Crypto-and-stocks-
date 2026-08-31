@@ -717,3 +717,86 @@
   background: rgba(255, 204, 102, 0.08);
 }
 .api-pill.is-stale .dot-led { background: #ffcc66; box-shadow: 0 0 8px #ffcc66; }
+
+/* ── Signal or Noise? ─────────────────────────────────────────────────────── */
+/* The charts deliberately carry no axis, no scale and no ticker: the whole
+   design rests on nothing but the shape being visible, so the styling must not
+   put back a cue the backend worked to remove. */
+.pc-grid {
+  display: grid; gap: 12px; margin-top: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.pc-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 10px 12px;
+}
+.pc-card.is-right { border-color: rgba(93, 242, 160, 0.55); }
+.pc-card.is-wrong { border-color: rgba(255, 107, 107, 0.55); }
+.pc-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 20px; margin-bottom: 4px;
+}
+.pc-n {
+  font: 600 11px/1 var(--font-mono); color: var(--faint);
+  letter-spacing: 0.04em;
+}
+.pc-truth { font: 500 11px/1 var(--font-mono); color: var(--muted); }
+.pc-truth b { color: var(--text); }
+.pc-ac { color: var(--faint); }
+.pc-canvas { width: 100%; display: block; }
+.pc-seg { margin-top: 8px; width: 100%; }
+.pc-seg button { flex: 1; font-size: 11.5px; padding: 6px 4px; }
+.pc-seg button:disabled { opacity: 0.75; cursor: default; }
+
+.pc-actions {
+  display: flex; align-items: center; gap: 14px;
+  margin-top: 16px; flex-wrap: wrap;
+}
+.pc-progress { font: 500 12.5px/1 var(--font-mono); color: var(--muted); }
+
+.pc-score {
+  display: flex; align-items: stretch; gap: 12px;
+  margin-top: 20px; flex-wrap: wrap;
+}
+.pc-score-main {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 12px 20px; border-radius: 12px;
+  background: var(--bg-soft); border: 1px solid var(--border-2);
+}
+.pc-score-n { font: 700 34px/1 var(--font-display); color: var(--volt); }
+.pc-score-d { font-size: 20px; color: var(--muted); }
+.pc-score-lbl {
+  margin-top: 4px; font: 500 11.5px/1 var(--font-mono); color: var(--faint);
+}
+.pc-verdict {
+  margin-top: 14px; padding: 12px 14px; border-radius: 11px;
+  background: var(--bg-soft); border-left: 2px solid var(--cyan);
+  color: var(--text); font-size: 14px; line-height: 1.62;
+}
+.pc-two {
+  display: grid; gap: 12px; margin-top: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.pc-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px;
+}
+.pc-box h4 {
+  margin: 0 0 6px; font: 600 13px/1.3 var(--font-display); color: var(--text);
+}
+.pc-ref-score { margin: 8px 0; font: 700 20px/1 var(--font-display); color: var(--cyan); }
+.pc-ref-sub { font: 500 12px/1 var(--font-mono); color: var(--muted); }
+.pc-power { width: 100%; border-collapse: collapse; margin: 8px 0 6px; }
+.pc-power th {
+  text-align: left; font: 600 10.5px/1 var(--font-mono); color: var(--faint);
+  text-transform: uppercase; letter-spacing: 0.06em; padding-bottom: 6px;
+}
+.pc-power td {
+  padding: 4px 0; font: 500 13px/1.4 var(--font-mono);
+  border-top: 1px solid var(--border);
+}
+.pc-power td:last-child { text-align: right; }
+.pc-tie {
+  margin-top: 14px; font-size: 13.5px; line-height: 1.65; color: var(--muted);
+}
+.pc-tie b { color: var(--volt); font-family: var(--font-mono); }

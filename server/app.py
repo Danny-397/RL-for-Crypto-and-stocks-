@@ -18,6 +18,8 @@ Lab
     GET  /api/regimes                     synthetic distribution-shift regimes
     GET  /api/datasets                    real committed per-seed datasets
     GET  /api/generalization              real single-path vs domain-random results
+    GET  /api/perception/quiz             a controlled signal-vs-noise chart test
+    POST /api/perception/score            exact binomial scoring of that test
     POST /api/statistics                  live bootstrap / permutation inference
     POST /api/experiments                 create an experiment (async)
     GET  /api/experiments                 list recent experiments
@@ -60,7 +62,7 @@ from rl_trader.config.training_config import crypto_config, stock_config  # noqa
 from rl_trader.data.data_loader import market_data_from_df  # noqa: E402
 from rl_trader.envs import make_env  # noqa: E402
 from rl_trader.evaluation.evaluate_agent import ANNUALISATION, compute_metrics  # noqa: E402
-from server import lab, precomputed, regimes, stats_api  # noqa: E402
+from server import lab, perception, precomputed, regimes, stats_api  # noqa: E402
 from server.experiments import ExperimentManager, code_version  # noqa: E402
 from server.policy import load_policies  # noqa: E402
 
@@ -272,6 +274,7 @@ def api_meta():
             "counterfactual": True,
             "distribution_shift": True,
             "statistics": True,
+            "perception_test": True,
             "training": False,
         },
         training_note=(
@@ -324,6 +327,57 @@ def api_generalization():
     if out is None:
         return jsonify(error="ablation results unavailable"), 503
     return jsonify(out)
+
+
+# ── Lab: the human pattern-detection test ───────────────────────────────────
+def _perception_params(src) -> dict:
+    """Pull the four fields that fully determine a quiz.
+
+    A quiz is stateless: the same four values rebuild it byte-for-byte, which is
+    what lets scoring happen without the answer key ever reaching the browser.
+    """
+    return {
+        "difficulty": str(src.get("difficulty", "synthetic")).lower(),
+        "seed": int(src.get("seed", 0) or 0),
+        "n_charts": int(src.get("n_charts", 12) or 12),
+        "market": str(src.get("market", "stock")).lower(),
+        "ticker": (str(src.get("ticker")).upper() if src.get("ticker") else None),
+    }
+
+
+@app.get("/api/perception/quiz")
+def api_perception_quiz():
+    """Serve a balanced signal-vs-noise chart test, without its answer key."""
+    args = request.args
+    params = _perception_params(
+        {k: args.get(k) for k in ("difficulty", "seed", "n_charts", "market", "ticker")
+         if args.get(k) is not None}
+    )
+    try:
+        quiz = perception.build_quiz(fetch_ohlcv=_fetch_ohlcv, **params)
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+    out = perception.public(quiz)
+    out["params"] = params  # exactly what /score needs to rebuild this quiz
+    return jsonify(out)
+
+
+@app.post("/api/perception/score")
+def api_perception_score():
+    """Score a submission by rebuilding the same quiz and testing it exactly."""
+    payload = request.get_json(silent=True) or {}
+    answers = payload.get("answers")
+    if not isinstance(answers, list) or not answers:
+        return jsonify(error="'answers' must be a non-empty list"), 400
+    if len(answers) > perception.MAX_CHARTS:
+        return jsonify(error=f"at most {perception.MAX_CHARTS} answers"), 400
+
+    params = _perception_params(payload.get("params") or payload)
+    try:
+        quiz = perception.build_quiz(fetch_ohlcv=_fetch_ohlcv, **params)
+        return jsonify(perception.score_quiz(quiz, answers))
+    except (ValueError, TypeError) as exc:
+        return jsonify(error=str(exc)), 400
 
 
 # ── Lab: live statistics ────────────────────────────────────────────────────
