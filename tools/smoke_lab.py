@@ -353,14 +353,17 @@ def run(api: str, port: int, shot: str | None) -> None:
             page.screenshot(path=shot)
             print(f"  screenshot -> {shot}")
 
-        # Free the first page before opening the second. Both pages open at once
-        # is a real memory spike on a modest machine, and the driver dies with an
-        # unhelpful "connection closed" when it runs out.
-        page.close()
+        # Finish with this browser entirely before starting the next phase, so
+        # only one is ever alive — two open at once is a real memory spike on a
+        # modest machine. Under --single-process, closing the last page also
+        # closes the browser, so the offline phase gets a fresh launch rather
+        # than a second page.
+        browser.close()
 
         # ── 2. the lab with no backend ─────────────────────────────────────
         # The important half: nothing may be rendered from thin air.
         print("\nUnreachable backend")
+        browser = p.chromium.launch(args=LEAN_ARGS)
         off_errors: list[str] = []
         off = browser.new_page(viewport={"width": 1280, "height": 900})
         off.on("pageerror", lambda e: off_errors.append(str(e)))
