@@ -113,7 +113,7 @@
       <div class="stat-cell"><div class="num" data-count="16">16</div><div class="lbl">Real tickers backtested</div></div>
       <div class="stat-cell"><div class="num" data-count="5">5</div><div class="lbl">Seeds in the significance study</div></div>
       <div class="stat-cell"><div class="num" data-count="28">28</div><div class="lbl">Engineered features</div></div>
-      <div class="stat-cell"><div class="num" data-count="230">230</div><div class="lbl">Tests passing</div></div>
+      <div class="stat-cell"><div class="num" data-count="257">257</div><div class="lbl">Tests passing</div></div>
     </section>
 
     <!-- ─────────────────────── FEATURES ─────────────────────── -->
@@ -169,7 +169,7 @@
       <div class="section-head">
         <div class="kicker">THE LAB</div>
         <h2>Don't just read the result. Test it.</h2>
-        <p>Seven experiments, each one runnable against the deployed agent or the
+        <p>Eight experiments, each one runnable against the deployed agent or the
            project's real committed results. Nothing on these pages is a mock-up.</p>
       </div>
 
@@ -182,8 +182,16 @@
           <span class="lab-card-tag tag-real">Live</span>
         </a>
 
-        <a class="lab-card" href="#lab/playground" data-view="lab" data-panel="playground">
+        <a class="lab-card" href="#lab/human" data-view="lab" data-panel="human">
           <span class="lab-card-n">02</span>
+          <h3>Your Turn</h3>
+          <p>Trade the same bars the agent trades, one at a time with no lookahead,
+             then get scored against it and against buy-&amp;-hold.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/playground" data-view="lab" data-panel="playground">
+          <span class="lab-card-n">03</span>
           <h3>Agent Playground</h3>
           <p>Pick a market, a data source, costs and a reward function. Run a real
              episode and scrub it bar by bar against buy-&amp;-hold.</p>
@@ -191,7 +199,7 @@
         </a>
 
         <a class="lab-card" href="#lab/xray" data-view="lab" data-panel="xray">
-          <span class="lab-card-n">03</span>
+          <span class="lab-card-n">04</span>
           <h3>Agent X-Ray</h3>
           <p>At any bar, see the actual 563-dimensional observation the agent
              consumed, and follow it through to the action and the reward.</p>
@@ -199,7 +207,7 @@
         </a>
 
         <a class="lab-card" href="#lab/generalization" data-view="lab" data-panel="generalization">
-          <span class="lab-card-n">04</span>
+          <span class="lab-card-n">05</span>
           <h3>Can You Break It?</h3>
           <p>One agent memorised a single price path; the other saw a new one every
              episode. Then push the deployed policy onto distributions it never met.</p>
@@ -207,7 +215,7 @@
         </a>
 
         <a class="lab-card" href="#lab/walkforward" data-view="lab" data-panel="walkforward">
-          <span class="lab-card-n">05</span>
+          <span class="lab-card-n">06</span>
           <h3>Walk-Forward</h3>
           <p>Disjoint chronological folds, each with its own scaler &mdash; plus a direct
              measurement of what fitting that scaler on the test block costs you.</p>
@@ -215,7 +223,7 @@
         </a>
 
         <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
-          <span class="lab-card-n">06</span>
+          <span class="lab-card-n">07</span>
           <h3>Real or Luck?</h3>
           <p>A <b>+275%</b> single-seed headline beside what five seeds actually say.
              Re-run the bootstrap and the permutation test yourself.</p>
@@ -223,7 +231,7 @@
         </a>
 
         <a class="lab-card" href="#lab/notebook" data-view="lab" data-panel="notebook">
-          <span class="lab-card-n">07</span>
+          <span class="lab-card-n">08</span>
           <h3>Research Notebook</h3>
           <p>Every experiment you run, with the exact config that produced it —
              and a button that replays it to the same numbers.</p>
@@ -560,6 +568,7 @@
 
         <div class="lab-tabs" role="tablist" aria-label="Laboratory sections">
           <button class="lab-tab" role="tab" id="tab-perception" data-panel="perception" aria-controls="panel-perception" aria-selected="true" tabindex="0">Signal or Noise?</button>
+          <button class="lab-tab" role="tab" id="tab-human" data-panel="human" aria-controls="panel-human" aria-selected="false" tabindex="-1">Your Turn</button>
           <button class="lab-tab" role="tab" id="tab-playground" data-panel="playground" aria-controls="panel-playground" aria-selected="false" tabindex="-1">Agent Playground</button>
           <button class="lab-tab" role="tab" id="tab-xray" data-panel="xray" aria-controls="panel-xray" aria-selected="false" tabindex="-1">Agent X-Ray</button>
           <button class="lab-tab" role="tab" id="tab-generalization" data-panel="generalization" aria-controls="panel-generalization" aria-selected="false" tabindex="-1">Can You Break It?</button>
@@ -614,6 +623,85 @@
 
             <div id="pc-result" hidden></div>
             <dl class="receipt" id="pc-receipt"></dl>
+          </div>
+        </section>
+
+        <!-- YOUR TURN -->
+        <section class="lab-panel" id="panel-human" role="tabpanel" aria-labelledby="tab-human" tabindex="0">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Now you try</h2>
+            <p>Trade the same bars, through the same environment, paying the same transaction
+               costs. You are shown one new bar per decision and nothing beyond it &mdash; the
+               price series stays on the server, so there is nothing here to read ahead in.
+               At the end your run is scored against the deployed agent and against
+               buy-&amp;-hold over exactly the bars you traded.</p>
+          </div>
+
+          <div class="panel-card" id="hm-setup">
+            <div class="gen-head">
+              <h3>Set up a run <span class="tag-real">Live</span></h3>
+              <div class="seg" id="hm-market" data-value="stock">
+                <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
+                <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+              </div>
+            </div>
+            <div class="shift-controls">
+              <div class="ctl">
+                <label>Data</label>
+                <div class="seg" id="hm-mode" data-value="synthetic">
+                  <button type="button" data-val="synthetic" aria-pressed="true">Synthetic</button>
+                  <button type="button" data-val="historical" aria-pressed="false">Real</button>
+                </div>
+              </div>
+              <div class="ctl">
+                <label for="hm-source" id="hm-source-label">Regime</label>
+                <select id="hm-source"></select>
+              </div>
+              <div class="ctl">
+                <label for="hm-steps">Decisions <span class="ctl-val" id="hm-steps-val">40</span></label>
+                <input type="range" id="hm-steps" min="10" max="120" step="10" value="40" />
+              </div>
+              <button class="run-btn" id="hm-start" type="button">Start</button>
+            </div>
+            <p class="xr-hint" id="hm-info"></p>
+            <div class="lab-status" id="hm-status"></div>
+            <div id="hm-error" hidden></div>
+          </div>
+
+          <div class="panel-card" id="hm-play" hidden>
+            <div class="gen-head">
+              <h3>Decision <span id="hm-progress">1 / 40</span></h3>
+              <div class="hm-account" id="hm-account"></div>
+            </div>
+            <canvas id="hm-chart" class="chart-canvas"></canvas>
+            <div class="hm-controls">
+              <label for="hm-target">Target position
+                <span class="ctl-val" id="hm-target-val">0%</span></label>
+              <input type="range" id="hm-target" min="-100" max="100" step="10" value="0" />
+              <div class="hm-quick">
+                <button type="button" data-val="-100">Short</button>
+                <button type="button" data-val="0">Flat</button>
+                <button type="button" data-val="100">Long</button>
+              </div>
+              <button class="run-btn" id="hm-trade" type="button">Trade &amp; advance</button>
+              <button class="run-btn run-btn-sm" id="hm-finish" type="button">Stop &amp; score</button>
+            </div>
+            <p class="xr-hint" id="hm-play-note"></p>
+          </div>
+
+          <div class="panel-card" id="hm-result" hidden>
+            <h3>How it went</h3>
+            <canvas id="hm-result-chart" class="chart-canvas"></canvas>
+            <div class="chart-legend hm-legend">
+              <span class="lg lg-you">You</span>
+              <span class="lg lg-agent">Agent</span>
+              <span class="lg lg-bench">Buy &amp; hold</span>
+            </div>
+            <div id="hm-scores"></div>
+            <p class="pc-verdict" id="hm-verdict"></p>
+            <div class="attr-caveats" id="hm-caveats"></div>
+            <button class="run-btn" id="hm-again" type="button">Run another</button>
           </div>
         </section>
 

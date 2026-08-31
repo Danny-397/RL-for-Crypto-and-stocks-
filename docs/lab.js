@@ -548,6 +548,228 @@
     return { init, redraw: () => sparks.forEach((c) => c.redraw()) };
   })();
 
+  /* ── Your Turn (human baseline) ─────────────────────────── */
+  /* The visitor trades the same bars the agent trades.
+   *
+   * The one property this panel must not violate is no-lookahead, and it is not
+   * enforced here — it is enforced by the protocol. The client never holds a
+   * price it has not traded through, because the server only ever sends one. All
+   * this module does is draw what it has been given. */
+  const Human = (function () {
+    let session = null;
+    let prices = [];
+    let chart = null;
+    let resultChart = null;
+    let tickers = null;
+
+    function mode() { return $("hm-mode").dataset.value; }
+    function market() { return $("hm-market").dataset.value; }
+
+    async function fillSources() {
+      const sel = $("hm-source");
+      sel.innerHTML = "";
+      if (mode() === "historical") {
+        $("hm-source-label").textContent = "Ticker";
+        if (!tickers) {
+          try { tickers = await api.get("/api/tickers"); }
+          catch (err) { tickers = { stock: ["SPY"], crypto: ["BTC-USD"] }; }
+        }
+        (tickers[market()] || []).forEach((t) => sel.add(new Option(t, t)));
+        return;
+      }
+      $("hm-source-label").textContent = "Regime";
+      try {
+        const body = await api.get("/api/regimes");
+        body.regimes.forEach((r) => sel.add(new Option(r.label, r.key)));
+        sel.value = "momentum";
+      } catch (err) { sel.add(new Option("Momentum", "momentum")); }
+    }
+
+    function config() {
+      const cfg = { market: market(), mode: mode() };
+      if (mode() === "historical") cfg.ticker = $("hm-source").value;
+      else {
+        cfg.regime = $("hm-source").value;
+        cfg.seed = Math.floor(Math.random() * 100000);
+        cfg.n_steps = 900;
+      }
+      return cfg;
+    }
+
+    function drawPrices() {
+      if (!chart) chart = Chart($("hm-chart"), { height: 220, fmtY: (v) => v.toFixed(0) });
+      chart.setSeries([{ values: prices, color: COLORS.bench, width: 1.8 }]);
+    }
+
+    function showAccount(acct) {
+      $("hm-account").innerHTML =
+        `<span class="hm-a"><b>${fmt.money(acct.equity)}</b> equity</span>` +
+        `<span class="hm-a ${fmt.cls(acct.return_so_far)}">` +
+        `${fmt.pct(acct.return_so_far, 1)}</span>` +
+        `<span class="hm-a">position ${Math.round(acct.position_fraction * 100)}%</span>`;
+    }
+
+    async function start() {
+      const btn = $("hm-start");
+      btn.disabled = true;
+      showError($("hm-error"), null);
+      $("hm-result").hidden = true;
+      setStatus($("hm-status"), "opening a session…", true);
+      try {
+        session = await api.post("/api/human/start", {
+          max_steps: Number($("hm-steps").value),
+          config: config(),
+        });
+      } catch (err) {
+        showError($("hm-error"), String(err.message || err));
+        setStatus($("hm-status"), "", false);
+        btn.disabled = false;
+        return;
+      }
+      prices = session.prices.slice();
+      setStatus($("hm-status"), session.session_id, false);
+      $("hm-info").textContent = session.information_note;
+      $("hm-play-note").textContent = session.lookahead_note;
+      $("hm-play").hidden = false;
+      $("hm-target").value = 0;
+      $("hm-target-val").textContent = "0%";
+      $("hm-trade").disabled = false;
+      $("hm-progress").textContent = `1 / ${session.max_steps}`;
+      showAccount(session.account);
+      drawPrices();
+      btn.disabled = false;
+    }
+
+    async function trade() {
+      if (!session) return;
+      const btn = $("hm-trade");
+      btn.disabled = true;
+      try {
+        const out = await api.post(`/api/human/${session.session_id}/step`, {
+          action: Number($("hm-target").value) / 100,
+        });
+        prices.push(out.price);
+        drawPrices();
+        showAccount(out.account);
+        $("hm-progress").textContent =
+          `${Math.min(out.step + 1, out.max_steps)} / ${out.max_steps}`;
+        if (out.done) {
+          $("hm-progress").textContent = `${out.step} / ${out.max_steps} · ${out.reason}`;
+          await finish();
+          return;
+        }
+      } catch (err) {
+        showError($("hm-error"), String(err.message || err));
+      }
+      btn.disabled = false;
+    }
+
+    function scoreRow(name, block, cls) {
+      const m = block.metrics;
+      return (
+        `<tr><td>${name}</td>` +
+        `<td class="${fmt.cls(m.total_return)}"><b>${fmt.pct(m.total_return, 1)}</b></td>` +
+        `<td>${fmt.num(m.sharpe)}</td>` +
+        `<td class="neg">${fmt.pct(-Math.abs(m.max_drawdown), 1)}</td></tr>`
+      );
+    }
+
+    async function finish() {
+      if (!session) return;
+      $("hm-trade").disabled = true;
+      setStatus($("hm-status"), "scoring against the agent…", true);
+      let res;
+      try {
+        res = await api.post(`/api/human/${session.session_id}/finish`, {});
+      } catch (err) {
+        showError($("hm-error"), String(err.message || err));
+        setStatus($("hm-status"), "", false);
+        return;
+      }
+      setStatus($("hm-status"), res.session_id + " · scored", false);
+      $("hm-play").hidden = true;
+      $("hm-result").hidden = false;
+
+      if (!resultChart) {
+        resultChart = Chart($("hm-result-chart"), {
+          height: 240, fmtY: (v) => "$" + Math.round(v / 1000) + "k",
+        });
+      }
+      resultChart.setSeries([
+        { values: res.you.equity_curve, color: COLORS.pos, width: 2.2 },
+        { values: res.agent.equity_curve, color: COLORS.agent, width: 1.8 },
+        { values: res.benchmark.equity_curve, color: COLORS.bench, width: 1.6, dash: [4, 3] },
+      ]);
+
+      $("hm-scores").innerHTML =
+        `<div class="wf-table-wrap"><table class="wf-table"><thead><tr>` +
+        `<th>Who</th><th>Return</th><th>Sharpe</th><th>Max drawdown</th></tr></thead><tbody>` +
+        scoreRow("You", res.you) +
+        scoreRow("The agent", res.agent) +
+        scoreRow("Buy &amp; hold", res.benchmark) +
+        `</tbody></table></div>`;
+      $("hm-verdict").textContent = res.verdict;
+      $("hm-caveats").innerHTML =
+        `<p class="attr-method">${res.information_note}</p>` +
+        `<ul><li>${res.sample_note}</li><li>You made ${res.you.trades} position ` +
+        `changes across ${res.bars_traded} bars; the agent averaged a ` +
+        `${Math.round(res.agent.mean_position * 100)}% position.</li></ul>`;
+      session = null;
+    }
+
+    function bindSeg(id, onChange) {
+      const seg = $(id);
+      seg.addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-val]");
+        if (!btn) return;
+        seg.dataset.value = btn.dataset.val;
+        seg.querySelectorAll("button").forEach((b) =>
+          b.setAttribute("aria-pressed", String(b === btn))
+        );
+        onChange(btn.dataset.val);
+      });
+    }
+
+    function init() {
+      if (!$("hm-start")) return;
+      bindSeg("hm-market", fillSources);
+      bindSeg("hm-mode", fillSources);
+      $("hm-steps").addEventListener("input", (e) => {
+        $("hm-steps-val").textContent = e.target.value;
+      });
+      $("hm-target").addEventListener("input", (e) => {
+        $("hm-target-val").textContent = e.target.value + "%";
+      });
+      $("hm-play").querySelector(".hm-quick").addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-val]");
+        if (!btn) return;
+        $("hm-target").value = btn.dataset.val;
+        $("hm-target-val").textContent = btn.dataset.val + "%";
+      });
+      $("hm-start").addEventListener("click", start);
+      $("hm-trade").addEventListener("click", trade);
+      $("hm-finish").addEventListener("click", finish);
+      $("hm-again").addEventListener("click", function () {
+        $("hm-result").hidden = true;
+        start();
+      });
+      window.addEventListener("resize", function () {
+        if (chart) chart.redraw();
+        if (resultChart) resultChart.redraw();
+      });
+      window.addEventListener("lab:panel", function (e) {
+        if (e.detail.panel !== "human") return;
+        if (chart) chart.redraw();
+        if (resultChart) resultChart.redraw();
+      });
+      if (!api.ok) return;
+      fillSources();
+    }
+
+    return { init };
+  })();
+
+
   /* ── Playground ─────────────────────────────────────────── */
   const Playground = (function () {
     let meta = null;
@@ -2410,7 +2632,7 @@
    * to find it. Keyboard behaviour follows the ARIA tabs pattern: arrows move
    * between tabs, Home/End jump to the ends, and a roving tabindex keeps a
    * single stop in the page's tab order. */
-  const PANELS = ["perception", "playground", "xray", "generalization",
+  const PANELS = ["perception", "human", "playground", "xray", "generalization",
                   "walkforward", "seeds", "notebook"];
 
   function showPanel(name, updateHash) {
@@ -2469,6 +2691,7 @@
     initTabs();
     initStatus();
     Perception.init();
+    Human.init();
     Playground.init();
     XRay.init();
     Attribution.init();
@@ -2484,6 +2707,6 @@
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
   window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel,
-                   Perception, Playground, XRay, Attribution, Generalization,
-                   WalkForward, Seeds, WhatIf, Notebook };
+                   Perception, Human, Playground, XRay, Attribution,
+                   Generalization, WalkForward, Seeds, WhatIf, Notebook };
 })();

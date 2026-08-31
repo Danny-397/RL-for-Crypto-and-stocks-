@@ -27,6 +27,9 @@ Lab
     GET  /api/experiments/<id>/config     the exact config needed to reproduce
     GET  /api/experiments/<id>/xray?step= the full observation at one bar
     GET  /api/experiments/<id>/attribution which of those inputs move the action
+    POST /api/human/start                 open a human-baseline session
+    POST /api/human/<sid>/step            one decision; reveals exactly one bar
+    POST /api/human/<sid>/finish          score it against the agent and buy-&-hold
 
 Experiment kinds: rollout, counterfactual, distribution_shift, walk_forward
 
@@ -66,6 +69,7 @@ from rl_trader.data.data_loader import market_data_from_df  # noqa: E402
 from rl_trader.envs import make_env  # noqa: E402
 from rl_trader.evaluation.evaluate_agent import ANNUALISATION, compute_metrics  # noqa: E402
 from server import (  # noqa: E402
+    human,
     lab,
     perception,
     precomputed,
@@ -90,6 +94,7 @@ CORS(app)  # public, read-only API — allow any origin
 
 _POLICIES = load_policies()
 MANAGER = ExperimentManager()
+HUMANS = human.SessionStore()
 
 
 def policy_action(market: str, obs: np.ndarray) -> float:
@@ -280,6 +285,7 @@ def api_meta():
         reward_kinds=list(lab.REWARD_KINDS),
         walk_forward=walkforward.describe(),
         preregistration=prereg.describe(),
+        human_sessions=HUMANS.stats(),
         evaluation_modes=list(lab.EVALUATION_MODES),
         tickers=TICKERS,
         live={
@@ -290,6 +296,7 @@ def api_meta():
             "perception_test": True,
             "attribution": True,
             "walk_forward": True,
+            "human_baseline": True,
             "training": False,
         },
         training_note=(
@@ -393,6 +400,81 @@ def api_perception_score():
         return jsonify(perception.score_quiz(quiz, answers))
     except (ValueError, TypeError) as exc:
         return jsonify(error=str(exc)), 400
+
+
+# ── Lab: the human baseline ─────────────────────────────────────────────────
+def _human_env(config):
+    """Rebuild the exact environment a session is trading."""
+    return lab.build_environment(config, _fetch_ohlcv, _market_index)
+
+
+@app.post("/api/human/start")
+def api_human_start():
+    """Open a session. The series stays server-side; bars are released one at a time."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        config = lab.parse_config(payload.get("config", payload), sorted(_POLICIES))
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+    if config["market"] not in _POLICIES:
+        return jsonify(error=f"no policy loaded for market {config['market']!r}"), 400
+
+    try:
+        env, cfg_obj, dates, meta = _human_env(config)
+        session = human.start(
+            env, cfg_obj, dates, meta, config,
+            max_steps=int(payload.get("max_steps", human.DEFAULT_STEPS) or human.DEFAULT_STEPS),
+        )
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+    HUMANS.add(session)
+    return jsonify(human.opening(session)), 201
+
+
+def _session_or_404(session_id: str):
+    session = HUMANS.get(session_id.upper())
+    if session is None:
+        return None, (jsonify(
+            error=f"no active session {session_id!r} — sessions are in-memory and "
+                  "expire after 30 minutes of inactivity"
+        ), 404)
+    return session, None
+
+
+@app.post("/api/human/<session_id>/step")
+def api_human_step(session_id: str):
+    """Apply one decision and release exactly one new bar."""
+    session, err = _session_or_404(session_id)
+    if err:
+        return err
+    payload = request.get_json(silent=True) or {}
+    try:
+        action = float(payload.get("action", 0.0))
+    except (TypeError, ValueError):
+        return jsonify(error="'action' must be a number in [-1, 1]"), 400
+    try:
+        return jsonify(human.step(session, action))
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 409
+
+
+@app.post("/api/human/<session_id>/finish")
+def api_human_finish(session_id: str):
+    """Score the run against the deployed agent and buy-and-hold on the same bars."""
+    session, err = _session_or_404(session_id)
+    if err:
+        return err
+    if session.result is not None:
+        return jsonify(session.result)
+    policy = _POLICIES.get(session.market)
+    if policy is None:
+        return jsonify(error=f"no policy loaded for market {session.market!r}"), 400
+    try:
+        return jsonify(
+            human.finish(session, policy, lambda: _human_env(session.config)[0])
+        )
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 409
 
 
 # ── Lab: live statistics ────────────────────────────────────────────────────

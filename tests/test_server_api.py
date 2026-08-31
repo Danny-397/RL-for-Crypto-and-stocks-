@@ -834,3 +834,91 @@ def test_meta_publishes_the_judging_rule(client):
     pre = client.get("/api/meta").get_json()["preregistration"]
     assert {o["key"] for o in pre["directions"]} == {"beats", "matches", "loses"}
     assert pre["match_band"] == 0.02
+
+
+# --------------------------------------------------------------------------- #
+# Human baseline                                                               #
+# --------------------------------------------------------------------------- #
+def _start_session(client, max_steps=15):
+    r = client.post("/api/human/start", json={
+        "max_steps": max_steps,
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 4, "n_steps": 420},
+    })
+    assert r.status_code == 201
+    return r.get_json()
+
+
+def test_a_session_opens_without_revealing_the_future(client):
+    body = _start_session(client)
+    assert body["session_id"].startswith("HUM-")
+    assert body["step"] == 0
+    assert len(body["prices"]) == 20          # the warm-up window, nothing more
+    assert "nothing here to read ahead in" in body["lookahead_note"]
+    assert "not a like-for-like" in body["information_note"]
+
+
+def test_each_decision_releases_exactly_one_bar(client):
+    body = _start_session(client, max_steps=12)
+    sid = body["session_id"]
+    for i in range(12):
+        out = client.post(f"/api/human/{sid}/step", json={"action": 0.5}).get_json()
+        assert out["step"] == i + 1
+        assert isinstance(out["price"], float)
+        assert "prices" not in out            # one bar, never a series
+    assert out["done"] is True
+
+
+def test_a_finished_session_scores_all_three_on_the_same_bars(client):
+    body = _start_session(client, max_steps=12)
+    sid = body["session_id"]
+    for _ in range(12):
+        client.post(f"/api/human/{sid}/step", json={"action": 1.0})
+    res = client.post(f"/api/human/{sid}/finish").get_json()
+
+    assert res["bars_traded"] == 12
+    n = len(res["you"]["equity_curve"])
+    assert len(res["agent"]["equity_curve"]) == n
+    assert len(res["benchmark"]["equity_curve"]) == n
+    assert res["you_beat_benchmark"] is (
+        res["you"]["metrics"]["total_return"] > res["benchmark"]["metrics"]["total_return"]
+    )
+    assert "single sample" in res["sample_note"]
+
+
+def test_finishing_twice_returns_the_same_scored_result(client):
+    body = _start_session(client, max_steps=10)
+    sid = body["session_id"]
+    for _ in range(10):
+        client.post(f"/api/human/{sid}/step", json={"action": 0.0})
+    first = client.post(f"/api/human/{sid}/finish").get_json()
+    second = client.post(f"/api/human/{sid}/finish").get_json()
+    assert first == second
+
+
+def test_stepping_after_the_limit_is_a_conflict_not_a_silent_noop(client):
+    body = _start_session(client, max_steps=10)
+    sid = body["session_id"]
+    for _ in range(10):
+        client.post(f"/api/human/{sid}/step", json={"action": 0.0})
+    r = client.post(f"/api/human/{sid}/step", json={"action": 0.0})
+    assert r.status_code == 409
+    assert "already finished" in r.get_json()["error"]
+
+
+def test_an_unknown_session_explains_that_sessions_expire(client):
+    r = client.post("/api/human/HUM-NOPE/step", json={"action": 0.0})
+    assert r.status_code == 404
+    assert "expire" in r.get_json()["error"]
+
+
+def test_a_bad_config_is_rejected_before_a_session_exists(client):
+    r = client.post("/api/human/start", json={"config": {"market": "forex"}})
+    assert r.status_code == 400
+    assert "unknown market" in r.get_json()["error"]
+
+
+def test_meta_advertises_the_human_baseline(client):
+    meta = client.get("/api/meta").get_json()
+    assert meta["live"]["human_baseline"] is True
+    assert "ephemeral" in meta["human_sessions"]["storage"]

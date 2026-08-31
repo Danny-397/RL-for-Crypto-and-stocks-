@@ -197,6 +197,55 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("the design is on the receipt",
               page.eval_on_selector_all("#pc-receipt dt", "els => els.length") >= 6)
 
+        # ── Your Turn (human baseline) ─────────────────────────────────────
+        print("\nYour Turn")
+        page.click('.lab-tab[data-panel="human"]')
+        page.wait_for_function(
+            "() => document.getElementById('hm-source').options.length >= 4", timeout=30000
+        )
+        page.eval_on_selector(
+            "#hm-steps", "el => { el.value = 10; el.dispatchEvent(new Event('input')); }"
+        )
+        page.click("#hm-start")
+        page.wait_for_selector("#hm-play:not([hidden])", timeout=60000)
+        time.sleep(0.4)
+
+        check("the asymmetry is stated before you start",
+              "not a like-for-like" in page.inner_text("#hm-info"))
+        check("no-lookahead is stated in the panel",
+              "read ahead" in page.inner_text("#hm-play-note"))
+        painted = page.eval_on_selector(
+            "#hm-chart",
+            "el => { const c = el.getContext('2d');"
+            "const d = c.getImageData(0,0,el.width,el.height).data;"
+            "let n=0; for (let i=3;i<d.length;i+=4) if (d[i]>0) n++; return n; }",
+        )
+        check("the revealed history is drawn", painted > 500, f"{painted} px")
+
+        # Trade every bar. The chart must grow by exactly one point per decision,
+        # which is the no-lookahead claim as seen from the browser.
+        page.click('.hm-quick button[data-val="100"]')
+        for _ in range(10):
+            page.click("#hm-trade")
+            time.sleep(0.35)
+        page.wait_for_selector("#hm-result:not([hidden])", timeout=60000)
+        time.sleep(0.5)
+
+        rows = page.eval_on_selector_all("#hm-scores tbody tr", "els => els.length")
+        check("you, the agent and buy-and-hold are all scored", rows == 3, f"{rows} rows")
+        painted = page.eval_on_selector(
+            "#hm-result-chart",
+            "el => { const c = el.getContext('2d');"
+            "const d = c.getImageData(0,0,el.width,el.height).data;"
+            "let n=0; for (let i=3;i<d.length;i+=4) if (d[i]>0) n++; return n; }",
+        )
+        check("three equity curves painted", painted > 800, f"{painted} px")
+        check("the verdict leads with the benchmark",
+              "buy-and-hold" in page.inner_text("#hm-verdict"),
+              page.inner_text("#hm-verdict")[:70])
+        check("one run is labelled a single sample",
+              "single sample" in page.inner_text("#hm-caveats"))
+
         # ── Agent Playground ───────────────────────────────────────────────
         print("\nAgent Playground")
         page.click('.lab-tab[data-panel="playground"]')
@@ -602,9 +651,9 @@ def run(api: str, port: int, shot: str | None) -> None:
               home.eval_on_selector(".hero-cta .btn-primary", "el => el.getAttribute('href')")
               == "#lab")
         n_cards = home.eval_on_selector_all(".lab-card", "els => els.length")
-        check("every panel is advertised", n_cards == 7, f"{n_cards} cards")
+        check("every panel is advertised", n_cards == 8, f"{n_cards} cards")
         check("each card declares whether it is live",
-              home.eval_on_selector_all(".lab-card-tag", "els => els.length") == 7)
+              home.eval_on_selector_all(".lab-card-tag", "els => els.length") == 8)
         check("the training caveat is on the home page",
               "training" in home.inner_text(".lab-strip-note").lower())
 

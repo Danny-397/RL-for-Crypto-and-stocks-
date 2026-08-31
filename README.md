@@ -431,6 +431,7 @@ and its panels are the research questions made runnable.
 | Panel | What you can do | Live? |
 |---|---|---|
 | **Signal or Noise?** | Before testing the agent, test yourself: tell charts carrying the agent's training-time autocorrelation from pure random walks, under a design where volatility and drift are standardised away. Scored with an exact binomial test, beside a power analysis and a one-line statistical rule run on the same charts. | ✅ live |
+| **Your Turn** | Trade the same bars the agent trades, through the same environment and cost model, one bar at a time with no lookahead — then get scored against the agent and against buy-&-hold over exactly the bars you traded. | ✅ live |
 | **Agent Playground** | Configure market, data source, capital, costs, reward, shorting — then run a real episode and scrub it bar by bar against buy-&-hold. | ✅ live |
 | **Agent X-Ray** | At any bar, read the actual observation → policy → action → reward → position chain, all 28 features grouped as the pipeline defines them, plus the 20-bar window as a heatmap — and an occlusion pass ranking which of those inputs actually move the action. | ✅ live |
 | **Can You Break It?** | The real domain-randomization ablation (Agent A vs Agent B) with per-seed points and CIs, plus a live shift test that drops the deployed policy onto controlled synthetic regimes. | mixed — see below |
@@ -528,6 +529,27 @@ The aggregate carries the same resolution warning as everything else: a sign tes
 over four folds cannot produce a p-value below `2/2⁴ = 0.125`, so that design
 cannot reach 0.05 whatever the effect size.
 
+### The human baseline
+
+A visitor can read every finding here and still assume they personally would have
+done better. So let them try, on the identical series, through the identical
+environment, paying the identical costs.
+
+**No lookahead is a property of the protocol, not a promise in the copy.** The
+price series lives on the server. A session hands out the warm-up window and then
+exactly one new bar per decision, so the page never holds a price the visitor has
+not already traded through — there is nothing to read ahead in. Sessions are
+in-memory, capped, and expire after 30 minutes; the API says so rather than
+implying anything durable.
+
+**It is deliberately not a like-for-like contest, and every payload says so.** The
+visitor sees a price chart and their own account; the agent sees 28 standardised
+indicators over a 20-bar window plus three account scalars. The comparison that
+*is* fair is the third line — buy-and-hold over the same bars through the same
+cost model — which is the benchmark this whole project is about. The verdict
+leads with that rather than the head-to-head, and the usual outcome, that
+neither party clears it, is the finding rather than a disappointment.
+
 ### Pre-registration
 
 Every panel here lets you run something and then read a number, which is exactly
@@ -624,6 +646,9 @@ paper.
 | `GET /api/experiments/<id>/attribution` | Occlusion attribution: which inputs move the action |
 | `POST /api/experiments` `kind=walk_forward` | Rolling folds, per-fold scaling, and the leakage comparison |
 | `POST /api/experiments` `prediction=` | Pre-register a prediction; the backend stamps it before the run and scores it after |
+| `POST /api/human/start` | Open a human-baseline session (the series stays server-side) |
+| `POST /api/human/<sid>/step` | One decision; releases exactly one new bar |
+| `POST /api/human/<sid>/finish` | Score it against the agent and buy-&-hold on the same bars |
 | `GET /api/results`, `/api/live`, `/api/tickers` | The original dashboard endpoints (unchanged) |
 
 ### Run an experiment
