@@ -753,6 +753,14 @@
     if (brand) brand.addEventListener("click", (e) => {
       e.preventDefault(); history.replaceState(null, "", "#home"); showView("home");
     });
+    // Any link that changes the hash — a deep link into the lab, or the browser's
+    // own back/forward — has to move the view too, not just the URL. Without this
+    // an in-page href like "#lab/xray" silently does nothing.
+    window.addEventListener("hashchange", () => {
+      const { view: v, ticker: tk } = parseHash();
+      showView(valid.includes(v) ? v : "home", tk);
+    });
+
     const { view, ticker } = parseHash();
     showView(valid.includes(view) ? view : "home", ticker);
   }

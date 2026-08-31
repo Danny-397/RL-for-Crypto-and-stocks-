@@ -141,7 +141,13 @@ def test_counterfactual_replays_from_an_identical_state(env_and_policy):
     assert all(c["steps"] == 1 for c in cf["candidates"])
     equity_before = cf["equity_before"]
     for c in cf["candidates"]:
-        assert c["equity_change"] == pytest.approx(c["end_equity"] - equity_before, abs=1e-6)
+        # The API rounds each field to 4dp independently, so ``equity_change`` is
+        # round(a - b) while this reconstruction is round(a) - round(b). Those can
+        # differ by more than 1e-6 purely from rounding — the tolerance has to
+        # cover the rounding, not just floating-point noise.
+        assert c["equity_change"] == pytest.approx(
+            c["end_equity"] - equity_before, abs=2e-4
+        )
 
     # Distinct actions must produce distinct outcomes (the state is real).
     ends = [c["end_equity"] for c in cf["candidates"]]

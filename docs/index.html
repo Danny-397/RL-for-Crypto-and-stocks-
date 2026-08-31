@@ -64,7 +64,7 @@
     <div class="view active" id="view-home">
     <section class="hero">
       <div class="hero-copy">
-        <div class="eyebrow"><span class="pulse"></span> DEEP REINFORCEMENT LEARNING &middot; RESEARCH STUDY</div>
+        <div class="eyebrow"><span class="pulse"></span> DEEP RL &middot; RESEARCH STUDY + INTERACTIVE LAB</div>
         <h1>How do deep-RL agents <span class="grad">generalize</span> — and how do you tell a real result from luck?</h1>
         <p class="lede">
           A from-scratch study of two ways RL fools you: <strong>memorising the
@@ -73,10 +73,12 @@
           overfitting, and ran <strong>multi-seed significance tests</strong> to check
           whether any edge is real. The testbed — deliberately hard — is financial
           markets: non-stationary, noisy, near-random-walk.
+          <strong>Every experiment below is runnable in your browser</strong> — not a
+          write-up of the results, the results being produced.
         </p>
         <div class="hero-cta">
-          <a class="btn btn-primary navtab" data-view="how" href="#how">The research →</a>
-          <a class="btn btn-ghost navtab" data-view="stocks" href="#stocks">See the experiments</a>
+          <a class="btn btn-primary navtab" data-view="lab" href="#lab">Run an experiment →</a>
+          <a class="btn btn-ghost navtab" data-view="how" href="#how">Read the research</a>
         </div>
         <div class="hero-tags">
           <span>PPO from scratch</span><span>Domain randomization</span><span>Multi-seed significance</span><span>Reproduces Henderson et&nbsp;al. 2018</span><span>Honest negative result</span>
@@ -161,6 +163,66 @@
         <p>What it demonstrates: I can take a non-trivial ML research question end to end — algorithm, environment, training, and an evaluation held to a real scientific standard — and report the honest answer even when it's a negative result.</p>
       </div>
     </section>
+
+    <!-- ═══════════ WHAT YOU CAN RUN (deep links into the lab) ═══════════ -->
+    <section class="section lab-strip-section">
+      <div class="section-head">
+        <div class="kicker">THE LAB</div>
+        <h2>Don't just read the result. Test it.</h2>
+        <p>Five experiments, each one runnable against the deployed agent or the
+           project's real committed results. Nothing on these pages is a mock-up.</p>
+      </div>
+
+      <div class="lab-strip">
+        <a class="lab-card" href="#lab/playground" data-view="lab" data-panel="playground">
+          <span class="lab-card-n">01</span>
+          <h3>Agent Playground</h3>
+          <p>Pick a market, a data source, costs and a reward function. Run a real
+             episode and scrub it bar by bar against buy-&amp;-hold.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/xray" data-view="lab" data-panel="xray">
+          <span class="lab-card-n">02</span>
+          <h3>Agent X-Ray</h3>
+          <p>At any bar, see the actual 563-dimensional observation the agent
+             consumed, and follow it through to the action and the reward.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/generalization" data-view="lab" data-panel="generalization">
+          <span class="lab-card-n">03</span>
+          <h3>Can You Break It?</h3>
+          <p>One agent memorised a single price path; the other saw a new one every
+             episode. Then push the deployed policy onto distributions it never met.</p>
+          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
+        </a>
+
+        <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
+          <span class="lab-card-n">04</span>
+          <h3>Real or Luck?</h3>
+          <p>A <b>+275%</b> single-seed headline beside what five seeds actually say.
+             Re-run the bootstrap and the permutation test yourself.</p>
+          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
+        </a>
+
+        <a class="lab-card" href="#lab/notebook" data-view="lab" data-panel="notebook">
+          <span class="lab-card-n">05</span>
+          <h3>Research Notebook</h3>
+          <p>Every experiment you run, with the exact config that produced it —
+             and a button that replays it to the same numbers.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+      </div>
+
+      <p class="lab-strip-note">
+        <b>What isn't live:</b> training. Each seed of a multi-seed study is a full PPO
+        run, so those results are served from the repository's real committed
+        experiments, labelled with the command that regenerates them — never
+        simulated. The statistics computed over them do run live.
+      </p>
+    </section>
+
     </div><!-- /view-home -->
 
     <!-- ═══════════════════════ HOW IT WORKS VIEW ═══════════════════════ -->
@@ -481,15 +543,15 @@
         </header>
 
         <div class="lab-tabs" role="tablist" aria-label="Laboratory sections">
-          <button class="lab-tab" role="tab" data-panel="playground" aria-selected="true">Agent Playground</button>
-          <button class="lab-tab" role="tab" data-panel="xray" aria-selected="false">Agent X-Ray</button>
-          <button class="lab-tab" role="tab" data-panel="generalization" aria-selected="false">Can You Break It?</button>
-          <button class="lab-tab" role="tab" data-panel="seeds" aria-selected="false">Real or Luck?</button>
-          <button class="lab-tab" role="tab" data-panel="notebook" aria-selected="false">Notebook</button>
+          <button class="lab-tab" role="tab" id="tab-playground" data-panel="playground" aria-controls="panel-playground" aria-selected="true" tabindex="0">Agent Playground</button>
+          <button class="lab-tab" role="tab" id="tab-xray" data-panel="xray" aria-controls="panel-xray" aria-selected="false" tabindex="-1">Agent X-Ray</button>
+          <button class="lab-tab" role="tab" id="tab-generalization" data-panel="generalization" aria-controls="panel-generalization" aria-selected="false" tabindex="-1">Can You Break It?</button>
+          <button class="lab-tab" role="tab" id="tab-seeds" data-panel="seeds" aria-controls="panel-seeds" aria-selected="false" tabindex="-1">Real or Luck?</button>
+          <button class="lab-tab" role="tab" id="tab-notebook" data-panel="notebook" aria-controls="panel-notebook" aria-selected="false" tabindex="-1">Notebook</button>
         </div>
 
         <!-- PLAYGROUND -->
-        <section class="lab-panel active" id="panel-playground" role="tabpanel">
+        <section class="lab-panel active" id="panel-playground" role="tabpanel" aria-labelledby="tab-playground" tabindex="0">
           <div class="lab-grid">
 
             <form class="panel-card" id="pg-form" onsubmit="return false">
@@ -634,7 +696,7 @@
         </section>
 
         <!-- AGENT X-RAY -->
-        <section class="lab-panel" id="panel-xray" role="tabpanel">
+        <section class="lab-panel" id="panel-xray" role="tabpanel" aria-labelledby="tab-xray" tabindex="0">
           <div class="lab-empty" id="xr-empty">
             No episode loaded.<br />
             Run an episode in <b>Agent Playground</b>, then return here to inspect
@@ -738,7 +800,7 @@
         </section>
 
         <!-- CAN YOU BREAK THE AGENT? -->
-        <section class="lab-panel" id="panel-generalization" role="tabpanel">
+        <section class="lab-panel" id="panel-generalization" role="tabpanel" aria-labelledby="tab-generalization" tabindex="0">
 
           <div class="gen-intro">
             <h2 class="gen-title">Can you break the agent?</h2>
@@ -821,7 +883,7 @@
         </section>
 
         <!-- IS THE RESULT REAL - OR LUCK? -->
-        <section class="lab-panel" id="panel-seeds" role="tabpanel">
+        <section class="lab-panel" id="panel-seeds" role="tabpanel" aria-labelledby="tab-seeds" tabindex="0">
 
           <div class="gen-intro">
             <h2 class="gen-title">Is the result real &mdash; or luck?</h2>
@@ -902,7 +964,7 @@
         </section>
 
         <!-- RESEARCH NOTEBOOK -->
-        <section class="lab-panel" id="panel-notebook" role="tabpanel">
+        <section class="lab-panel" id="panel-notebook" role="tabpanel" aria-labelledby="tab-notebook" tabindex="0">
 
           <div class="gen-intro">
             <h2 class="gen-title">Research notebook</h2>

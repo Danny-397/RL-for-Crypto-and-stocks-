@@ -1738,17 +1738,61 @@
   }
 
   /* ── lab sub-tabs ───────────────────────────────────────── */
+  /* Panels are addressable as #lab/<panel>, so a link can point at a specific
+   * experiment rather than dropping the reader on the first tab and asking them
+   * to find it. Keyboard behaviour follows the ARIA tabs pattern: arrows move
+   * between tabs, Home/End jump to the ends, and a roving tabindex keeps a
+   * single stop in the page's tab order. */
+  const PANELS = ["playground", "xray", "generalization", "seeds", "notebook"];
+
+  function showPanel(name, updateHash) {
+    if (PANELS.indexOf(name) === -1) name = PANELS[0];
+    document.querySelectorAll(".lab-tab").forEach(function (t) {
+      const on = t.dataset.panel === name;
+      t.setAttribute("aria-selected", String(on));
+      t.tabIndex = on ? 0 : -1;
+    });
+    document.querySelectorAll(".lab-panel").forEach(function (p) {
+      p.classList.toggle("active", p.id === "panel-" + name);
+    });
+    if (updateHash && location.hash.indexOf("#lab") === 0) {
+      history.replaceState(null, "", "#lab/" + name);
+    }
+    window.dispatchEvent(new CustomEvent("lab:panel", { detail: { panel: name } }));
+  }
+
+  function panelFromHash() {
+    const m = /^#lab\/([a-z]+)/.exec(location.hash || "");
+    return m && PANELS.indexOf(m[1]) !== -1 ? m[1] : null;
+  }
+
   function initTabs() {
-    const tabs = document.querySelectorAll(".lab-tab");
+    const tabs = Array.prototype.slice.call(document.querySelectorAll(".lab-tab"));
     if (!tabs.length) return;
-    tabs.forEach((t) => {
-      t.addEventListener("click", () => {
-        tabs.forEach((x) => x.setAttribute("aria-selected", String(x === t)));
-        document.querySelectorAll(".lab-panel").forEach((p) => {
-          p.classList.toggle("active", p.id === "panel-" + t.dataset.panel);
-        });
-        window.dispatchEvent(new CustomEvent("lab:panel", { detail: { panel: t.dataset.panel } }));
+
+    tabs.forEach(function (t, i) {
+      t.addEventListener("click", function () {
+        showPanel(t.dataset.panel, true);
       });
+      t.addEventListener("keydown", function (e) {
+        const keys = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 1, ArrowUp: -1 };
+        let next = null;
+        if (keys[e.key]) next = (i + keys[e.key] + tabs.length) % tabs.length;
+        else if (e.key === "Home") next = 0;
+        else if (e.key === "End") next = tabs.length - 1;
+        if (next === null) return;
+        e.preventDefault();
+        tabs[next].focus();
+        showPanel(tabs[next].dataset.panel, true);
+      });
+    });
+
+    // Honour a deep link on arrival, and keep up with back/forward navigation.
+    const initial = panelFromHash();
+    if (initial) showPanel(initial, false);
+    window.addEventListener("hashchange", function () {
+      const p = panelFromHash();
+      if (p) showPanel(p, false);
     });
   }
 
@@ -1768,5 +1812,5 @@
   else boot();
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
-  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, Playground, XRay, Generalization, Seeds, WhatIf, Notebook };
+  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel, Playground, XRay, Generalization, Seeds, WhatIf, Notebook };
 })();
