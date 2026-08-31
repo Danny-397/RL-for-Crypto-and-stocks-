@@ -87,3 +87,19 @@ def test_momentum_sign_controls_return_autocorrelation():
     assert abs(flat) < 0.03, f"zero momentum should be memoryless, got {flat:+.4f}"
     assert reverting < -0.03, f"negative momentum should revert, got {reverting:+.4f}"
     assert reverting < flat < trending
+
+
+def test_feature_groups_partition_the_feature_set():
+    """The X-Ray panel groups the observation from FEATURE_GROUPS.
+
+    If a feature were added to FEATURE_COLUMNS but not to a group, the UI would
+    silently stop showing it — so the two must stay an exact partition.
+    """
+    from rl_trader.data.data_loader import FEATURE_GROUPS
+
+    grouped = [f for names in FEATURE_GROUPS.values() for f in names]
+    assert len(grouped) == len(set(grouped)), "a feature appears in two groups"
+    assert set(grouped) == set(FEATURE_COLUMNS), (
+        f"ungrouped: {sorted(set(FEATURE_COLUMNS) - set(grouped))}; "
+        f"unknown: {sorted(set(grouped) - set(FEATURE_COLUMNS))}"
+    )

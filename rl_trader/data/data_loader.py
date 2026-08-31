@@ -327,6 +327,22 @@ FEATURE_COLUMNS: List[str] = [
 ]
 
 
+# What each feature block encodes, in the same order as FEATURE_COLUMNS. Kept
+# beside the list so the two cannot drift: anything that presents the observation
+# to a reader (the interactive lab's X-Ray panel, plots, the paper's feature
+# table) groups it from here rather than hard-coding its own copy.
+FEATURE_GROUPS: Dict[str, List[str]] = {
+    "Momentum": ["return_1", "return_5", "return_20", "log_return"],
+    "Trend context": ["sma_10_ratio", "sma_30_ratio", "ema_12_ratio", "sma_50_ratio"],
+    "Oscillators": ["rsi_14", "macd", "macd_signal"],
+    "Band / range": ["bollinger_pct_b", "donchian_pos"],
+    "Volatility": ["volatility_10", "atr_norm", "vol_regime"],
+    "Range / volume": ["high_low_range", "volume_change", "volume_zscore"],
+    "Long horizon": ["return_60", "return_120", "sma_100_ratio", "high_120_dist", "vol_ratio"],
+    "Market context": ["rel_return_5", "rel_return_20", "market_trend", "market_ret_20"],
+}
+
+
 # --------------------------------------------------------------------------- #
 # Scaling + splitting                                                          #
 # --------------------------------------------------------------------------- #

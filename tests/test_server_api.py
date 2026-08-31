@@ -319,3 +319,83 @@ def test_dashboard_endpoints_still_work(client):
     live = client.get("/api/live?market=stock&ticker=TEST").get_json()
     assert live["equity_agent"] and live["equity_bench"]
     assert live["market"] == "stock"
+
+
+def test_xray_accounts_for_every_observation_dimension(client):
+    """X-Ray must explain all 563 inputs: 20x28 features + 3 account scalars."""
+    r = client.post("/api/experiments", json={
+        "kind": "rollout",
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 12, "n_steps": 320},
+    })
+    exp_id = r.get_json()["id"]
+    _await(client, exp_id)
+
+    body = client.get(f"/api/experiments/{exp_id}/xray?step=40").get_json()
+    n_feat = len(body["feature_names"])
+    assert len(body["window_values"]) * n_feat + len(body["account"]) == body["obs_dim"]
+    assert set(body["account"]) == set(body["account_names"])
+
+    # Groups arrive as an ordered LIST: a JSON object would get key-sorted in
+    # transit and lose the semantic ordering the panel relies on.
+    assert isinstance(body["feature_groups"], list)
+    assert body["feature_groups"][0]["label"] == "Momentum"
+    grouped = [f for g in body["feature_groups"] for f in g["features"]]
+    assert sorted(grouped) == sorted(body["feature_names"])
+
+
+def test_xray_replays_the_policy_to_the_requested_step(client):
+    """The account state and action must be the real ones at that bar."""
+    cfg = {"market": "stock", "mode": "synthetic", "regime": "momentum",
+           "seed": 12, "n_steps": 320}
+    r = client.post("/api/experiments", json={"kind": "rollout", "config": cfg})
+    exp_id = r.get_json()["id"]
+    body = _await(client, exp_id)
+    step = 40
+    expected = body["result"]["steps"][step]
+
+    xray = client.get(f"/api/experiments/{exp_id}/xray?step={step}").get_json()
+    assert xray["step"] == step
+    # The action X-Ray reports is the action the trace recorded at that bar.
+    assert xray["policy"]["action"] == pytest.approx(expected["action"], abs=1e-6)
+    # Position entering the bar matches what the trace recorded.
+    assert xray["account"]["position_fraction"] == pytest.approx(
+        expected["position_before"], abs=1e-4
+    )
+    # No critic on the current archives — omitted, never approximated.
+    if not xray["policy"]["value_available"]:
+        assert xray["policy"]["value"] is None
+        assert "omitted rather than approximated" in xray["value_note"]
+
+
+def test_synthetic_paths_declare_their_inert_features(client):
+    """4 of 28 features need a reference index and are zero on synthetic paths.
+
+    Left unstated they read as four suspiciously flat rows in the X-Ray panel,
+    which invites the reader to conclude the model ignores them.
+    """
+    r = client.post("/api/experiments", json={
+        "kind": "rollout",
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 3, "n_steps": 320},
+    })
+    body = _await(client, r.get_json()["id"])
+    meta = body["result"]["meta"]
+    assert set(meta["inert_features"]) == {
+        "rel_return_5", "rel_return_20", "market_trend", "market_ret_20"
+    }
+    assert "24 of its 28" in meta["inert_features_note"]
+
+    # And they really are zero in the observation.
+    xray = client.get(f"/api/experiments/{body['id']}/xray?step=30").get_json()
+    by_name = dict(zip(xray["feature_names"], xray["current"]))
+    for name in meta["inert_features"]:
+        assert by_name[name] == 0.0
+
+    # Real data has a reference index, so nothing is declared inert there.
+    r2 = client.post("/api/experiments", json={
+        "kind": "rollout",
+        "config": {"market": "stock", "mode": "historical", "ticker": "TEST"},
+    })
+    meta2 = _await(client, r2.get_json()["id"])["result"]["meta"]
+    assert "inert_features" not in meta2

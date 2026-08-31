@@ -539,6 +539,225 @@
     return { init, get trace() { return trace; }, get cursor() { return cursor; } };
   })();
 
+
+  /* -- Agent X-Ray ---------------------------------------- */
+  /* Shows the causal chain at one bar: what the agent saw, what it decided,
+   * what the environment paid, and where that left the book.
+   *
+   * Policy/action/reward/position come straight from the trace already in
+   * memory, so scrubbing is instant. The feature *window* is fetched from
+   * /xray on a debounce -- it is 20x28 values per bar and there is no reason
+   * to request it faster than a person can read it. */
+  const XRay = (function () {
+    let trace = null;
+    let expId = null;
+    let step = 0;
+    let pending = null;
+    let lastFetched = -1;
+
+    const el = (id) => $(id);
+
+    function onTrace(detail) {
+      trace = detail.trace;
+      expId = detail.body.id;
+      lastFetched = -1;
+      el("xr-empty").hidden = true;
+      el("xr-body").hidden = false;
+      el("xr-scrub").max = String(trace.steps.length - 1);
+      setStep(trace.steps.length - 1);
+    }
+
+    function setStep(i) {
+      if (!trace) return;
+      step = Math.max(0, Math.min(trace.steps.length - 1, i));
+      el("xr-scrub").value = String(step);
+      renderChain();
+      scheduleWindow();
+    }
+
+    function renderChain() {
+      const s = trace.steps[step];
+      el("xr-step").textContent =
+        "step " + (step + 1) + " / " + trace.steps.length + (s.date ? " · " + s.date : "");
+      el("xr-price").textContent = "price " + fmt.money(s.price);
+
+      el("xr-obsdim").textContent = String(trace.obs_dim);
+      el("xr-action").innerHTML =
+        '<span class="' + fmt.cls(s.action) + '">' + fmt.signed(s.action, 3) + "</span>";
+      el("xr-reward").innerHTML =
+        '<span class="' + fmt.cls(s.reward) + '">' + fmt.signed(s.reward, 5) + "</span>";
+      el("xr-position").innerHTML =
+        '<span class="' + fmt.cls(s.position_after) + '">' + fmt.signed(s.position_after, 3) + "</span>";
+      el("xr-position-cmp").textContent = "from " + fmt.signed(s.position_before, 3);
+
+      // The critic is shown only when the archive actually contains one.
+      const node = el("xr-value-node");
+      if (trace.value_available && s.value != null) {
+        node.classList.remove("is-absent");
+        el("xr-value").textContent = fmt.signed(s.value, 4);
+        el("xr-value-cmp").textContent = "critic estimate";
+      } else {
+        node.classList.add("is-absent");
+        el("xr-value").textContent = "not exported";
+        el("xr-value-cmp").textContent = "no critic head in archive";
+      }
+    }
+
+    /* Debounced: one request per settled cursor position, not per pixel. */
+    function scheduleWindow() {
+      if (pending) clearTimeout(pending);
+      pending = setTimeout(fetchWindow, 220);
+    }
+
+    async function fetchWindow() {
+      if (!expId || step === lastFetched) return;
+      const want = step;
+      try {
+        const body = await api.get("/api/experiments/" + expId + "/xray?step=" + want);
+        if (want !== step) return; // a newer scrub already superseded this
+        lastFetched = want;
+        renderFeatures(body);
+        renderAccount(body);
+        renderHeatmap(body);
+        el("xr-window-dims").textContent =
+          body.window_values.length + " bars × " + body.feature_names.length +
+          " features + " + body.account_names.length + " account = " + body.obs_dim;
+        el("xr-notes").innerHTML =
+          '<div class="caveat">' + body.scaling_note + "</div>" +
+          (body.value_note ? '<div class="caveat">' + body.value_note + "</div>" : "");
+      } catch (err) {
+        el("xr-features").innerHTML =
+          '<div class="lab-error">Could not load the observation: ' + err.message + "</div>";
+      }
+    }
+
+    /* Feature rows grouped exactly as the research code groups them
+     * (FEATURE_GROUPS), so the panel cannot drift from the model's input. */
+    function renderFeatures(body) {
+      const byName = {};
+      body.feature_names.forEach((n, i) => (byName[n] = body.current[i]));
+      // Scale bars against the largest magnitude on screen so they stay comparable.
+      const span = Math.max(1e-6, ...body.current.map((v) => Math.abs(v)));
+      // An ordered LIST, not an object: JSON object keys get sorted in transit,
+      // which would scramble the semantic order (momentum first, context last).
+      const groups = body.feature_groups && body.feature_groups.length
+        ? body.feature_groups
+        : [{ label: "Features", features: body.feature_names }];
+      // Features that are structurally zero on this path (e.g. cross-asset
+      // features on a synthetic series) are marked rather than left looking flat.
+      const inert = new Set((body.meta && body.meta.inert_features) || []);
+
+      el("xr-features").innerHTML = groups
+        .map(function (group) {
+          const rows = group.features
+            .filter((n) => n in byName)
+            .map(function (n) {
+              const v = byName[n];
+              const w = (Math.abs(v) / span) * 50;
+              const bar = v >= 0
+                ? '<i class="up" style="width:' + w + '%"></i>'
+                : '<i class="dn" style="width:' + w + '%"></i>';
+              const dead = inert.has(n);
+              return '<div class="xr-feat' + (dead ? " is-inert" : "") + '">' +
+                     '<span class="fname" title="' + n +
+                     (dead ? " — inert on this path" : "") + '">' + n +
+                     "</span>" +
+                     '<span class="fbar">' + bar + "</span>" +
+                     '<span class="fval ' + (dead ? "inert" : fmt.cls(v)) + '">' +
+                     fmt.signed(v, 2) + "</span></div>";
+            })
+            .join("");
+          return '<div class="xr-group"><h4>' + group.label + "</h4>" + rows + "</div>";
+        })
+        .join("");
+
+      if (body.meta && body.meta.inert_features_note) {
+        el("xr-features").insertAdjacentHTML(
+          "beforeend",
+          '<div class="caveat">' + body.meta.inert_features_note + "</div>"
+        );
+      }
+    }
+
+    function renderAccount(body) {
+      const a = body.account;
+      el("xr-account").innerHTML =
+        metric("Position", fmt.signed(a.position_fraction, 3), fmt.cls(a.position_fraction), "of equity") +
+        metric("Cash", fmt.signed(a.cash_fraction, 3), "neutral", "of start balance") +
+        metric("Equity", fmt.num(a.equity_normalised, 3), fmt.cls(a.equity_normalised - 1), "normalised");
+    }
+
+    /* window_values is [bars][features] of z-scores; render it as a heatmap so
+     * the whole market half of the observation is visible at once. */
+    function renderHeatmap(body) {
+      const cv = $("xr-heatmap");
+      const rows = body.window_values;
+      if (!rows || !rows.length) return;
+      const cols = rows[0].length;
+      const dpr = window.devicePixelRatio || 1;
+      const w = cv.clientWidth || 420;
+      const h = 260;
+      cv.width = Math.round(w * dpr);
+      cv.height = Math.round(h * dpr);
+      cv.style.height = h + "px";
+      const ctx = cv.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const padL = 4;
+      const padB = 14;
+      const cw = (w - padL) / cols;
+      const ch = (h - padB) / rows.length;
+      // Symmetric scale so zero is always the neutral colour.
+      let span = 0;
+      rows.forEach((r) => r.forEach((v) => { if (Math.abs(v) > span) span = Math.abs(v); }));
+      span = Math.max(span, 1e-6);
+
+      rows.forEach(function (row, y) {
+        row.forEach(function (v, x) {
+          const t = Math.max(-1, Math.min(1, v / span));
+          const c = t >= 0
+            ? "rgba(93,242,160," + (t * 0.85).toFixed(3) + ")"
+            : "rgba(255,107,107," + (-t * 0.85).toFixed(3) + ")";
+          const px = padL + x * cw;
+          const py = y * ch;
+          const pw = Math.max(cw - 0.5, 0.5);
+          const ph = Math.max(ch - 0.5, 0.5);
+          ctx.fillStyle = "#121a25";
+          ctx.fillRect(px, py, pw, ph);
+          ctx.fillStyle = c;
+          ctx.fillRect(px, py, pw, ph);
+        });
+      });
+
+      ctx.fillStyle = COLORS.text;
+      ctx.font = "9px ui-monospace, monospace";
+      ctx.textAlign = "left";
+      ctx.fillText("oldest bar", padL, h - 4);
+      ctx.textAlign = "right";
+      ctx.fillText("newest bar", w, h - 4);
+    }
+
+    function init() {
+      if (!$("xr-scrub")) return;
+      $("xr-scrub").addEventListener("input", (e) => setStep(Number(e.target.value)));
+      window.addEventListener("lab:trace", (e) => onTrace(e.detail));
+      // Follow the Playground cursor so both panels stay on the same bar.
+      window.addEventListener("lab:cursor", function (e) {
+        if (!trace) return;
+        step = e.detail.step;
+        $("xr-scrub").value = String(step);
+        renderChain();
+        scheduleWindow();
+      });
+      window.addEventListener("lab:panel", function (e) {
+        if (e.detail.panel === "xray" && trace) { renderChain(); scheduleWindow(); }
+      });
+    }
+
+    return { init };
+  })();
+
   /* ── backend status ─────────────────────────────────────── */
   async function initStatus() {
     const pill = $("lab-api-status");
@@ -579,11 +798,12 @@
     initTabs();
     initStatus();
     Playground.init();
+    XRay.init();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
-  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, Playground };
+  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, Playground, XRay };
 })();

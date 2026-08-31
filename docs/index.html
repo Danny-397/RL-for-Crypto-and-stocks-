@@ -482,6 +482,7 @@
 
         <div class="lab-tabs" role="tablist" aria-label="Laboratory sections">
           <button class="lab-tab" role="tab" data-panel="playground" aria-selected="true">Agent Playground</button>
+          <button class="lab-tab" role="tab" data-panel="xray" aria-selected="false">Agent X-Ray</button>
         </div>
 
         <!-- PLAYGROUND -->
@@ -623,6 +624,88 @@
                   <h3>Reproducibility receipt</h3>
                   <dl class="receipt" id="pg-receipt"></dl>
                   <div id="pg-notes"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- AGENT X-RAY -->
+        <section class="lab-panel" id="panel-xray" role="tabpanel">
+          <div class="lab-empty" id="xr-empty">
+            No episode loaded.<br />
+            Run an episode in <b>Agent Playground</b>, then return here to inspect
+            what the agent actually saw at any bar.
+          </div>
+
+          <div id="xr-body" hidden>
+            <div class="panel-card xr-bar">
+              <div class="xr-when">
+                <span class="chart-title">Inspecting</span>
+                <strong id="xr-step">&mdash;</strong>
+                <span class="xr-price" id="xr-price"></span>
+              </div>
+              <div class="scrub-row xr-scrub-row">
+                <input type="range" id="xr-scrub" min="0" max="0" value="0"
+                       aria-label="Scrub through the episode" />
+              </div>
+            </div>
+
+            <!-- the causal chain, in order -->
+            <div class="xr-chain">
+              <div class="xr-node">
+                <span class="k">Observation</span>
+                <span class="v" id="xr-obsdim">&mdash;</span>
+                <span class="cmp">inputs at this bar</span>
+              </div>
+              <div class="xr-arrow" aria-hidden="true">&rarr;</div>
+              <div class="xr-node">
+                <span class="k">Policy</span>
+                <span class="v" id="xr-action">&mdash;</span>
+                <span class="cmp">target position</span>
+              </div>
+              <div class="xr-arrow" aria-hidden="true">&rarr;</div>
+              <div class="xr-node" id="xr-value-node">
+                <span class="k">Value</span>
+                <span class="v" id="xr-value">&mdash;</span>
+                <span class="cmp" id="xr-value-cmp">critic estimate</span>
+              </div>
+              <div class="xr-arrow" aria-hidden="true">&rarr;</div>
+              <div class="xr-node">
+                <span class="k">Reward</span>
+                <span class="v" id="xr-reward">&mdash;</span>
+                <span class="cmp">paid by the environment</span>
+              </div>
+              <div class="xr-arrow" aria-hidden="true">&rarr;</div>
+              <div class="xr-node">
+                <span class="k">Position</span>
+                <span class="v" id="xr-position">&mdash;</span>
+                <span class="cmp" id="xr-position-cmp">after rebalancing</span>
+              </div>
+            </div>
+
+            <div class="lab-grid xr-grid">
+              <div class="panel-card">
+                <h3>Observation &mdash; market features</h3>
+                <p class="xr-hint">Standardised exactly as the agent receives them. Bars run from the centre: right is above this series' mean, left is below.</p>
+                <div id="xr-features"></div>
+              </div>
+
+              <div>
+                <div class="panel-card">
+                  <h3>Observation &mdash; account state</h3>
+                  <div class="metric-grid" id="xr-account"></div>
+                  <p class="panel-note">These three scalars complete the observation vector alongside the flattened feature window.</p>
+                </div>
+
+                <div class="panel-card">
+                  <h3>Feature window</h3>
+                  <p class="xr-hint">Every value the policy consumed: <b id="xr-window-dims">&mdash;</b>. Newest bar at the bottom.</p>
+                  <canvas id="xr-heatmap" class="chart-canvas"></canvas>
+                  <div class="xr-scale">
+                    <span>low</span><i class="xr-ramp"></i><span>high</span>
+                  </div>
+                  <div id="xr-notes"></div>
                 </div>
               </div>
             </div>

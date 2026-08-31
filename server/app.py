@@ -479,7 +479,12 @@ def api_experiment_xray(experiment_id: str):
         return jsonify(error=f"no experiment {experiment_id!r}"), 404
     step = request.args.get("step", default=0, type=int) or 0
     try:
-        return jsonify(lab.xray_at(exp.config, step, _fetch_ohlcv, _market_index))
+        return jsonify(
+            lab.xray_at(
+                exp.config, step, _fetch_ohlcv, _market_index,
+                policy=_POLICIES.get(exp.config.get("market")),
+            )
+        )
     except ValueError as exc:
         return jsonify(error=str(exc)), 400
 

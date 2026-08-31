@@ -121,6 +121,55 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("step label tracks the cursor", "/" in page.inner_text("#pg-step"))
         check("no page errors", not errors, "; ".join(errors[:2]))
 
+        # ── Agent X-Ray ────────────────────────────────────────────────────
+        print("\nAgent X-Ray")
+        page.click('.lab-tab[data-panel="xray"]')
+        page.wait_for_selector("#xr-body:not([hidden])", timeout=20000)
+        page.wait_for_function(
+            "() => document.querySelectorAll('.xr-feat').length > 0", timeout=20000
+        )
+        time.sleep(0.6)
+
+        n_feat = page.eval_on_selector_all(".xr-feat", "els => els.length")
+        check("every feature is listed", n_feat == 28, f"{n_feat} rows")
+
+        groups = page.eval_on_selector_all(".xr-group h4", "els => els.map(e => e.textContent)")
+        check("groups keep their semantic order", groups[0].strip().upper() == "MOMENTUM",
+              " > ".join(g.strip() for g in groups[:3]))
+
+        dims = page.inner_text("#xr-window-dims")
+        check("observation is fully accounted for", "563" in dims, dims.strip())
+
+        painted = page.eval_on_selector(
+            "#xr-heatmap",
+            "el => { const c = el.getContext('2d');"
+            "const d = c.getImageData(0,0,el.width,el.height).data;"
+            "let n=0; for (let i=3;i<d.length;i+=4) if (d[i]>0) n++; return n; }",
+        )
+        check("feature-window heatmap painted", painted > 5000, f"{painted} px")
+
+        # The critic genuinely is not in the deployed archives: it must be
+        # declared absent, never filled in with a plausible number.
+        absent = page.eval_on_selector("#xr-value-node", "el => el.classList.contains('is-absent')")
+        value_text = page.inner_text("#xr-value").strip().lower()
+        check("missing critic is declared, not faked",
+              absent and "not exported" in value_text, value_text)
+
+        # Synthetic paths have no reference index, so 4 features are inert.
+        inert = page.eval_on_selector_all(".xr-feat.is-inert", "els => els.length")
+        check("inert cross-asset features are marked", inert == 4, f"{inert} marked")
+
+        act_before = page.inner_text("#xr-action")
+        page.eval_on_selector(
+            "#xr-scrub",
+            "el => { el.value = Math.floor(el.max/3); el.dispatchEvent(new Event('input')); }",
+        )
+        time.sleep(1.2)
+        check("X-Ray scrub moves the decision", page.inner_text("#xr-action") != act_before)
+
+        page.click('.lab-tab[data-panel="playground"]')
+        time.sleep(0.3)
+
         if shot:
             page.screenshot(path=shot)
             print(f"  screenshot -> {shot}")

@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 
 from rl_trader.config.training_config import crypto_config, stock_config
-from rl_trader.data.data_loader import market_data_from_df
+from rl_trader.data.data_loader import FEATURE_GROUPS, market_data_from_df
 from rl_trader.envs import make_env
 
 from . import regimes
@@ -133,6 +133,22 @@ def apply_config(cfg_obj, config: Dict[str, Any]):
     return cfg_obj
 
 
+# Cross-asset features need a reference index (SPY / BTC). A synthetic path has
+# none, so these four are structurally zero there — stated rather than left for a
+# reader to discover as four suspiciously flat rows in the X-Ray panel.
+CROSS_ASSET_FEATURES = ("rel_return_5", "rel_return_20", "market_trend", "market_ret_20")
+
+
+def _feature_groups() -> List[dict]:
+    """Feature groups as an ordered list.
+
+    Deliberately not a dict: Flask sorts JSON object keys, which would silently
+    reorder the groups alphabetically and lose the semantic ordering that makes
+    the observation readable (momentum first, market context last).
+    """
+    return [{"label": k, "features": list(v)} for k, v in FEATURE_GROUPS.items()]
+
+
 def _frame_hash(df: pd.DataFrame) -> str:
     """Stable content hash of the price series backing an experiment."""
     closes = np.asarray(df["close"], dtype=np.float64)
@@ -190,6 +206,14 @@ def build_environment(
             "dataset_hash": hashlib.sha256(
                 np.asarray(data.prices, dtype=np.float64).tobytes()
             ).hexdigest()[:16],
+            "inert_features": list(CROSS_ASSET_FEATURES),
+            "inert_features_note": (
+                f"A synthetic path has no reference index, so the "
+                f"{len(CROSS_ASSET_FEATURES)} cross-asset features are exactly zero "
+                f"here — the agent is effectively reading "
+                f"{len(data.feature_names) - len(CROSS_ASSET_FEATURES)} of its "
+                f"{len(data.feature_names)} features."
+            ),
             **regime_meta,
         }
 
@@ -232,6 +256,7 @@ def make_rollout_runner(policy, config, fetch_ohlcv, market_index):
         out = trace.to_dict()
         out["meta"] = meta
         out["feature_names"] = list(env.data.feature_names)
+        out["feature_groups"] = _feature_groups()
         out["obs_dim"] = cfg_obj.env.window_size * env.data.features.shape[1] + 3
         out["window_size"] = cfg_obj.env.window_size
         out["inference_note"] = INFERENCE_NOTE
@@ -348,21 +373,62 @@ def make_shift_runner(policy, config, regime_keys, seeds, fetch_ohlcv, market_in
     return run
 
 
-def xray_at(config, step: int, fetch_ohlcv, market_index) -> Dict[str, Any]:
-    """The full observation the agent consumed at one step of an episode."""
+def xray_at(config, step: int, fetch_ohlcv, market_index, policy=None) -> Dict[str, Any]:
+    """The complete input-to-decision chain at one step of an episode.
+
+    Replays the policy to ``step`` so the *account* half of the observation
+    (position, cash, normalised equity) and the policy's output are the genuine
+    values at that state — not reconstructed from the trace. Together with the
+    feature window this accounts for every one of the 563 input dimensions.
+    """
     env, cfg_obj, dates, meta = build_environment(config, fetch_ohlcv, market_index)
-    env.reset()
-    first_t = env.t
-    t = min(max(first_t, first_t + int(step)), len(env.data.prices) - 1)
+    obs, _info = env.reset()
+    target = max(0, int(step))
+
+    # Replay the agent's own decisions up to the bar of interest.
+    taken = 0
+    if policy is not None:
+        while taken < target:
+            out = policy.evaluate(obs)
+            obs, _r, term, trunc, _i = env.step(np.array([out.action], dtype=np.float32))
+            taken += 1
+            if term or trunc:
+                break
+
+    t = min(env.t, len(env.data.prices) - 1)
     detail = observation_detail(
         env, t=t, feature_names=env.data.feature_names, window=cfg_obj.env.window_size
     )
-    detail["step"] = int(step)
+    detail["step"] = taken
+    detail["requested_step"] = target
     detail["date"] = dates[t] if dates and t < len(dates) else None
     detail["price"] = round(float(env.data.prices[t]), 6)
     detail["meta"] = meta
+    detail["feature_groups"] = _feature_groups()
     detail["scaling_note"] = (
         "Feature values are standardised (z-scored) exactly as the agent receives "
         "them, not raw indicator levels."
     )
+
+    # The three account scalars that complete the observation vector.
+    account = np.asarray(obs[-3:], dtype=float)
+    detail["account"] = {
+        "position_fraction": round(float(account[0]), 6),
+        "cash_fraction": round(float(account[1]), 6),
+        "equity_normalised": round(float(account[2]), 6),
+    }
+    detail["account_names"] = ["position_fraction", "cash_fraction", "equity_normalised"]
+
+    if policy is not None:
+        out = policy.evaluate(obs)
+        detail["policy"] = {
+            "action": round(out.action, 6),
+            "value": round(out.value, 6) if out.value is not None else None,
+            "value_available": bool(out.value is not None),
+        }
+        if out.value is None:
+            detail["value_note"] = (
+                "This policy archive contains no critic head, so no value estimate "
+                "is shown. It is omitted rather than approximated."
+            )
     return detail
