@@ -309,6 +309,7 @@ def api_datasets():
             }
             for d in precomputed.paired_asset_datasets().values()
         ],
+        headline_single_seed=precomputed.headline_single_seed(),
         note=(
             "These are real results committed to the repository, not live runs. "
             "Statistical inference over them runs live."

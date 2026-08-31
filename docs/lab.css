@@ -477,3 +477,69 @@
 .ref-tag { white-space: nowrap; }
 .rbar-row { grid-template-columns: minmax(150px, 190px) 1fr 96px; }
 .rbar-name { line-height: 1.35; }
+
+/* ── Real or luck? ───────────────────────────────────────── */
+.sub-h {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--cyan); font-weight: 500;
+  margin: 26px 0 6px;
+}
+
+/* The whole lesson in one comparison: one run beside five. */
+.verdict-pair {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px; margin: 18px 0;
+}
+.vp-card {
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px; background: var(--bg-soft); position: relative;
+}
+.vp-card.is-claim { border-color: rgba(212, 255, 63, 0.35); }
+.vp-card.is-truth { border-color: rgba(54, 224, 255, 0.35); }
+.vp-kicker {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--faint); margin-bottom: 10px;
+}
+.vp-num {
+  font-family: var(--font-mono); font-size: clamp(30px, 5vw, 44px);
+  font-weight: 700; letter-spacing: -0.03em; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.vp-meta {
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--muted);
+  margin-top: 10px; line-height: 1.7;
+}
+.vp-flag {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 12px;
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 4px 9px; border-radius: 6px;
+}
+.vp-flag.bad { color: var(--neg); background: rgba(255,107,107,.1);
+               border: 1px solid rgba(255,107,107,.3); }
+.vp-flag.ok { color: var(--pos); background: rgba(93,242,160,.1);
+              border: 1px solid rgba(93,242,160,.3); }
+
+/* One row per training run. */
+.seed-row {
+  display: grid; grid-template-columns: 92px 1fr 84px;
+  gap: 12px; align-items: center; padding: 5px 0;
+}
+.seed-row .sname {
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--muted);
+}
+.seed-row .stack { position: relative; height: 16px;
+                   background: var(--bg-soft); border-radius: 3px; }
+.seed-row .stack::before {
+  content: ""; position: absolute; left: 50%; top: 0; bottom: 0;
+  width: 1px; background: var(--border-2);
+}
+.seed-row .stack > i { position: absolute; top: 3px; bottom: 3px; border-radius: 2px; }
+.seed-row .stack > i.up { background: var(--pos); left: 50%; }
+.seed-row .stack > i.dn { background: var(--neg); right: 50%; }
+.seed-row .sval {
+  font-family: var(--font-mono); font-size: 12px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.seed-row.is-best .sname { color: var(--volt); }
+
+#sd-hist { height: 150px; cursor: default; }

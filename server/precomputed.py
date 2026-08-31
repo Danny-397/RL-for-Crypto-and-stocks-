@@ -276,6 +276,40 @@ def generalization_results() -> Optional[dict]:
 # --------------------------------------------------------------------------- #
 # Provenance of the baked dashboard results                                    #
 # --------------------------------------------------------------------------- #
+def headline_single_seed() -> Dict[str, dict]:
+    """The published single-seed dashboard number, per market.
+
+    This is the figure a reader would quote if they only ever saw one run — and
+    the whole point of the multi-seed study is that it does not survive. Serving
+    it beside the seed distribution lets the site put the two side by side
+    instead of merely asserting the lesson.
+    """
+    blob = _load_js_global(os.path.join(_DOCS, "results.js"))
+    if not blob:
+        return {}
+    out: Dict[str, dict] = {}
+    for market, mblob in (blob.get("markets") or {}).items():
+        metrics = mblob.get("metrics") or {}
+        if "total_return" not in metrics:
+            continue
+        out[market] = {
+            "market": market,
+            "total_return": metrics["total_return"],
+            "sharpe": metrics.get("sharpe"),
+            "max_drawdown": metrics.get("max_drawdown"),
+            "seed": blob.get("seed"),
+            "timesteps": blob.get("timesteps"),
+            "start_date": mblob.get("start_date"),
+            "end_date": mblob.get("end_date"),
+            "source": "docs/results.js",
+            "note": (
+                "One training seed on one walk-forward split — the number the "
+                "dashboard headlines."
+            ),
+        }
+    return out
+
+
 def results_provenance() -> dict:
     """When the baked dashboard results were generated, and by what."""
     path = os.path.join(_DOCS, "results.js")

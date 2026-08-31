@@ -484,6 +484,7 @@
           <button class="lab-tab" role="tab" data-panel="playground" aria-selected="true">Agent Playground</button>
           <button class="lab-tab" role="tab" data-panel="xray" aria-selected="false">Agent X-Ray</button>
           <button class="lab-tab" role="tab" data-panel="generalization" aria-selected="false">Can You Break It?</button>
+          <button class="lab-tab" role="tab" data-panel="seeds" aria-selected="false">Real or Luck?</button>
         </div>
 
         <!-- PLAYGROUND -->
@@ -793,6 +794,87 @@
               <div id="shift-bars"></div>
               <div id="shift-notes"></div>
             </div>
+          </div>
+        </section>
+
+        <!-- IS THE RESULT REAL - OR LUCK? -->
+        <section class="lab-panel" id="panel-seeds" role="tabpanel">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Is the result real &mdash; or luck?</h2>
+            <p>A single training run is one draw from a distribution. Below is the number this
+               project headlines from one seed, next to what the same recipe produces across five.</p>
+          </div>
+
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>Single seed vs. the seed distribution <span class="tag-precomputed">Real &middot; precomputed</span></h3>
+              <div class="seg gen-market" id="sd-market" data-value="crypto">
+                <button type="button" data-val="stock" aria-pressed="false">Stocks</button>
+                <button type="button" data-val="crypto" aria-pressed="true">Crypto</button>
+              </div>
+            </div>
+
+            <div id="sd-error" hidden></div>
+
+            <div class="verdict-pair" id="sd-pair"></div>
+            <div class="gen-verdict" id="sd-verdict"></div>
+
+            <h4 class="sub-h">Every training run</h4>
+            <p class="xr-hint">Each row is one independent PPO training run, evaluated on held-out data.</p>
+            <div id="sd-seeds"></div>
+
+            <h4 class="sub-h">Bootstrap distribution of the mean</h4>
+            <p class="xr-hint">Resampling the five outcomes with replacement, recomputed live.</p>
+            <canvas id="sd-hist" class="chart-canvas"></canvas>
+            <div class="legend" style="margin-top:6px">
+              <span><i style="background:#d4ff3f"></i> observed mean</span>
+              <span><i style="background:#36e0ff"></i> zero</span>
+            </div>
+
+            <div class="gen-stats">
+              <h4>Recompute the inference</h4>
+              <p class="xr-hint">These are the estimators the paper uses, run on request against the same real data.</p>
+              <div class="stat-controls">
+                <label>Confidence
+                  <select id="sd-conf">
+                    <option value="0.8">80%</option>
+                    <option value="0.9">90%</option>
+                    <option value="0.95" selected>95%</option>
+                    <option value="0.99">99%</option>
+                  </select>
+                </label>
+                <label>Bootstrap resamples
+                  <select id="sd-boot">
+                    <option value="1000">1,000</option>
+                    <option value="10000" selected>10,000</option>
+                    <option value="50000">50,000</option>
+                  </select>
+                </label>
+                <label>Permutations
+                  <select id="sd-perm">
+                    <option value="1000">1,000</option>
+                    <option value="20000" selected>20,000</option>
+                    <option value="100000">100,000</option>
+                  </select>
+                </label>
+                <button class="run-btn run-btn-sm" id="sd-run" type="button">Recompute</button>
+              </div>
+              <div class="lab-status" id="sd-status"></div>
+              <div id="sd-stats"></div>
+            </div>
+
+            <dl class="receipt" id="sd-receipt"></dl>
+          </div>
+
+          <!-- the paper's own axis -->
+          <div class="panel-card">
+            <h3>The published test <span class="tag-precomputed">Real &middot; precomputed</span></h3>
+            <p class="xr-hint">The paper's significance test pairs across <b>held-out tickers</b>,
+               not across seeds. Different axis, different question &mdash; and enough pairs to
+               actually resolve a p-value.</p>
+            <div class="lab-status" id="sd-paper-status"></div>
+            <div id="sd-paper"></div>
           </div>
         </section>
 

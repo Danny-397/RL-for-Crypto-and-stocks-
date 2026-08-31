@@ -58,12 +58,12 @@ def run(api: str, port: int, shot: str | None) -> None:
     url = f"http://127.0.0.1:{port}/index.html#lab"
 
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(args=["--disable-dev-shm-usage", "--no-sandbox"])
 
         # ── 1. the lab against a live backend ──────────────────────────────
         print("\nLive backend")
         errors: list[str] = []
-        page = browser.new_page(viewport={"width": 1440, "height": 1000})
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
         page.on("pageerror", lambda e: errors.append(str(e)))
         # config.js loads after any init script, so intercept it to repoint the API.
         page.route(
@@ -208,12 +208,54 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("regimes report realised autocorrelation",
               "autocorr" in page.inner_text("#shift-bars").lower())
 
+        # ── Real or luck? ──────────────────────────────────────────────────
+        print("\nReal or luck?")
+        page.click('.lab-tab[data-panel="seeds"]')
+        page.wait_for_function(
+            "() => document.querySelectorAll('#sd-seeds .seed-row').length > 0", timeout=30000
+        )
+        time.sleep(0.8)
+
+        n_seeds = page.eval_on_selector_all("#sd-seeds .seed-row", "els => els.length")
+        check("every training run listed", n_seeds == 5, f"{n_seeds} runs")
+        check("one run is shown beside many",
+              page.eval_on_selector_all(".vp-card", "els => els.length") == 2)
+
+        pair = page.inner_text("#sd-pair")
+        check("single-seed headline shown", "275" in pair, pair.split("\n")[1] if "\n" in pair else pair[:40])
+        check("interval reported as spanning zero", "spans zero" in pair.lower())
+        check("verdict states it does not survive",
+              "does not survive" in page.inner_text("#sd-verdict").lower())
+
+        painted = page.eval_on_selector(
+            "#sd-hist",
+            "el => { const c = el.getContext('2d');"
+            "const d = c.getImageData(0,0,el.width,el.height).data;"
+            "let n=0; for (let i=3;i<d.length;i+=4) if (d[i]>0) n++; return n; }",
+        )
+        check("bootstrap histogram painted", painted > 2000, f"{painted} px")
+
+        # Changing the design must actually change the numbers.
+        before = page.inner_text("#sd-pair")
+        page.select_option("#sd-conf", "0.8")
+        page.click("#sd-run")
+        time.sleep(1.5)
+        check("confidence level changes the interval", page.inner_text("#sd-pair") != before)
+
+        paper = page.inner_text("#sd-paper")
+        check("published ticker-axis test shown", "p-value" in paper.lower())
+
         page.click('.lab-tab[data-panel="playground"]')
         time.sleep(0.3)
 
         if shot:
             page.screenshot(path=shot)
             print(f"  screenshot -> {shot}")
+
+        # Free the first page before opening the second. Both pages open at once
+        # is a real memory spike on a modest machine, and the driver dies with an
+        # unhelpful "connection closed" when it runs out.
+        page.close()
 
         # ── 2. the lab with no backend ─────────────────────────────────────
         # The important half: nothing may be rendered from thin air.

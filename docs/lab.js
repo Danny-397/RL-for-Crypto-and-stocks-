@@ -1031,6 +1031,277 @@
     return { init };
   })();
 
+
+  /* -- Is the result real, or luck? ------------------------ */
+  /* The data is precomputed and real: every point is a full PPO training run,
+   * so "run 5 seeds" cannot be a live button. What IS live is the inference --
+   * the bootstrap and permutation estimators the paper uses, recomputed on
+   * request with caller-chosen parameters against the same real numbers. */
+  const Seeds = (function () {
+    let catalog = null;
+    let headline = null;
+    let market = "crypto";
+    let last = null;
+
+    async function load() {
+      try {
+        catalog = await api.get("/api/datasets");
+        headline = catalog.headline_single_seed || {};
+        await refresh();
+        loadPaperAxis();
+      } catch (err) {
+        showError($("sd-error"), "Could not load the seed data: " + err.message);
+      }
+    }
+
+    async function refresh() {
+      showError($("sd-error"), null);
+      setStatus($("sd-status"), "computing…", true);
+      try {
+        const body = await api.post("/api/statistics", {
+          dataset: "real:" + market,
+          confidence: Number($("sd-conf").value),
+          n_boot: Number($("sd-boot").value),
+          n_perm: Number($("sd-perm").value),
+        });
+        last = body;
+        renderPair(body);
+        renderSeeds(body);
+        renderHist(body);
+        renderStats(body);
+        renderReceipt(body);
+        setStatus($("sd-status"),
+                  body.n_boot.toLocaleString("en-US") + " bootstrap resamples · " +
+                  Math.round(body.confidence * 100) + "% interval", false);
+      } catch (err) {
+        showError($("sd-error"), "Recompute failed: " + err.message);
+        setStatus($("sd-status"), "", false);
+      }
+    }
+
+    /* One run beside five, at the same scale, in the same units. */
+    function renderPair(body) {
+      const one = headline[market];
+      const ms = body.multi_seed;
+      const spansZero = !ms.ci_excludes_zero;
+
+      const claim = one
+        ? '<div class="vp-card is-claim"><div class="vp-kicker">What one run says</div>' +
+          '<div class="vp-num ' + fmt.cls(one.total_return) + '">' +
+          fmt.pct(one.total_return, 1) + "</div>" +
+          '<div class="vp-meta">seed ' + one.seed + " · " +
+          (one.timesteps ? one.timesteps.toLocaleString("en-US") : "?") + " timesteps<br />" +
+          (one.start_date || "") + " → " + (one.end_date || "") + "</div>" +
+          '<div class="vp-flag bad">single run · no uncertainty</div></div>'
+        : "";
+
+      const truth =
+        '<div class="vp-card is-truth"><div class="vp-kicker">What ' + body.n_seeds +
+        " runs say</div>" +
+        '<div class="vp-num ' + fmt.cls(ms.mean) + '">' + fmt.pct(ms.mean, 1) + "</div>" +
+        '<div class="vp-meta">mean of ' + body.n_seeds + " independent seeds<br />" +
+        Math.round(body.confidence * 100) + "% CI [" + fmt.pct(ms.ci_low, 1) + ", " +
+        fmt.pct(ms.ci_high, 1) + "]</div>" +
+        '<div class="vp-flag ' + (spansZero ? "bad" : "ok") + '">' +
+        (spansZero ? "interval spans zero" : "interval excludes zero") + "</div></div>";
+
+      $("sd-pair").innerHTML = claim + truth;
+
+      const best = body.single_seed.best;
+      $("sd-verdict").innerHTML = one
+        ? "The headline number is <b>" + fmt.pct(one.total_return, 1) + "</b> from a single seed. " +
+          "Retrain the same recipe five times and the mean is <b>" + fmt.pct(ms.mean, 1) +
+          "</b>, with a " + Math.round(body.confidence * 100) + "% interval of <b>[" +
+          fmt.pct(ms.ci_low, 1) + ", " + fmt.pct(ms.ci_high, 1) + "]</b>" +
+          (spansZero
+            ? " — which contains zero. The apparent edge does not survive reseeding."
+            : " — which excludes zero.") +
+          " The luckiest of those five returned <b>" + fmt.pct(best, 1) +
+          "</b>; reporting that one alone would have been the same mistake."
+        : "Across " + body.n_seeds + " seeds the mean is <b>" + fmt.pct(ms.mean, 1) + "</b>.";
+    }
+
+    function renderSeeds(body) {
+      const vals = body.values;
+      const span = Math.max(0.05, ...vals.map((v) => Math.abs(v)));
+      $("sd-seeds").innerHTML = vals
+        .map(function (v, i) {
+          const w = (Math.abs(v) / span) * 50;
+          const bar = v >= 0
+            ? '<i class="up" style="width:' + w + '%"></i>'
+            : '<i class="dn" style="width:' + w + '%"></i>';
+          const isBest = i === body.single_seed.best_index;
+          return '<div class="seed-row' + (isBest ? " is-best" : "") + '">' +
+                 '<span class="sname">seed ' + (i + 1) +
+                 (isBest ? " ★" : "") + "</span>" +
+                 '<span class="stack">' + bar + "</span>" +
+                 '<span class="sval ' + fmt.cls(v) + '">' + fmt.pct(v, 1) + "</span></div>";
+        })
+        .join("");
+    }
+
+    /* Histogram of the bootstrap means, with the observed mean and zero marked. */
+    function renderHist(body) {
+      const d = body.distribution;
+      const cv = $("sd-hist");
+      if (!d || !d.counts || !d.counts.length) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = cv.clientWidth || 600;
+      const h = 150;
+      cv.width = Math.round(w * dpr);
+      cv.height = Math.round(h * dpr);
+      cv.style.height = h + "px";
+      const ctx = cv.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const padL = 6, padB = 20, padT = 8;
+      const lo = d.edges[0];
+      const hi = d.edges[d.edges.length - 1];
+      const maxC = Math.max(...d.counts);
+      const X = (v) => padL + ((v - lo) / (hi - lo || 1)) * (w - padL * 2);
+      const bw = (w - padL * 2) / d.counts.length;
+
+      d.counts.forEach(function (c, i) {
+        const x = X(d.edges[i]);
+        const bh = (c / maxC) * (h - padB - padT);
+        ctx.fillStyle = d.edges[i] >= 0 ? "rgba(93,242,160,0.5)" : "rgba(255,107,107,0.5)";
+        ctx.fillRect(x, h - padB - bh, Math.max(bw - 1, 1), bh);
+      });
+
+      function rule(v, color, label) {
+        if (v < lo || v > hi) return;
+        const x = X(v);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(x, padT);
+        ctx.lineTo(x, h - padB);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = color;
+        ctx.font = "10px ui-monospace, monospace";
+        ctx.textAlign = x > w - 60 ? "right" : "left";
+        ctx.fillText(label, x + (x > w - 60 ? -4 : 4), padT + 9);
+      }
+      rule(0, COLORS.bench, "0");
+      rule(body.multi_seed.mean, COLORS.agent, "mean " + fmt.pct(body.multi_seed.mean, 1));
+
+      ctx.fillStyle = COLORS.text;
+      ctx.font = "10px ui-monospace, monospace";
+      ctx.textAlign = "left";
+      ctx.fillText(fmt.pct(lo, 0), padL, h - 6);
+      ctx.textAlign = "right";
+      ctx.fillText(fmt.pct(hi, 0), w - padL, h - 6);
+    }
+
+    function renderStats(body) {
+      const ms = body.multi_seed;
+      const ss = body.single_seed;
+      const b = body.benchmark;
+      let html =
+        '<div class="stat-out">' +
+        metric("Mean", fmt.pct(ms.mean), fmt.cls(ms.mean), body.n_seeds + " seeds") +
+        metric("Median", fmt.pct(ms.median), fmt.cls(ms.median), "middle run") +
+        metric("Std dev", fmt.pct(ms.std, 1).replace("+", ""), "neutral", "across seeds") +
+        metric("Best run", fmt.pct(ss.best), fmt.cls(ss.best), "the one to not quote") +
+        metric("Worst run", fmt.pct(ss.worst), fmt.cls(ss.worst), "same recipe") +
+        metric("Spread", fmt.pct(ss.spread, 1), "neutral", "best minus worst") +
+        "</div>";
+
+      if (b) {
+        const res = b.resolution || {};
+        html +=
+          '<div class="stat-out" style="margin-top:12px">' +
+          metric("Benchmark", fmt.pct(b.value), "neutral", "buy &amp; hold") +
+          metric("Difference", fmt.pct(b.mean_difference), fmt.cls(b.mean_difference),
+                 "agent minus b&amp;h") +
+          metric("p-value", fmt.num(b.p_value, 4), "neutral",
+                 b.n_perm.toLocaleString("en-US") + " permutations") +
+          metric("Beat benchmark", b.seeds_beating_benchmark + " / " + body.n_seeds,
+                 b.seeds_beating_benchmark > body.n_seeds / 2 ? "pos" : "neg", "seeds") +
+          "</div>" +
+          '<div class="caveat">' + b.verdict + "</div>" +
+          '<div class="caveat"><b>Axis:</b> ' + b.axis_note + "</div>";
+      }
+      $("sd-stats").innerHTML = html;
+    }
+
+    function renderReceipt(body) {
+      const rows = [
+        ["Dataset", body.dataset],
+        ["Label", body.label],
+        ["Source", body.source],
+        ["Regenerate", body.generated_by],
+        ["Published mean", body.published ? fmt.pct(body.published.mean, 2) : null],
+        ["Published CI", body.published
+          ? "[" + fmt.pct(body.published.ci_low, 2) + ", " + fmt.pct(body.published.ci_high, 2) + "]"
+          : null],
+      ];
+      $("sd-receipt").innerHTML = rows
+        .filter((r) => r[1])
+        .map((r) => "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>").join("");
+    }
+
+    /* The paper's own axis: paired across held-out tickers. */
+    async function loadPaperAxis() {
+      setStatus($("sd-paper-status"), "computing…", true);
+      try {
+        const body = await api.post("/api/statistics", {
+          dataset: "assets:" + market,
+          n_perm: Number($("sd-perm").value),
+        });
+        const res = body.resolution || {};
+        $("sd-paper").innerHTML =
+          '<div class="stat-out">' +
+          metric("Agent mean", fmt.pct(body.mean_a), fmt.cls(body.mean_a),
+                 body.n_pairs + " tickers") +
+          metric("Buy &amp; hold", fmt.pct(body.mean_b), fmt.cls(body.mean_b), "same tickers") +
+          metric("Difference", fmt.pct(body.mean_difference), fmt.cls(body.mean_difference),
+                 "95% CI [" + fmt.pct(body.difference_ci[0], 0) + ", " +
+                 fmt.pct(body.difference_ci[1], 0) + "]") +
+          metric("p-value", fmt.num(body.p_value, 4),
+                 body.significant_at_05 ? "pos" : "neutral",
+                 "floor " + fmt.num(res.min_attainable_p, 4)) +
+          "</div>" +
+          '<div class="caveat">Agent beat buy &amp; hold on <b>' + body.a_wins + " of " +
+          body.n_pairs + "</b> held-out tickers.</div>" +
+          '<div class="caveat"><b>Note:</b> ' + body.caveat + "</div>";
+        setStatus($("sd-paper-status"),
+                  body.n_perm.toLocaleString("en-US") + " permutations · paired by ticker", false);
+      } catch (err) {
+        $("sd-paper").innerHTML =
+          '<div class="lab-error">Could not run the published test: ' + err.message + "</div>";
+        setStatus($("sd-paper-status"), "", false);
+      }
+    }
+
+    function init() {
+      if (!$("sd-pair")) return;
+      const seg = $("sd-market");
+      seg.addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-val]");
+        if (!btn) return;
+        seg.dataset.value = btn.dataset.val;
+        seg.querySelectorAll("button").forEach((b) =>
+          b.setAttribute("aria-pressed", String(b === btn))
+        );
+        market = btn.dataset.val;
+        refresh();
+        loadPaperAxis();
+      });
+      $("sd-run").addEventListener("click", refresh);
+      window.addEventListener("resize", function () { if (last) renderHist(last); });
+      window.addEventListener("lab:panel", function (e) {
+        if (e.detail.panel === "seeds" && last) renderHist(last);
+      });
+      load();
+    }
+
+    return { init };
+  })();
+
   /* ── backend status ─────────────────────────────────────── */
   async function initStatus() {
     const pill = $("lab-api-status");
@@ -1073,11 +1344,12 @@
     Playground.init();
     XRay.init();
     Generalization.init();
+    Seeds.init();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
-  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, Playground, XRay, Generalization };
+  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, Playground, XRay, Generalization, Seeds };
 })();

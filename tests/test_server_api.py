@@ -463,3 +463,21 @@ def test_shift_sweep_reports_uncertainty_and_a_reference(client):
 
     assert "wide" in result["sampling_note"]
     assert "in-distribution" in result["reference_note"]
+
+
+def test_datasets_expose_the_single_seed_headline(client):
+    """The panel contrasts one run against five, so it needs the published one."""
+    body = client.get("/api/datasets").get_json()
+    head = body["headline_single_seed"]
+    assert set(head) >= {"stock", "crypto"}
+    # The crypto dashboard headline is the +275% single-seed run the
+    # multi-seed study exists to catch.
+    assert head["crypto"]["total_return"] == pytest.approx(2.7545, abs=1e-3)
+    assert head["crypto"]["seed"] == 42
+    assert head["crypto"]["source"] == "docs/results.js"
+
+    # And the 5-seed study of the same market does not support it.
+    stats = client.post("/api/statistics", json={"dataset": "real:crypto"}).get_json()
+    assert stats["multi_seed"]["mean"] < 0.1
+    assert stats["multi_seed"]["ci_low"] < 0 < stats["multi_seed"]["ci_high"]
+    assert stats["multi_seed"]["ci_excludes_zero"] is False
