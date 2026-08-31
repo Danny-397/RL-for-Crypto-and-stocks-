@@ -69,6 +69,45 @@ def serve(port: int):
     return httpd
 
 
+STALE_PORT = 8099
+
+
+def serve_stale_backend(port: int = STALE_PORT):
+    """Stand in for the dashboard-era API: ``/health`` answers, the lab does not.
+
+    Reproduces the state the deployed backend is in between merging the lab and
+    redeploying it — the case where a naive "is anything there?" check would
+    wrongly report the lab as working.
+    """
+    import json
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def _send(self, code: int, body: dict) -> None:
+            payload = json.dumps(body).encode()
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def do_GET(self):  # noqa: N802 - BaseHTTPRequestHandler's naming
+            if self.path.startswith("/health"):
+                self._send(200, {"status": "ok",
+                                 "policies": ["crypto", "stock"],
+                                 "version": "0.1.0"})
+            else:
+                self._send(404, {"error": "Not Found"})
+
+        def log_message(self, *args):  # keep the smoke output readable
+            pass
+
+    socketserver.TCPServer.allow_reuse_address = True
+    httpd = socketserver.TCPServer(("127.0.0.1", port), Handler)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    return httpd
+
+
 def run(api: str, port: int, shot: str | None) -> None:
     from playwright.sync_api import sync_playwright
 
@@ -453,6 +492,47 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("browser back navigates", home.eval_on_selector_all(
             ".view.active", "els => els.length") == 1)
         check("no page errors on the static site", not home_errors, "; ".join(home_errors[:2]))
+
+        # ── 4. a backend that is up but predates the lab ───────────────────
+        # The dashboard-era API serves /health too. If the page trusted that it
+        # would announce "API live" and then 404 on every panel — a reassuring
+        # claim followed by a broken experience, which is the exact failure mode
+        # this project exists to argue against.
+        print("\nOutdated backend (health OK, lab endpoints missing)")
+        stale = serve_stale_backend()
+        try:
+            browser.close()
+            browser = p.chromium.launch(args=LEAN_ARGS)
+            old_errors: list[str] = []
+            old = browser.new_page(viewport={"width": 1280, "height": 900})
+            old.on("pageerror", lambda e: old_errors.append(str(e)))
+            old.route(
+                "**/config.js",
+                lambda route: route.fulfill(
+                    status=200,
+                    content_type="application/javascript",
+                    body=f"window.RL_API = 'http://127.0.0.1:{STALE_PORT}';",
+                ),
+            )
+            old.goto(url, wait_until="load")
+            old.wait_for_function(
+                "() => { const el = document.getElementById('lab-api-status');"
+                "return el && !/connecting/i.test(el.textContent); }",
+                timeout=45000,
+            )
+            time.sleep(1.0)
+
+            pill = old.inner_text("#lab-api-status").strip()
+            check("does not claim the API is live", "api live" not in pill.lower(), pill)
+            check("names the real problem", "too old" in pill.lower(), pill)
+            check("distinguishes stale from unreachable",
+                  "is-stale" in old.eval_on_selector("#lab-api-status", "el => el.className"))
+            check("run button disabled", old.eval_on_selector("#pg-run", "el => el.disabled"))
+            check("nothing is rendered", old.eval_on_selector("#pg-output", "el => el.hidden"))
+            check("no page errors against an old backend", not old_errors,
+                  "; ".join(old_errors[:2]))
+        finally:
+            stale.shutdown()
 
         browser.close()
 

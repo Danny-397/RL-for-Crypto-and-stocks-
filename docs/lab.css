@@ -711,3 +711,9 @@
   .lab-card, .lab-card:hover { transition: none; transform: none; }
   .bar > i { transition: none; }
 }
+/* Backend answers, but predates the lab endpoints — neither "live" nor "down". */
+.api-pill.is-stale {
+  color: #ffcc66; border-color: rgba(255, 204, 102, 0.34);
+  background: rgba(255, 204, 102, 0.08);
+}
+.api-pill.is-stale .dot-led { background: #ffcc66; box-shadow: 0 0 8px #ffcc66; }

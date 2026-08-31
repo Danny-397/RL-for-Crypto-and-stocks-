@@ -274,7 +274,7 @@ tests/               # pytest suite (envs, agent, features, reward, recurrent, s
                      #   normalization, portfolio, snapshot, lab backend, HTTP API)
 tools/
 ├── fetch_data.py        # download a real OHLCV basket; --end pins a snapshot
-├── smoke_lab.py         # 71 headless-browser checks against the live lab
+├── smoke_lab.py         # 77 headless-browser checks against the live lab
 ├── build_site_data.py   # train + backtest -> docs/results.js for the dashboard
 ├── ablation.py          # domain-randomization overfitting study
 ├── baseline_report.py   # agent vs. buy-&-hold / random / momentum
@@ -564,7 +564,7 @@ all**, and the lab layers live experiments on top when `window.RL_API` is set.
 ```bash
 python tools/build_site_data.py --real --timesteps 200000   # regenerate docs/results.js
 python server/app.py                                        # the experiment API
-python tools/smoke_lab.py                                   # 71 browser checks against both
+python tools/smoke_lab.py                                   # 77 browser checks against both
 ```
 
 `tools/smoke_lab.py` drives the real page in headless Chromium. Its most important

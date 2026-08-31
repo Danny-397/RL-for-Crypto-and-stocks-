@@ -1727,14 +1727,34 @@
       return;
     }
     pill.innerHTML = '<i class="dot-led"></i> connecting…';
+    let health;
     try {
-      const h = await api.get("/health");
-      pill.className = "api-pill is-live";
-      pill.innerHTML = `<i class="dot-led"></i> API live · ${h.policies.join(" + ")} · v${h.version}`;
+      health = await api.get("/health");
     } catch (err) {
       pill.className = "api-pill is-down";
       pill.innerHTML = '<i class="dot-led"></i> API unreachable';
+      return;
     }
+
+    // /health alone is not enough. The dashboard-era backend serves it too, so
+    // reporting "live" off that would claim the lab works and then 404 on every
+    // panel — the one failure mode this site must not have. Confirm the lab API
+    // itself answers before saying anything reassuring.
+    try {
+      await api.get("/api/meta");
+    } catch (err) {
+      pill.className = "api-pill is-stale";
+      pill.innerHTML =
+        `<i class="dot-led"></i> Backend v${health.version || "?"} — too old for the lab`;
+      pill.title =
+        "The API responds but does not serve the lab endpoints. Redeploy the " +
+        "backend from a revision that includes server/lab.py.";
+      return;
+    }
+
+    pill.className = "api-pill is-live";
+    pill.innerHTML =
+      `<i class="dot-led"></i> API live · ${health.policies.join(" + ")} · v${health.version}`;
   }
 
   /* ── lab sub-tabs ───────────────────────────────────────── */
