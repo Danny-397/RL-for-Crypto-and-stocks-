@@ -436,7 +436,7 @@ and its panels are the research questions made runnable.
 | **Can You Break It?** | The real domain-randomization ablation (Agent A vs Agent B) with per-seed points and CIs, plus a live shift test that drops the deployed policy onto controlled synthetic regimes. | mixed — see below |
 | **Walk-Forward** | Disjoint chronological folds from the research code's own splitter, each scaled on its training rows alone, with the deployed policy scored on every out-of-sample block — plus a second pass with the scaler fit on everything, measuring what that shortcut costs. | mixed — see below |
 | **Real or Luck?** | The published single-seed headline beside the five-seed distribution, with the bootstrap and permutation machinery re-runnable at your own confidence level and resample count. | mixed — see below |
-| **Notebook** | Every experiment this session, with its config, receipt, and a Reproduce button that replays it exactly. | ✅ live |
+| **Notebook** | Every experiment this session, with its config, receipt, pre-registered prediction, and a Reproduce button that replays it exactly. | ✅ live |
 
 ### What is live, and what is not — and why
 
@@ -528,6 +528,29 @@ The aggregate carries the same resolution warning as everything else: a sign tes
 over four folds cannot produce a p-value below `2/2⁴ = 0.125`, so that design
 cannot reach 0.05 whatever the effect size.
 
+### Pre-registration
+
+Every panel here lets you run something and then read a number, which is exactly
+the order in which researchers talk themselves into results. So the notebook lets
+you commit first: state the question, pick a prediction, and the backend stamps
+it onto the experiment record *before* the worker thread starts.
+
+Two details make it a real commitment rather than a caption:
+
+- **There is no endpoint that edits it.** Changing your mind after seeing the
+  outcome means creating a new experiment with a new id, and the notebook lists
+  both. The record of what you actually predicted survives.
+- **The judging rule is a module constant, not a request field.** `MATCH_BAND` is
+  ±2 percentage points of buy-and-hold, published in `/api/meta`, shown in the
+  form before you choose, restated on the result, and applied identically to
+  every prediction. You can disagree with the band; you cannot move it after the
+  fact. A test asserts that passing `match_band` in the request does nothing.
+
+A kind with no single agent-vs-benchmark number — a counterfactual, say —
+records the prediction and reports `scorable: false` rather than scoring it
+against a different quantity. And a hit is worded as weak evidence, because one
+run agreeing with one prediction is one run.
+
 ### Testing the reader, not just the agent
 
 The first panel is the project's thesis turned on the visitor. Half the charts
@@ -600,6 +623,7 @@ paper.
 | `GET /api/experiments/<id>/xray?step=` | The full observation at one bar |
 | `GET /api/experiments/<id>/attribution` | Occlusion attribution: which inputs move the action |
 | `POST /api/experiments` `kind=walk_forward` | Rolling folds, per-fold scaling, and the leakage comparison |
+| `POST /api/experiments` `prediction=` | Pre-register a prediction; the backend stamps it before the run and scores it after |
 | `GET /api/results`, `/api/live`, `/api/tickers` | The original dashboard endpoints (unchanged) |
 
 ### Run an experiment

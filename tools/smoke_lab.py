@@ -471,15 +471,35 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("runs with no stated question say so",
               page.eval_on_selector_all("#nb-list .nb-q.is-unstated", "els => els.length") > 0)
 
-        # Run one with a question of our own.
+        check("the judging rule is published before you predict",
+              "fixed before the run" in page.inner_text("#nb-prereg-rule"),
+              page.inner_text("#nb-prereg-rule")[:60])
+        # "No prediction" has to stay reachable: selecting then re-clicking clears it.
+        page.click('#nb-prediction button[data-val="beats"]')
+        check("a prediction can be selected",
+              page.eval_on_selector("#nb-prediction", "el => el.dataset.value") == "beats")
+        page.click('#nb-prediction button[data-val="beats"]')
+        check("a prediction can be cleared again",
+              page.eval_on_selector("#nb-prediction", "el => el.dataset.value") == "")
+
+        # Run one with a question and a prediction of our own.
         question = "Does the agent survive mean reversion?"
         page.fill("#nb-question", question)
+        page.click('#nb-prediction button[data-val="beats"]')
         page.select_option("#nb-regime", "mean_reversion")
         page.click("#nb-run")
         page.wait_for_selector("#nb-detail-card:not([hidden])", timeout=90000)
         time.sleep(0.8)
 
         detail = page.inner_text("#nb-detail")
+        check("the prediction is on the receipt with its timestamp",
+              "registered 20" in detail, "timestamped")
+        outcome = page.eval_on_selector_all(
+            ".nb-pred-out.is-hit, .nb-pred-out.is-miss", "els => els.length"
+        )
+        check("predicted vs observed is scored", outcome == 1, f"{outcome} blocks")
+        check("the outcome restates the rule it was judged by",
+              "about the same" in page.inner_text(".nb-pred-out"))
         # inner_text returns *rendered* text and .receipt dt is uppercased in CSS,
         # so compare case-insensitively rather than against the source casing.
         lower = detail.lower()

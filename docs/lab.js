@@ -2139,6 +2139,25 @@
         .join("");
     }
 
+    /* Predicted vs observed, rendered only when a prediction was actually made.
+     * The backend decides matched/unmatched; nothing here re-judges it, and an
+     * experiment kind with no benchmark comparison says so rather than being
+     * scored against a different quantity. */
+    function predictionBlock(outcome) {
+      if (!outcome) return "";
+      if (!outcome.scorable) {
+        return '<div class="nb-pred-out is-unscored"><b>Prediction: ' +
+               escapeHtml(outcome.predicted) + "</b> — " +
+               escapeHtml(outcome.reason) + "</div>";
+      }
+      const cls = outcome.matched ? "is-hit" : "is-miss";
+      return '<div class="nb-pred-out ' + cls + '">' +
+             '<span class="nb-pred-tag">' + (outcome.matched ? "as predicted" : "not as predicted") +
+             "</span>" +
+             '<p>' + escapeHtml(outcome.verdict) + "</p>" +
+             '<p class="xr-hint">' + escapeHtml(outcome.rule) + "</p></div>";
+    }
+
     function escapeHtml(str) {
       const d = document.createElement("div");
       d.textContent = str;
@@ -2180,6 +2199,10 @@
           ["Experiment", body.id],
           ["Kind", kindLabel(body.kind)],
           ["Question", body.question || "— not stated —"],
+          ["Prediction", body.prediction
+            ? body.prediction.statement + " (registered " +
+              body.prediction.registered_at_utc + ")"
+            : "— none registered —"],
           ["Status", body.status + (body.error ? " · " + body.error : "")],
           ["Started", receipt.created_at_utc],
           ["Elapsed", body.elapsed_sec + "s"],
@@ -2207,6 +2230,7 @@
                  .map((e) => "<dt>" + e[0] + "</dt><dd>" + escapeHtml(String(e[1])) + "</dd>")
                  .join("") +
           "</dl>" +
+          predictionBlock(body.prediction_outcome) +
           '<div class="caveat">This config round-trips exactly: replaying it rebuilds ' +
           "an identical environment and reproduces these numbers.</div>";
       } catch (err) {
@@ -2248,10 +2272,14 @@
       $("nb-bar").firstElementChild.style.width = "0%";
       const kind = $("nb-kind").value;
       const question = $("nb-question").value.trim();
+      // Read once, here, and sent with the creation request — the backend stamps
+      // it before the runner starts. There is no path that edits it afterwards.
+      const prediction = $("nb-prediction").dataset.value;
 
       const payload = {
         kind: kind,
         question: question || undefined,
+        prediction: prediction || undefined,
         config: {
           market: $("nb-market").dataset.value || "stock",
           mode: "synthetic",
@@ -2299,6 +2327,21 @@
       });
       $("nb-kind").addEventListener("change", syncKind);
       $("nb-run").addEventListener("click", run);
+      // Clicking the selected prediction again clears it: "no prediction" has to
+      // stay reachable, or the form would quietly invent one.
+      const pred = $("nb-prediction");
+      pred.addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-val]");
+        if (!btn) return;
+        const off = pred.dataset.value === btn.dataset.val;
+        pred.dataset.value = off ? "" : btn.dataset.val;
+        pred.querySelectorAll("button").forEach((b) =>
+          b.setAttribute("aria-pressed", String(!off && b === btn))
+        );
+      });
+      api.get("/api/meta")
+        .then((m) => { $("nb-prereg-rule").textContent = m.preregistration.rule; })
+        .catch(() => {});
       $("nb-refresh").addEventListener("click", refresh);
       $("nb-reproduce").addEventListener("click", reproduce);
       $("nb-close").addEventListener("click", function () {

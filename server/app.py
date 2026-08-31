@@ -69,6 +69,7 @@ from server import (  # noqa: E402
     lab,
     perception,
     precomputed,
+    prereg,
     regimes,
     stats_api,
     walkforward,
@@ -278,6 +279,7 @@ def api_meta():
         markets=sorted(_POLICIES),
         reward_kinds=list(lab.REWARD_KINDS),
         walk_forward=walkforward.describe(),
+        preregistration=prereg.describe(),
         evaluation_modes=list(lab.EVALUATION_MODES),
         tickers=TICKERS,
         live={
@@ -543,10 +545,18 @@ def api_create_experiment():
     if question is not None:
         question = str(question).strip()[:400] or None
 
+    # A prediction, if one was made, is stamped before the runner starts — see
+    # server/prereg.py for why that ordering is the entire point.
+    try:
+        prediction = prereg.parse(payload)
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+
     exp = MANAGER.create(
         kind, config, runner,
         provenance={"api_version": API_VERSION},
         question=question,
+        prediction=prediction,
     )
     return jsonify(exp.summary()), 202
 

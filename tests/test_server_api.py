@@ -742,3 +742,95 @@ def test_unknown_experiment_kind_lists_walk_forward(client):
         "market": "stock", "mode": "synthetic", "regime": "momentum"}})
     assert r.status_code == 400
     assert "walk_forward" in r.get_json()["supported"]
+
+
+# --------------------------------------------------------------------------- #
+# Pre-registration                                                             #
+# --------------------------------------------------------------------------- #
+def test_a_prediction_is_stamped_before_the_run(client):
+    r = client.post("/api/experiments", json={
+        "kind": "rollout",
+        "question": "Does the agent beat buy-and-hold on a trending path?",
+        "prediction": {"direction": "beats", "note": "momentum should suit it"},
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 3, "n_steps": 500},
+    })
+    assert r.status_code == 202
+    created = r.get_json()
+    # It is on the record the instant the experiment exists, before any result.
+    assert created["prediction"]["direction"] == "beats"
+    assert created["prediction"]["registered_at_utc"].endswith("Z")
+    assert created["has_result"] is False
+
+    body = _await(client, created["id"])
+    outcome = body["prediction_outcome"]
+    assert outcome["predicted"] == "beats"
+    assert outcome["observed"] in ("beats", "matches", "loses")
+    assert outcome["matched"] is (outcome["observed"] == "beats")
+    assert outcome["scorable"] is True
+
+
+def test_the_prediction_is_on_the_reproducibility_receipt(client):
+    r = client.post("/api/experiments", json={
+        "kind": "rollout", "prediction": "loses",
+        "config": {"market": "stock", "mode": "synthetic", "regime": "random_walk",
+                   "seed": 6, "n_steps": 400},
+    })
+    exp_id = r.get_json()["id"]
+    _await(client, exp_id)
+    receipt = client.get(f"/api/experiments/{exp_id}/config").get_json()["receipt"]
+    assert receipt["prediction"]["direction"] == "loses"
+
+
+def test_an_experiment_without_a_prediction_records_none(client):
+    r = client.post("/api/experiments", json={
+        "kind": "rollout",
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 7, "n_steps": 400},
+    })
+    body = _await(client, r.get_json()["id"])
+    assert body["prediction"] is None
+    assert body["prediction_outcome"] is None
+
+
+def test_an_unscorable_kind_records_but_does_not_score(client):
+    r = client.post("/api/experiments", json={
+        "kind": "counterfactual", "step": 30, "actions": [1.0, -1.0],
+        "prediction": "beats",
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 4, "n_steps": 400},
+    })
+    body = _await(client, r.get_json()["id"])
+    assert body["prediction"]["direction"] == "beats"
+    assert body["prediction_outcome"]["scorable"] is False
+    assert body["prediction_outcome"]["matched"] is None
+
+
+def test_a_bad_prediction_is_rejected_before_anything_runs(client):
+    r = client.post("/api/experiments", json={
+        "kind": "rollout", "prediction": "sideways",
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum"},
+    })
+    assert r.status_code == 400
+    assert "unknown prediction direction" in r.get_json()["error"]
+
+
+def test_walk_forward_predictions_score_on_the_fold_mean(client):
+    r = client.post("/api/experiments", json={
+        "kind": "walk_forward", "n_folds": 3, "prediction": "loses",
+        "compare_leakage": False,
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 2, "n_steps": 1200},
+    })
+    body = _await(client, r.get_json()["id"], timeout=60)
+    outcome = body["prediction_outcome"]
+    assert outcome["scorable"] is True
+    assert outcome["observed_excess"] == pytest.approx(
+        body["result"]["summary"]["mean_excess_return"], abs=1e-6
+    )
+
+
+def test_meta_publishes_the_judging_rule(client):
+    pre = client.get("/api/meta").get_json()["preregistration"]
+    assert {o["key"] for o in pre["directions"]} == {"beats", "matches", "loses"}
+    assert pre["match_band"] == 0.02

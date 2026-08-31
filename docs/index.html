@@ -113,7 +113,7 @@
       <div class="stat-cell"><div class="num" data-count="16">16</div><div class="lbl">Real tickers backtested</div></div>
       <div class="stat-cell"><div class="num" data-count="5">5</div><div class="lbl">Seeds in the significance study</div></div>
       <div class="stat-cell"><div class="num" data-count="28">28</div><div class="lbl">Engineered features</div></div>
-      <div class="stat-cell"><div class="num" data-count="196">196</div><div class="lbl">Tests passing</div></div>
+      <div class="stat-cell"><div class="num" data-count="230">230</div><div class="lbl">Tests passing</div></div>
     </section>
 
     <!-- ─────────────────────── FEATURES ─────────────────────── -->
@@ -1159,6 +1159,15 @@
                 <label for="nb-question">Research question <span class="ctl-opt">optional</span></label>
                 <input type="text" id="nb-question" maxlength="200"
                        placeholder="e.g. Does the agent still work when returns mean-revert?" />
+              </div>
+              <div class="ctl ctl-wide">
+                <label>Prediction <span class="ctl-opt">optional &mdash; locked before the run</span></label>
+                <div class="seg nb-pred" id="nb-prediction" data-value="">
+                  <button type="button" data-val="beats" aria-pressed="false">Agent beats buy &amp; hold</button>
+                  <button type="button" data-val="matches" aria-pressed="false">About level</button>
+                  <button type="button" data-val="loses" aria-pressed="false">Agent loses</button>
+                </div>
+                <p class="ctl-note" id="nb-prereg-rule"></p>
               </div>
               <div class="ctl">
                 <label for="nb-kind">Experiment</label>
