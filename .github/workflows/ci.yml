@@ -21,7 +21,7 @@ jobs:
         # build with no code change. Bump this deliberately.
         run: pip install ruff==0.16.2
       - name: Ruff check
-        run: ruff check rl_trader tools tests
+        run: ruff check rl_trader tools tests server
 
   test:
     name: Tests (Python ${{ matrix.python-version }})

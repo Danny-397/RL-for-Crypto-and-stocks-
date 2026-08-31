@@ -55,3 +55,51 @@ def test_indicators_have_no_lookahead():
     a = prefix[FEATURE_COLUMNS].to_numpy()[-overlap:]
     b = full[FEATURE_COLUMNS].to_numpy()[: len(prefix)][-overlap:]
     assert np.allclose(a, b, atol=1e-6)
+
+
+def _lag1_autocorr(df) -> float:
+    """Lag-1 autocorrelation of log returns for a generated price path."""
+    close = df["close"].to_numpy(dtype=float)
+    lr = np.diff(np.log(close))
+    return float(np.corrcoef(lr[:-1], lr[1:])[0, 1])
+
+
+def test_momentum_sign_controls_return_autocorrelation():
+    """``momentum`` is an AR(1) coefficient, so its *sign* must reach the output.
+
+    A guard of ``if momentum > 0`` would silently route negative coefficients
+    into the memoryless branch, making a "mean reverting" regime identical to a
+    random walk. Averaged over seeds, the three cases must separate cleanly.
+    """
+    def mean_ac(phi: float) -> float:
+        return float(
+            np.mean([
+                _lag1_autocorr(generate_synthetic_ohlcv(n_steps=800, momentum=phi, seed=s))
+                for s in range(6)
+            ])
+        )
+
+    trending = mean_ac(0.70)
+    flat = mean_ac(0.0)
+    reverting = mean_ac(-0.50)
+
+    assert trending > 0.05, f"positive momentum should trend, got {trending:+.4f}"
+    assert abs(flat) < 0.03, f"zero momentum should be memoryless, got {flat:+.4f}"
+    assert reverting < -0.03, f"negative momentum should revert, got {reverting:+.4f}"
+    assert reverting < flat < trending
+
+
+def test_feature_groups_partition_the_feature_set():
+    """The X-Ray panel groups the observation from FEATURE_GROUPS.
+
+    If a feature were added to FEATURE_COLUMNS but not to a group, the UI would
+    silently stop showing it — so the two must stay an exact partition.
+    """
+    from rl_trader.data.data_loader import FEATURE_GROUPS
+
+    grouped = [f for names in FEATURE_GROUPS.values() for f in names]
+    assert len(grouped) == len(set(grouped)), "a feature appears in two groups"
+    assert set(grouped) == set(FEATURE_COLUMNS), (
+        f"ungrouped: {sorted(set(FEATURE_COLUMNS) - set(grouped))}; "
+        f"unknown: {sorted(set(grouped) - set(FEATURE_COLUMNS))}"
+    )

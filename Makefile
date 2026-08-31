@@ -4,13 +4,14 @@
 PY ?= python
 TIMESTEPS ?= 200000
 
-.PHONY: help install test lint fetch build build-synth ablation ablation1 baselines portfolio figures all
+.PHONY: help install test lint fetch verify-data build build-synth ablation ablation1 baselines portfolio figures all
 
 help:
 	@echo "install     install runtime + dev dependencies"
 	@echo "test        run the pytest suite"
 	@echo "lint        run ruff"
 	@echo "fetch       download the real OHLCV basket"
+	@echo "verify-data check data/raw against the committed data/SNAPSHOT.json"
 	@echo "build       train + backtest on REAL data -> docs/results.js"
 	@echo "build-synth train + backtest on synthetic data -> docs/results.js"
 	@echo "ablation    5-seed domain-randomization ablation -> docs/assets/ablation_multiseed.json"
@@ -28,10 +29,16 @@ test:
 	$(PY) -m pytest -q
 
 lint:
-	$(PY) -m ruff check rl_trader tools tests
+	$(PY) -m ruff check rl_trader tools tests server
 
 fetch:
 	$(PY) tools/fetch_data.py
+
+# Fail loudly if the local data has drifted from the committed pin. PERIOD is a
+# relative window, so an unpinned re-fetch silently shifts the train/test split
+# and any rebuilt figures stop matching the published ones.
+verify-data:
+	$(PY) tools/fetch_data.py --verify
 
 build: fetch
 	$(PY) tools/build_site_data.py --real --timesteps $(TIMESTEPS)

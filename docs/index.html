@@ -23,6 +23,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="lab.css" />
 </head>
 <body>
   <a class="skip-link" href="#top">Skip to content</a>
@@ -49,6 +50,7 @@
       <a href="#how" class="navtab" data-view="how">How it works</a>
       <a href="#stocks" class="navtab" data-view="stocks">Stocks</a>
       <a href="#crypto" class="navtab" data-view="crypto">Crypto</a>
+      <a href="#lab" class="navtab navtab-lab" data-view="lab">Lab</a>
     </nav>
     <a class="btn btn-ghost nav-cta" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -62,7 +64,7 @@
     <div class="view active" id="view-home">
     <section class="hero">
       <div class="hero-copy">
-        <div class="eyebrow"><span class="pulse"></span> DEEP REINFORCEMENT LEARNING &middot; RESEARCH STUDY</div>
+        <div class="eyebrow"><span class="pulse"></span> DEEP RL &middot; RESEARCH STUDY + INTERACTIVE LAB</div>
         <h1>How do deep-RL agents <span class="grad">generalize</span> — and how do you tell a real result from luck?</h1>
         <p class="lede">
           A from-scratch study of two ways RL fools you: <strong>memorising the
@@ -71,10 +73,12 @@
           overfitting, and ran <strong>multi-seed significance tests</strong> to check
           whether any edge is real. The testbed — deliberately hard — is financial
           markets: non-stationary, noisy, near-random-walk.
+          <strong>Every experiment below is runnable in your browser</strong> — not a
+          write-up of the results, the results being produced.
         </p>
         <div class="hero-cta">
-          <a class="btn btn-primary navtab" data-view="how" href="#how">The research →</a>
-          <a class="btn btn-ghost navtab" data-view="stocks" href="#stocks">See the experiments</a>
+          <a class="btn btn-primary navtab" data-view="lab" href="#lab">Run an experiment →</a>
+          <a class="btn btn-ghost navtab" data-view="how" href="#how">Read the research</a>
         </div>
         <div class="hero-tags">
           <span>PPO from scratch</span><span>Domain randomization</span><span>Multi-seed significance</span><span>Reproduces Henderson et&nbsp;al. 2018</span><span>Honest negative result</span>
@@ -159,6 +163,66 @@
         <p>What it demonstrates: I can take a non-trivial ML research question end to end — algorithm, environment, training, and an evaluation held to a real scientific standard — and report the honest answer even when it's a negative result.</p>
       </div>
     </section>
+
+    <!-- ═══════════ WHAT YOU CAN RUN (deep links into the lab) ═══════════ -->
+    <section class="section lab-strip-section">
+      <div class="section-head">
+        <div class="kicker">THE LAB</div>
+        <h2>Don't just read the result. Test it.</h2>
+        <p>Five experiments, each one runnable against the deployed agent or the
+           project's real committed results. Nothing on these pages is a mock-up.</p>
+      </div>
+
+      <div class="lab-strip">
+        <a class="lab-card" href="#lab/playground" data-view="lab" data-panel="playground">
+          <span class="lab-card-n">01</span>
+          <h3>Agent Playground</h3>
+          <p>Pick a market, a data source, costs and a reward function. Run a real
+             episode and scrub it bar by bar against buy-&amp;-hold.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/xray" data-view="lab" data-panel="xray">
+          <span class="lab-card-n">02</span>
+          <h3>Agent X-Ray</h3>
+          <p>At any bar, see the actual 563-dimensional observation the agent
+             consumed, and follow it through to the action and the reward.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/generalization" data-view="lab" data-panel="generalization">
+          <span class="lab-card-n">03</span>
+          <h3>Can You Break It?</h3>
+          <p>One agent memorised a single price path; the other saw a new one every
+             episode. Then push the deployed policy onto distributions it never met.</p>
+          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
+        </a>
+
+        <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
+          <span class="lab-card-n">04</span>
+          <h3>Real or Luck?</h3>
+          <p>A <b>+275%</b> single-seed headline beside what five seeds actually say.
+             Re-run the bootstrap and the permutation test yourself.</p>
+          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
+        </a>
+
+        <a class="lab-card" href="#lab/notebook" data-view="lab" data-panel="notebook">
+          <span class="lab-card-n">05</span>
+          <h3>Research Notebook</h3>
+          <p>Every experiment you run, with the exact config that produced it —
+             and a button that replays it to the same numbers.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+      </div>
+
+      <p class="lab-strip-note">
+        <b>What isn't live:</b> training. Each seed of a multi-seed study is a full PPO
+        run, so those results are served from the repository's real committed
+        experiments, labelled with the command that regenerates them — never
+        simulated. The statistics computed over them do run live.
+      </p>
+    </section>
+
     </div><!-- /view-home -->
 
     <!-- ═══════════════════════ HOW IT WORKS VIEW ═══════════════════════ -->
@@ -466,6 +530,515 @@
     </section>
     </div><!-- /view-market -->
 
+    <!-- ======================= LAB ======================= -->
+    <div class="view" id="view-lab">
+      <div class="lab-wrap">
+
+        <header class="lab-head">
+          <div>
+            <h1>RL&#183;TRADER LAB</h1>
+            <p class="lab-sub">Can an RL agent actually learn a generalizable strategy &mdash; or is it exploiting its training data and getting lucky? Run the experiments yourself.</p>
+          </div>
+          <div class="api-pill" id="lab-api-status"><i class="dot-led"></i> connecting&hellip;</div>
+        </header>
+
+        <div class="lab-tabs" role="tablist" aria-label="Laboratory sections">
+          <button class="lab-tab" role="tab" id="tab-playground" data-panel="playground" aria-controls="panel-playground" aria-selected="true" tabindex="0">Agent Playground</button>
+          <button class="lab-tab" role="tab" id="tab-xray" data-panel="xray" aria-controls="panel-xray" aria-selected="false" tabindex="-1">Agent X-Ray</button>
+          <button class="lab-tab" role="tab" id="tab-generalization" data-panel="generalization" aria-controls="panel-generalization" aria-selected="false" tabindex="-1">Can You Break It?</button>
+          <button class="lab-tab" role="tab" id="tab-seeds" data-panel="seeds" aria-controls="panel-seeds" aria-selected="false" tabindex="-1">Real or Luck?</button>
+          <button class="lab-tab" role="tab" id="tab-notebook" data-panel="notebook" aria-controls="panel-notebook" aria-selected="false" tabindex="-1">Notebook</button>
+        </div>
+
+        <!-- PLAYGROUND -->
+        <section class="lab-panel active" id="panel-playground" role="tabpanel" aria-labelledby="tab-playground" tabindex="0">
+          <div class="lab-grid">
+
+            <form class="panel-card" id="pg-form" onsubmit="return false">
+              <h3>Configure experiment</h3>
+
+              <div class="ctl">
+                <label>Market</label>
+                <div class="seg" id="pg-market" data-value="stock">
+                  <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
+                  <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+                </div>
+              </div>
+
+              <div class="ctl">
+                <label>Evaluation mode</label>
+                <div class="seg" id="pg-mode" data-value="historical">
+                  <button type="button" data-val="historical" aria-pressed="true">Real data</button>
+                  <button type="button" data-val="synthetic" aria-pressed="false">Synthetic</button>
+                </div>
+              </div>
+
+              <div id="pg-hist-row">
+                <div class="ctl">
+                  <label for="pg-ticker">Ticker</label>
+                  <input type="text" id="pg-ticker" value="AAPL" autocomplete="off"
+                         spellcheck="false" placeholder="AAPL, BTC-USD, ..." />
+                </div>
+              </div>
+
+              <div id="pg-syn-row" hidden>
+                <div class="ctl">
+                  <label for="pg-regime">Regime</label>
+                  <select id="pg-regime"></select>
+                </div>
+                <div class="ctl">
+                  <label for="pg-seed">Path seed</label>
+                  <input type="number" id="pg-seed" value="0" min="0" max="99999" />
+                </div>
+              </div>
+
+              <div class="ctl">
+                <label for="pg-capital">Starting capital</label>
+                <input type="number" id="pg-capital" value="100000" min="1000" step="1000" />
+              </div>
+
+              <div class="ctl">
+                <label for="pg-cost">Transaction cost <span class="ctl-val" id="pg-cost-val">5 bps</span></label>
+                <input type="range" id="pg-cost" min="0" max="100" step="1" value="5" />
+              </div>
+
+              <div class="ctl">
+                <label for="pg-slip">Slippage <span class="ctl-val" id="pg-slip-val">3 bps</span></label>
+                <input type="range" id="pg-slip" min="0" max="100" step="1" value="3" />
+              </div>
+
+              <div class="ctl">
+                <label>Reward function</label>
+                <div class="seg" id="pg-reward" data-value="return">
+                  <button type="button" data-val="return" aria-pressed="true">Return</button>
+                  <button type="button" data-val="dsr" aria-pressed="false">Diff. Sharpe</button>
+                </div>
+              </div>
+
+              <div class="ctl">
+                <label>Shorting</label>
+                <div class="seg" id="pg-short" data-value="on">
+                  <button type="button" data-val="on" aria-pressed="true">Allowed</button>
+                  <button type="button" data-val="off" aria-pressed="false">Long only</button>
+                </div>
+              </div>
+
+              <button class="run-btn" id="pg-run" type="button">Run episode</button>
+              <div class="bar" id="pg-bar"><i></i></div>
+              <div class="lab-status" id="pg-status"></div>
+              <div id="pg-error" hidden></div>
+
+              <p class="panel-note">The policy is <b>fixed and not learning</b>. Costs change the trajectory (they feed back through account state); the reward selector changes what is <i>measured</i>, not what is <i>done</i>.</p>
+            </form>
+
+            <div>
+              <div class="lab-empty" id="pg-empty">
+                No episode yet.<br />Configure a run and press <b>Run episode</b>.<br />
+                Every number will come from the backend stepping the real environment.
+              </div>
+
+              <div id="pg-output" hidden>
+                <div class="panel-card">
+                  <h3>Episode</h3>
+                  <div class="metric-grid" id="pg-metrics"></div>
+
+                  <div class="chart-block" style="margin-top:20px">
+                    <div class="chart-head">
+                      <span class="chart-title">Equity</span>
+                      <span class="chart-read" id="read-equity">&mdash;</span>
+                    </div>
+                    <canvas class="chart-canvas" id="chart-equity"></canvas>
+                    <div class="legend">
+                      <span><i style="background:#d4ff3f"></i> Agent</span>
+                      <span><i style="background:#36e0ff"></i> Buy &amp; hold</span>
+                    </div>
+                  </div>
+
+                  <div class="chart-block">
+                    <div class="chart-head">
+                      <span class="chart-title">Position (target exposure)</span>
+                      <span class="chart-read" id="read-position">&mdash;</span>
+                    </div>
+                    <canvas class="chart-canvas" id="chart-position"></canvas>
+                  </div>
+
+                  <div class="chart-block">
+                    <div class="chart-head">
+                      <span class="chart-title">Reward per bar</span>
+                      <span class="chart-read" id="read-reward">&mdash;</span>
+                    </div>
+                    <canvas class="chart-canvas" id="chart-reward"></canvas>
+                  </div>
+
+                  <div class="chart-block">
+                    <div class="chart-head">
+                      <span class="chart-title">Drawdown</span>
+                      <span class="chart-read" id="read-drawdown">&mdash;</span>
+                    </div>
+                    <canvas class="chart-canvas" id="chart-drawdown"></canvas>
+                  </div>
+
+                  <div class="scrub-row">
+                    <span class="step-lbl" id="pg-step">step &mdash; / &mdash;</span>
+                    <input type="range" id="pg-scrub" min="0" max="0" value="0"
+                           aria-label="Scrub through the episode" />
+                  </div>
+                </div>
+
+                <div class="panel-card">
+                  <h3>Reproducibility receipt</h3>
+                  <dl class="receipt" id="pg-receipt"></dl>
+                  <div id="pg-notes"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- AGENT X-RAY -->
+        <section class="lab-panel" id="panel-xray" role="tabpanel" aria-labelledby="tab-xray" tabindex="0">
+          <div class="lab-empty" id="xr-empty">
+            No episode loaded.<br />
+            Run an episode in <b>Agent Playground</b>, then return here to inspect
+            what the agent actually saw at any bar.
+          </div>
+
+          <div id="xr-body" hidden>
+            <div class="panel-card xr-bar">
+              <div class="xr-when">
+                <span class="chart-title">Inspecting</span>
+                <strong id="xr-step">&mdash;</strong>
+                <span class="xr-price" id="xr-price"></span>
+              </div>
+              <div class="scrub-row xr-scrub-row">
+                <input type="range" id="xr-scrub" min="0" max="0" value="0"
+                       aria-label="Scrub through the episode" />
+              </div>
+            </div>
+
+            <!-- the causal chain, in order -->
+            <div class="xr-chain">
+              <div class="xr-node">
+                <span class="k">Observation</span>
+                <span class="v" id="xr-obsdim">&mdash;</span>
+                <span class="cmp">inputs at this bar</span>
+              </div>
+              <div class="xr-arrow" aria-hidden="true">&rarr;</div>
+              <div class="xr-node">
+                <span class="k">Policy</span>
+                <span class="v" id="xr-action">&mdash;</span>
+                <span class="cmp">target position</span>
+              </div>
+              <div class="xr-arrow" aria-hidden="true">&rarr;</div>
+              <div class="xr-node" id="xr-value-node">
+                <span class="k">Value</span>
+                <span class="v" id="xr-value">&mdash;</span>
+                <span class="cmp" id="xr-value-cmp">critic estimate</span>
+              </div>
+              <div class="xr-arrow" aria-hidden="true">&rarr;</div>
+              <div class="xr-node">
+                <span class="k">Reward</span>
+                <span class="v" id="xr-reward">&mdash;</span>
+                <span class="cmp">paid by the environment</span>
+              </div>
+              <div class="xr-arrow" aria-hidden="true">&rarr;</div>
+              <div class="xr-node">
+                <span class="k">Position</span>
+                <span class="v" id="xr-position">&mdash;</span>
+                <span class="cmp" id="xr-position-cmp">after rebalancing</span>
+              </div>
+            </div>
+
+            <div class="lab-grid xr-grid">
+              <div class="panel-card">
+                <h3>Observation &mdash; market features</h3>
+                <p class="xr-hint">Standardised exactly as the agent receives them. Bars run from the centre: right is above this series' mean, left is below.</p>
+                <div id="xr-features"></div>
+              </div>
+
+              <div>
+                <div class="panel-card">
+                  <h3>Observation &mdash; account state</h3>
+                  <div class="metric-grid" id="xr-account"></div>
+                  <p class="panel-note">These three scalars complete the observation vector alongside the flattened feature window.</p>
+                </div>
+
+                <div class="panel-card">
+                  <h3>Feature window</h3>
+                  <p class="xr-hint">Every value the policy consumed: <b id="xr-window-dims">&mdash;</b>. Newest bar at the bottom.</p>
+                  <canvas id="xr-heatmap" class="chart-canvas"></canvas>
+                  <div class="xr-scale">
+                    <span>low</span><i class="xr-ramp"></i><span>high</span>
+                  </div>
+                  <div id="xr-notes"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-card" id="wi-card">
+              <div class="gen-head">
+                <h3>What if? <span class="tag-real">Live counterfactual</span></h3>
+                <div class="wi-ctl">
+                  <label for="wi-horizon">Hold for</label>
+                  <select id="wi-horizon">
+                    <option value="1" selected>1 bar</option>
+                    <option value="5">5 bars</option>
+                    <option value="20">20 bars</option>
+                  </select>
+                  <button class="run-btn run-btn-sm" id="wi-run" type="button">Evaluate</button>
+                </div>
+              </div>
+              <p class="xr-hint">Replays this exact bar under different actions, from an identical
+                 environment state, on price movement that already happened. This is a
+                 counterfactual, <b>not</b> a prediction &mdash; the agent could not have known
+                 the outcome.</p>
+              <div class="lab-status" id="wi-status"></div>
+              <div id="wi-error" hidden></div>
+              <div id="wi-out"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CAN YOU BREAK THE AGENT? -->
+        <section class="lab-panel" id="panel-generalization" role="tabpanel" aria-labelledby="tab-generalization" tabindex="0">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Can you break the agent?</h2>
+            <p>Strong training performance is not evidence of a strategy. These two experiments
+               separate <b>memorising a price path</b> from <b>learning something transferable</b>.</p>
+          </div>
+
+          <!-- 1. the real ablation -->
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>1 &middot; Trained two ways <span class="tag-precomputed">Real &middot; precomputed</span></h3>
+              <div class="seg gen-market" id="gen-market" data-value="stock">
+                <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
+                <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+              </div>
+            </div>
+            <p class="xr-hint">Two identical PPO agents. <b>A</b> trained on one fixed price path;
+               <b>B</b> trained on a freshly resampled path every episode. Both evaluated on paths
+               neither had seen.</p>
+
+            <div id="gen-error" hidden></div>
+            <div class="ab-grid" id="gen-ab"></div>
+
+            <div class="gen-verdict" id="gen-verdict"></div>
+
+            <div class="gen-stats">
+              <h4>Held-out difference, tested live</h4>
+              <p class="xr-hint">A paired permutation test over the same seed set, recomputed on request.</p>
+              <div class="stat-controls">
+                <label>Permutations
+                  <select id="gen-nperm">
+                    <option value="1000">1,000</option>
+                    <option value="20000" selected>20,000</option>
+                    <option value="100000">100,000</option>
+                  </select>
+                </label>
+                <button class="run-btn run-btn-sm" id="gen-test" type="button">Run test</button>
+              </div>
+              <div class="lab-status" id="gen-stat-status"></div>
+              <div id="gen-stat-out"></div>
+            </div>
+
+            <dl class="receipt" id="gen-receipt"></dl>
+          </div>
+
+          <!-- 2. break the deployed agent live -->
+          <div class="panel-card">
+            <h3>2 &middot; Break the deployed agent <span class="tag-real">Live</span></h3>
+            <p class="xr-hint">Now take the <b>actual deployed policy</b> and move the world out from
+               under it. Each regime is a controlled distribution: the agent is unchanged, only the
+               data generating process differs.</p>
+
+            <div class="shift-controls">
+              <div class="ctl">
+                <label>Market</label>
+                <div class="seg" id="shift-market" data-value="stock">
+                  <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
+                  <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+                </div>
+              </div>
+              <div class="ctl">
+                <label for="shift-seeds">Paths per regime <span class="ctl-val" id="shift-seeds-val">5</span></label>
+                <input type="range" id="shift-seeds" min="2" max="10" step="1" value="5" />
+              </div>
+              <button class="run-btn" id="shift-run" type="button">Run shift test</button>
+            </div>
+
+            <div class="bar" id="shift-bar"><i></i></div>
+            <div class="lab-status" id="shift-status"></div>
+            <div id="shift-error" hidden></div>
+
+            <div id="shift-out" hidden>
+              <div class="chart-head" style="margin-top:18px">
+                <span class="chart-title">Mean excess return vs buy &amp; hold, by regime</span>
+              </div>
+              <div id="shift-bars"></div>
+              <div id="shift-notes"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- IS THE RESULT REAL - OR LUCK? -->
+        <section class="lab-panel" id="panel-seeds" role="tabpanel" aria-labelledby="tab-seeds" tabindex="0">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Is the result real &mdash; or luck?</h2>
+            <p>A single training run is one draw from a distribution. Below is the number this
+               project headlines from one seed, next to what the same recipe produces across five.</p>
+          </div>
+
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>Single seed vs. the seed distribution <span class="tag-precomputed">Real &middot; precomputed</span></h3>
+              <div class="seg gen-market" id="sd-market" data-value="crypto">
+                <button type="button" data-val="stock" aria-pressed="false">Stocks</button>
+                <button type="button" data-val="crypto" aria-pressed="true">Crypto</button>
+              </div>
+            </div>
+
+            <div id="sd-error" hidden></div>
+
+            <div class="verdict-pair" id="sd-pair"></div>
+            <div class="gen-verdict" id="sd-verdict"></div>
+
+            <h4 class="sub-h">Every training run</h4>
+            <p class="xr-hint">Each row is one independent PPO training run, evaluated on held-out data.</p>
+            <div id="sd-seeds"></div>
+
+            <h4 class="sub-h">Bootstrap distribution of the mean</h4>
+            <p class="xr-hint">Resampling the five outcomes with replacement, recomputed live.</p>
+            <canvas id="sd-hist" class="chart-canvas"></canvas>
+            <div class="legend" style="margin-top:6px">
+              <span><i style="background:#d4ff3f"></i> observed mean</span>
+              <span><i style="background:#36e0ff"></i> zero</span>
+            </div>
+
+            <div class="gen-stats">
+              <h4>Recompute the inference</h4>
+              <p class="xr-hint">These are the estimators the paper uses, run on request against the same real data.</p>
+              <div class="stat-controls">
+                <label>Confidence
+                  <select id="sd-conf">
+                    <option value="0.8">80%</option>
+                    <option value="0.9">90%</option>
+                    <option value="0.95" selected>95%</option>
+                    <option value="0.99">99%</option>
+                  </select>
+                </label>
+                <label>Bootstrap resamples
+                  <select id="sd-boot">
+                    <option value="1000">1,000</option>
+                    <option value="10000" selected>10,000</option>
+                    <option value="50000">50,000</option>
+                  </select>
+                </label>
+                <label>Permutations
+                  <select id="sd-perm">
+                    <option value="1000">1,000</option>
+                    <option value="20000" selected>20,000</option>
+                    <option value="100000">100,000</option>
+                  </select>
+                </label>
+                <button class="run-btn run-btn-sm" id="sd-run" type="button">Recompute</button>
+              </div>
+              <div class="lab-status" id="sd-status"></div>
+              <div id="sd-stats"></div>
+            </div>
+
+            <dl class="receipt" id="sd-receipt"></dl>
+          </div>
+
+          <!-- the paper's own axis -->
+          <div class="panel-card">
+            <h3>The published test <span class="tag-precomputed">Real &middot; precomputed</span></h3>
+            <p class="xr-hint">The paper's significance test pairs across <b>held-out tickers</b>,
+               not across seeds. Different axis, different question &mdash; and enough pairs to
+               actually resolve a p-value.</p>
+            <div class="lab-status" id="sd-paper-status"></div>
+            <div id="sd-paper"></div>
+          </div>
+        </section>
+
+        <!-- RESEARCH NOTEBOOK -->
+        <section class="lab-panel" id="panel-notebook" role="tabpanel" aria-labelledby="tab-notebook" tabindex="0">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Research notebook</h2>
+            <p>Every experiment run in this session, with the exact configuration that produced it.
+               Any of them can be replayed &mdash; the config is a fixed point, so a replay rebuilds
+               an identical environment.</p>
+          </div>
+
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>Run a new experiment</h3>
+              <div class="nb-count" id="nb-count"></div>
+            </div>
+
+            <div class="nb-builder">
+              <div class="ctl ctl-wide">
+                <label for="nb-question">Research question <span class="ctl-opt">optional</span></label>
+                <input type="text" id="nb-question" maxlength="200"
+                       placeholder="e.g. Does the agent still work when returns mean-revert?" />
+              </div>
+              <div class="ctl">
+                <label for="nb-kind">Experiment</label>
+                <select id="nb-kind">
+                  <option value="rollout">Rollout &mdash; one full episode</option>
+                  <option value="distribution_shift">Distribution shift &mdash; across regimes</option>
+                </select>
+              </div>
+              <div class="ctl">
+                <label>Market</label>
+                <div class="seg" id="nb-market" data-value="stock">
+                  <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
+                  <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+                </div>
+              </div>
+              <div class="ctl" id="nb-regime-ctl">
+                <label for="nb-regime">Regime</label>
+                <select id="nb-regime"></select>
+              </div>
+              <div class="ctl">
+                <label for="nb-seed">Path seed</label>
+                <input type="number" id="nb-seed" value="0" min="0" step="1" />
+              </div>
+              <button class="run-btn" id="nb-run" type="button">Run experiment</button>
+            </div>
+
+            <div class="bar" id="nb-bar"><i></i></div>
+            <div class="lab-status" id="nb-status"></div>
+            <div id="nb-error" hidden></div>
+          </div>
+
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>Session history</h3>
+              <button class="btn-link" id="nb-refresh" type="button">Refresh</button>
+            </div>
+            <p class="xr-hint" id="nb-storage"></p>
+            <div id="nb-list"></div>
+          </div>
+
+          <div class="panel-card" id="nb-detail-card" hidden>
+            <div class="gen-head">
+              <h3 id="nb-detail-title">Experiment</h3>
+              <div class="wi-ctl">
+                <button class="run-btn run-btn-sm" id="nb-reproduce" type="button">Reproduce this</button>
+                <button class="btn-link" id="nb-close" type="button">Close</button>
+              </div>
+            </div>
+            <div id="nb-detail"></div>
+          </div>
+        </section>
+
+      </div>
+    </div><!-- /view-lab -->
+
     <!-- ─────────────────────── CTA ─────────────────────── -->
     <section class="cta">
       <h2>Clone it. Train it. Break my results.</h2>
@@ -489,5 +1062,6 @@ python -m rl_trader.scripts.compare_markets --plot</code></pre>
   <script src="significance.js"></script>
   <script src="learning.js"></script>
   <script src="app.js"></script>
+  <script src="lab.js"></script>
 </body>
 </html>
