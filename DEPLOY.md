@@ -48,9 +48,18 @@ Set these in the service's **Settings**, then **Manual Deploy → Deploy latest 
 > request after a nap takes ~30–50 s to wake (cold start). The UI tells the user
 > this. Subsequent calls are fast.
 
-**What it serves:** `/health`, `/api/results` (the dashboard data), `/api/tickers`,
-and `/api/live?market=stock&ticker=AAPL` (fetches ~2 yrs of real prices and runs
-the agent live).
+**What it serves:** the dashboard endpoints (`/health`, `/api/results`,
+`/api/tickers`, `/api/live?market=stock&ticker=AAPL`) plus the whole lab —
+`/api/meta`, `/api/regimes`, `/api/datasets`, `/api/generalization`,
+`/api/perception/*`, `/api/statistics`, `/api/experiments/*` (including
+attribution and walk-forward), and `/api/human/*`. See the API table in
+[README.md](README.md#api) for the full list.
+
+**Memory note:** human-baseline sessions and the experiment registry are both
+held in process memory, capped and time-limited (60 sessions / 200 experiments),
+so a single free-tier worker is enough. Both are ephemeral by design and are
+lost when the service restarts — the API states this rather than implying
+durable storage.
 
 ---
 
