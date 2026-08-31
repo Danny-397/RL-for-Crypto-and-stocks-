@@ -42,6 +42,24 @@ def check(label: str, ok: bool, detail: str = "") -> None:
         failures.append(label)
 
 
+# Chromium's default multi-process model needs headroom this test does not always
+# have — on a loaded machine the launch fails with a bare "spawn UNKNOWN", or the
+# driver dies mid-run as "connection closed". The page under test is a handful of
+# canvases with no cross-origin content, so collapsing it into one process with a
+# capped JS heap costs nothing and makes the run survive a busy desktop.
+LEAN_ARGS = [
+    "--single-process",
+    "--no-zygote",
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--disable-software-rasterizer",
+    "--disable-extensions",
+    "--renderer-process-limit=1",
+    "--js-flags=--max-old-space-size=256",
+]
+
+
 def serve(port: int):
     """Serve docs/ locally so the page runs over http rather than file://."""
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=DOCS)
@@ -58,7 +76,7 @@ def run(api: str, port: int, shot: str | None) -> None:
     url = f"http://127.0.0.1:{port}/index.html#lab"
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(args=["--disable-dev-shm-usage", "--no-sandbox"])
+        browser = p.chromium.launch(args=LEAN_ARGS)
 
         # ── 1. the lab against a live backend ──────────────────────────────
         print("\nLive backend")

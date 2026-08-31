@@ -650,3 +650,6 @@
 .nb-empty {
   padding: 30px 10px; text-align: center; color: var(--muted); font-size: 14px;
 }
+/* The experiment selector's labels are longer than the auto column; give it room. */
+.nb-builder { grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); }
+.nb-builder select { width: 100%; text-overflow: ellipsis; }

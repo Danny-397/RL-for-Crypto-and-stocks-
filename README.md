@@ -8,11 +8,14 @@ measured — with financial markets as a hard, non-stationary testbed.*
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-d4ff3f.svg)](LICENSE)
 
-### 🔗 Interactive companion → **[rl-for-crypto-and-stocks.vercel.app](https://rl-for-crypto-and-stocks.vercel.app/)**
+### 🔗 Interactive research lab → **[rl-for-crypto-and-stocks.vercel.app](https://rl-for-crypto-and-stocks.vercel.app/)**
 
-An interactive appendix to the study: inspect each agent on held-out data, see the
-multi-seed significance and overfitting experiments play out, and reproduce a
-single held-out rollout live on any ticker you type.
+Not a write-up of the experiments — the experiments themselves, runnable in the
+browser. Configure an environment and run a real episode, scrub to any bar and read
+the exact 563-dimensional observation the agent consumed, replay that bar under
+different actions, push the agent onto distributions it never trained on, and
+re-run the paper's own statistics with your own parameters. Every experiment gets
+an id and a reproducibility receipt, and any of them can be replayed.
 
 [![RL-Trader live demo](docs/assets/og.png)](https://rl-for-crypto-and-stocks.vercel.app/)
 
@@ -257,9 +260,21 @@ rl_trader/
     ├── run_stock_training.py
     ├── run_crypto_training.py
     └── compare_markets.py
-tests/               # pytest suite (envs, agent, features, reward, recurrent, stats, normalization, portfolio)
+server/              # the experiment engine behind the lab (torch-free)
+├── app.py               # Flask routes: dashboard + lab endpoints
+├── lab.py               # config parsing, env construction, experiment runners
+├── experiments.py       # async experiment registry, progress, receipts
+├── policy.py            # actor(-critic) forward pass in plain NumPy
+├── rollout.py           # full per-bar traces + state-restoring counterfactuals
+├── regimes.py           # controlled synthetic distributions for shift testing
+├── precomputed.py       # the repo's real committed results, with provenance
+├── stats_api.py         # live bootstrap / permutation inference
+└── models/              # exported policy archives (ppo_*.npz)
+tests/               # pytest suite (envs, agent, features, reward, recurrent, stats,
+                     #   normalization, portfolio, snapshot, lab backend, HTTP API)
 tools/
-├── fetch_data.py        # download a real OHLCV basket (Yahoo Finance)
+├── fetch_data.py        # download a real OHLCV basket; --end pins a snapshot
+├── smoke_lab.py         # 57 headless-browser checks against the live lab
 ├── build_site_data.py   # train + backtest -> docs/results.js for the dashboard
 ├── ablation.py          # domain-randomization overfitting study
 ├── baseline_report.py   # agent vs. buy-&-hold / random / momentum
@@ -268,7 +283,15 @@ tools/
 ├── surrogate_test.py    # surrogate-data falsification test (signal vs. noise)
 ├── portfolio_experiment.py # cross-sectional portfolio agent vs. quant baselines
 └── make_figures.py      # render docs/assets/*.png for the README & report
-docs/                # data-driven web dashboard + figures (GitHub Pages ready)
+docs/                # the site: dashboard + interactive lab (no build step)
+├── index.html           # all views, including the five lab panels
+├── app.js               # dashboard: markets explorer, charts, live widget
+├── lab.js               # the lab: playground, x-ray, ablation, seeds, notebook
+├── lab.css              # lab-specific styling
+├── results.js           # baked real backtest output (window.RL_RESULTS)
+├── significance.js      # real per-seed results (window.RL_SIGNIFICANCE)
+└── config.js            # window.RL_API — set it to light up the lab
+data/SNAPSHOT.json   # committed dataset pin: sha256 + date range per ticker
 ```
 
 ---
@@ -399,28 +422,155 @@ cost-and-slippage environment — so any edge has to be real.
 
 ---
 
-## Web prototype
+## The interactive research lab
 
-A self-contained, **data-driven** site lives in [`docs/`](docs/) (dark
-cyber-fintech theme) and is deployed at
-**[rl-for-crypto-and-stocks.vercel.app](https://rl-for-crypto-and-stocks.vercel.app/)**.
-It's an interactive **markets explorer**, not a screenshot: separate **Stocks**
-and **Crypto** tabs, clickable per-ticker backtests (each a real held-out run), a
-time **scrubber** that replays the agent's position day by day, a sortable
-all-tickers results table, and the honest-evaluation visuals — the **multi-seed
-significance** distribution, the **does-more-compute-help** curve, and the
-**domain-randomization overfitting** ablation. A **How it works** tab explains the
-RL loop end to end, and the **Run live** widget executes the exported policy on any
-ticker you type. Every number is a real backtest — no mock data.
+The site in [`docs/`](docs/) is a **laboratory**, not a slide deck. It is deployed
+at **[rl-for-crypto-and-stocks.vercel.app](https://rl-for-crypto-and-stocks.vercel.app/)**
+and its five panels are the four research questions made runnable.
+
+| Panel | What you can do | Live? |
+|---|---|---|
+| **Agent Playground** | Configure market, data source, capital, costs, reward, shorting — then run a real episode and scrub it bar by bar against buy-&-hold. | ✅ live |
+| **Agent X-Ray** | At any bar, read the actual observation → policy → action → reward → position chain, all 28 features grouped as the pipeline defines them, plus the 20-bar window as a heatmap. | ✅ live |
+| **Can You Break It?** | The real domain-randomization ablation (Agent A vs Agent B) with per-seed points and CIs, plus a live shift test that drops the deployed policy onto controlled synthetic regimes. | mixed — see below |
+| **Real or Luck?** | The published single-seed headline beside the five-seed distribution, with the bootstrap and permutation machinery re-runnable at your own confidence level and resample count. | mixed — see below |
+| **Notebook** | Every experiment this session, with its config, receipt, and a Reproduce button that replays it exactly. | ✅ live |
+
+### What is live, and what is not — and why
+
+This matters more than any feature in the table, so the API states it explicitly
+at [`/api/meta`](server/app.py) rather than leaving the frontend to imply it.
+
+**Live on request.** Rollouts, counterfactuals, distribution-shift sweeps, and
+*all* statistical inference. These are cheap: a full episode is one NumPy forward
+pass per bar and completes in seconds.
+
+**Not live: training.** The serving container has no PyTorch and a fraction of a
+CPU. More fundamentally, the seed variation this project is *about* is variation
+across **training** seeds, and each of those points is a complete PPO run — a
+"run 5 seeds" button that returned in two seconds would be a lie. So seed-level
+and ablation results are served from the repository's **real committed
+experiments**, each labelled with its source file and the command that
+regenerates it. The statistics computed *over* that real data run live, which is
+the honest and more instructive half: you can change the design and watch a
+genuine p-value move.
+
+**Nothing is ever fabricated.** If the backend cannot compute something it is
+omitted and labelled, never filled in with a plausible number. The clearest
+example: the deployed policy archives contain the actor but **no critic head**,
+so the X-Ray's value slot reads *"not exported"* instead of showing an invented
+estimate.
+
+### One statistical detail the lab is careful about
+
+The project reports two numbers that live on **different axes**, and pairing on
+the wrong one silently changes the claim:
+
+- **across training seeds** (n = 5) — "how repeatable is this?" → bootstrap CI
+- **across held-out tickers** (n = 10 / 6) — "is the cross-sectional edge real?"
+  → paired permutation test, which is where the published p-value comes from
+
+A two-sided sign-flip test over `n` pairs draws from only `2**n` sign
+assignments, so **p can never fall below `2 / 2**n`** — 0.0625 at n = 5. That
+design cannot reach significance at 0.05 whatever the effect size. The lab
+reports this resolution floor beside every test, because *"underpowered by
+construction"* and *"no effect"* are different statements. It shows up concretely
+in the ablation: the held-out difference between the two agents is **+61.4% with
+a 95% CI of [+37%, +82%]** — decisive — yet **p = 0.063**, because five pairs
+cannot resolve further.
+
+## API
+
+The backend ([`server/`](server/)) is the experiment engine. It imports the
+research code rather than reimplementing it, so the site cannot drift from the
+paper.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /health` | Liveness, loaded policies, and per-policy capabilities |
+| `GET /api/meta` | What this backend can actually do — including `live.training: false` |
+| `GET /api/regimes` | Synthetic distribution-shift regimes |
+| `GET /api/datasets` | Real committed per-seed and per-ticker datasets, with provenance |
+| `GET /api/generalization` | The real single-path vs domain-randomized ablation |
+| `POST /api/statistics` | Live bootstrap / permutation inference over that real data |
+| `POST /api/experiments` | Create an experiment (async; returns an id immediately) |
+| `GET /api/experiments` | Session history |
+| `GET /api/experiments/<id>` | Status, progress, result, receipt |
+| `GET /api/experiments/<id>/config` | The exact config needed to reproduce it |
+| `GET /api/experiments/<id>/xray?step=` | The full observation at one bar |
+| `GET /api/results`, `/api/live`, `/api/tickers` | The original dashboard endpoints (unchanged) |
+
+### Run an experiment
 
 ```bash
-python tools/build_site_data.py --timesteps 200000   # regenerates docs/results.js from a real run
+# 1. Create it — returns an id like EXP-8F42A straight away
+curl -s -X POST http://localhost:8000/api/experiments \
+  -H 'Content-Type: application/json' \
+  -d '{"kind": "rollout",
+       "question": "Does the agent survive mean reversion?",
+       "config": {"market": "stock", "mode": "synthetic",
+                  "regime": "mean_reversion", "seed": 7}}'
+
+# 2. Poll it
+curl -s http://localhost:8000/api/experiments/EXP-8F42A
+
+# 3. Get everything needed to reproduce it
+curl -s http://localhost:8000/api/experiments/EXP-8F42A/config
 ```
 
-That script trains both agents, backtests them on held-out data, and writes the
-results the page loads — so the site never shows mock numbers. Open
-`docs/index.html` locally, or view the deployed version at
-**[rl-for-crypto-and-stocks.vercel.app](https://rl-for-crypto-and-stocks.vercel.app/)**.
+`kind` is `rollout`, `counterfactual`, or `distribution_shift`. Experiments are
+**ephemeral** — held in memory on a single worker that restarts when idle — and
+the API says so rather than implying durable storage.
+
+## Reproducibility
+
+Every experiment carries a receipt: code version, dataset hash, policy hash,
+the resolved environment config, and the caller's own research question if they
+stated one (never invented for them). The config is a **fixed point of the round
+trip** — re-submitting what `/config` returns rebuilds an identical environment
+and reproduces the numbers, which the test suite asserts.
+
+### Pin the dataset before you rebuild
+
+`tools/fetch_data.py` requests a *relative* window (`period="10y"` / `"max"`), so
+**what you get depends on when you run it**. This is not hypothetical: the figures
+in `docs/results.js` were built from data fetched 2026-06-22 and cannot be
+regenerated today, because a later fetch slides the whole train/val/test split.
+A rebuild on 2026-08-30 evaluated stocks on 2022-11-30→2026-08-28 instead of the
+published 2022-08-10→2026-06-17, moving crypto total return 2.75 → 1.96. Same
+recipe, different slice of history, different experiment.
+
+Pin a snapshot, and verify against it before rebuilding:
+
+```bash
+python tools/fetch_data.py --end 2026-08-28    # clip to a fixed date, write data/SNAPSHOT.json
+make verify-data                                # fails loudly if the data has drifted
+```
+
+`data/SNAPSHOT.json` is committed and records a SHA-256, row count and date range
+per ticker, so an experiment can be cited by dataset hash.
+
+> **Note on the published figures.** `docs/results.js` and the deployed policy
+> archives are deliberately left as they are, so the paper, the DOI and the live
+> site continue to describe exactly the same artifact. The pinning above applies
+> to experiments from here on.
+
+## Web prototype internals
+
+The page is dependency-free — no framework, no build step. `docs/results.js` is a
+baked `window.RL_RESULTS` global, so the dashboard renders with **no server at
+all**, and the lab layers live experiments on top when `window.RL_API` is set.
+
+```bash
+python tools/build_site_data.py --real --timesteps 200000   # regenerate docs/results.js
+python server/app.py                                        # the experiment API
+python tools/smoke_lab.py                                   # 57 browser checks against both
+```
+
+`tools/smoke_lab.py` drives the real page in headless Chromium. Its most important
+assertions are the negative ones: with the backend unreachable, the lab must
+surface an honest error and render **nothing** — no charts, no placeholder
+numbers, no fabricated results.
 
 ## Deploy (Render + Vercel)
 
