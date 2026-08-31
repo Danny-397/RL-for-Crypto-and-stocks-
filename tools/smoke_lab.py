@@ -386,6 +386,69 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("no results rendered", off.eval_on_selector("#pg-output", "el => el.hidden"))
         check("no page errors offline", not off_errors, "; ".join(off_errors[:2]))
 
+        # ── 3. home page + routing, with no backend at all ─────────────────
+        # The dashboard is meant to work fully static, and the home page's deep
+        # links into the lab must land on the right panel without one.
+        print("\nHome page and routing (static)")
+        home_errors: list[str] = []
+        home = browser.new_page(viewport={"width": 1280, "height": 900})
+        home.on("pageerror", lambda e: home_errors.append(str(e)))
+        home.route(
+            "**/config.js",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/javascript",
+                body="window.RL_API = '';",
+            ),
+        )
+        home.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+        time.sleep(1.5)
+
+        check("home view is the default",
+              home.eval_on_selector("#view-home", "el => el.classList.contains('active')"))
+        check("primary CTA leads to the lab",
+              home.eval_on_selector(".hero-cta .btn-primary", "el => el.getAttribute('href')")
+              == "#lab")
+        n_cards = home.eval_on_selector_all(".lab-card", "els => els.length")
+        check("every panel is advertised", n_cards == 5, f"{n_cards} cards")
+        check("each card declares whether it is live",
+              home.eval_on_selector_all(".lab-card-tag", "els => els.length") == 5)
+        check("the training caveat is on the home page",
+              "training" in home.inner_text(".lab-strip-note").lower())
+
+        # A deep link has to move the view *and* select the panel.
+        home.click('.lab-card[data-panel="seeds"]')
+        time.sleep(1.0)
+        check("deep link switches view",
+              home.eval_on_selector("#view-lab", "el => el.classList.contains('active')"))
+        check("deep link selects the panel",
+              home.eval_on_selector("#panel-seeds", "el => el.classList.contains('active')"))
+        check("deep link is reflected in the URL",
+              "seeds" in home.evaluate("location.hash"), home.evaluate("location.hash"))
+        check("selected tab is announced",
+              home.eval_on_selector("#tab-seeds", "el => el.getAttribute('aria-selected')")
+              == "true")
+
+        # ARIA tabs keyboard pattern.
+        home.eval_on_selector("#tab-seeds", "el => el.focus()")
+        home.keyboard.press("ArrowRight")
+        time.sleep(0.4)
+        check("arrow keys move between tabs",
+              home.eval_on_selector("#panel-notebook", "el => el.classList.contains('active')"))
+        home.keyboard.press("Home")
+        time.sleep(0.4)
+        check("Home key jumps to the first tab",
+              home.eval_on_selector("#panel-playground", "el => el.classList.contains('active')"))
+        check("only the selected tab is in the tab order",
+              home.eval_on_selector_all(".lab-tab", "els => els.filter(e => e.tabIndex === 0).length")
+              == 1)
+
+        home.go_back()
+        time.sleep(0.8)
+        check("browser back navigates", home.eval_on_selector_all(
+            ".view.active", "els => els.length") == 1)
+        check("no page errors on the static site", not home_errors, "; ".join(home_errors[:2]))
+
         browser.close()
 
     httpd.shutdown()
