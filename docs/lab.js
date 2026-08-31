@@ -758,6 +758,279 @@
     return { init };
   })();
 
+
+  /* -- Can you break the agent? ---------------------------- */
+  /* Two experiments, deliberately labelled differently.
+   *
+   * (1) The trained ablation is REAL but PRECOMPUTED: each point is a full PPO
+   *     training run, so it cannot be produced on request. The statistics over
+   *     it are recomputed live, which is the honest interactive half.
+   *
+   * (2) The shift test is fully LIVE: the deployed policy is fixed and meets
+   *     controlled synthetic distributions on demand. */
+  const Generalization = (function () {
+    let data = null;
+    let market = "stock";
+
+    async function load() {
+      try {
+        data = await api.get("/api/generalization");
+        render();
+      } catch (err) {
+        showError($("gen-error"), "Could not load the ablation: " + err.message);
+      }
+    }
+
+    function seedStrip(values) {
+      return '<div class="seed-strip">' +
+        values.map((v) => '<span class="seed-dot ' + (v > 0 ? "up" : "dn") +
+                          '" title="' + fmt.pct(v) + '"></span>').join("") +
+        "</div>";
+    }
+
+    function ci(pair) {
+      if (!pair || pair.length < 2) return "";
+      return '<span class="ci">95% CI [' + fmt.pct(pair[0], 0) + ", " + fmt.pct(pair[1], 0) + "]</span>";
+    }
+
+    function armCard(arm, blob, isWinner) {
+      const inS = blob.in_sample;
+      const out = blob.held_out;
+      return (
+        '<div class="ab-card' + (isWinner ? " is-winner" : "") + '">' +
+        '<div class="ab-name">' + blob.label + "</div>" +
+        '<div class="ab-sub">' + (arm === "single" ? "one fixed path" : "resampled every episode") + "</div>" +
+
+        '<div class="ab-row"><span class="lbl">In-sample</span>' +
+        seedStrip(inS.per_seed || []) +
+        '<span class="val ' + fmt.cls(inS.mean) + '">' + fmt.pct(inS.mean, 0) + ci(inS.ci) + "</span></div>" +
+
+        '<div class="ab-row"><span class="lbl">Held out</span>' +
+        seedStrip(out.per_seed || []) +
+        '<span class="val ' + fmt.cls(out.mean) + '">' + fmt.pct(out.mean, 0) + ci(out.ci) + "</span></div>" +
+
+        '<div class="ab-gap"><span class="lbl">Generalization gap</span>' +
+        '<span class="val ' + (blob.generalization_gap > 1 ? "neg" : "pos") + '">' +
+        fmt.pct(blob.generalization_gap, 0) + "</span></div>" +
+        "</div>"
+      );
+    }
+
+    function render() {
+      if (!data) return;
+      const arms = data.markets[market];
+      if (!arms) return;
+      const single = arms.single;
+      const domain = arms.domain;
+
+      $("gen-ab").innerHTML =
+        armCard("single", single, false) + armCard("domain", domain, true);
+
+      // State the lesson in words, using this market's actual numbers.
+      const ratio = single.in_sample.mean / Math.max(1e-9, Math.abs(domain.in_sample.mean));
+      $("gen-verdict").innerHTML =
+        "Agent <b>A</b> looks " + (ratio > 5 ? "spectacular" : "better") +
+        " in training — <b>" + fmt.pct(single.in_sample.mean, 0) + "</b> on the path it " +
+        "memorised — then returns <b>" + fmt.pct(single.held_out.mean, 0) + "</b> on paths it " +
+        "has not seen. Agent <b>B</b> trains to a far more modest <b>" +
+        fmt.pct(domain.in_sample.mean, 0) + "</b> and holds <b>" +
+        fmt.pct(domain.held_out.mean, 0) + "</b> out of sample. " +
+        "The in-sample number is the one that lies.";
+
+      const rows = [
+        ["Seeds", data.seeds ? data.seeds.join(", ") : "—"],
+        ["Timesteps", data.timesteps ? data.timesteps.toLocaleString("en-US") : "—"],
+        ["Source", data.source],
+        ["Regenerate", data.generated_by],
+        ["Why not live", data.why_not_live],
+      ];
+      $("gen-receipt").innerHTML = rows
+        .filter((r) => r[1])
+        .map((r) => "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>").join("");
+    }
+
+    async function runTest() {
+      const btn = $("gen-test");
+      btn.disabled = true;
+      setStatus($("gen-stat-status"), "recomputing…", true);
+      try {
+        const arms = data.markets[market];
+        // Both arms were trained on the SAME seed set, so this is a genuinely
+        // paired design: pair by seed index rather than testing one arm against
+        // the other's scalar mean.
+        const r = await api.post("/api/statistics", {
+          values_a: arms.domain.held_out.per_seed,
+          values_b: arms.single.held_out.per_seed,
+          n_perm: Number($("gen-nperm").value),
+          axis: "training_seed",
+        });
+        const res = r.resolution || {};
+        const reachable = res.can_reach_05;
+        $("gen-stat-out").innerHTML =
+          '<div class="stat-out">' +
+          metric("B held-out", fmt.pct(r.mean_a), fmt.cls(r.mean_a), "domain randomized") +
+          metric("A held-out", fmt.pct(r.mean_b), fmt.cls(r.mean_b), "single path") +
+          metric("Difference", fmt.pct(r.mean_difference), fmt.cls(r.mean_difference),
+                 "95% CI [" + fmt.pct(r.difference_ci[0], 0) + ", " +
+                 fmt.pct(r.difference_ci[1], 0) + "]") +
+          metric("p-value", fmt.num(r.p_value, 4),
+                 r.significant_at_05 ? "pos" : "neutral",
+                 r.n_pairs + " paired seeds") +
+          "</div>" +
+          '<div class="caveat"><b>Resolution floor:</b> ' + (res.explanation || "") +
+          (reachable ? "" : " With this many seeds the test cannot reach significance at " +
+           "0.05 whatever the effect size, so read the confidence interval, not the p-value.") +
+          "</div>" +
+          '<div class="caveat">B beat A on <b>' + r.a_wins + " of " + r.n_pairs +
+          "</b> seeds.</div>";
+        setStatus($("gen-stat-status"),
+                  r.n_perm.toLocaleString("en-US") + " permutations · " +
+                  r.n_boot.toLocaleString("en-US") + " bootstrap resamples", false);
+      } catch (err) {
+        showError($("gen-error"), "Test failed: " + err.message);
+        setStatus($("gen-stat-status"), "", false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    /* -- live distribution shift -- */
+    async function runShift() {
+      const btn = $("shift-run");
+      btn.disabled = true;
+      showError($("shift-error"), null);
+      $("shift-bar").firstElementChild.style.width = "0%";
+      const nSeeds = Number($("shift-seeds").value);
+      const seeds = Array.from({ length: nSeeds }, (_, i) => i);
+
+      try {
+        const body = await api.runExperiment(
+          {
+            kind: "distribution_shift",
+            seeds: seeds,
+            config: {
+              market: $("shift-market").dataset.value || "stock",
+              mode: "synthetic",
+              n_steps: 500,
+            },
+          },
+          (b) => {
+            const pctDone = Math.round((b.progress || 0) * 100);
+            $("shift-bar").firstElementChild.style.width = pctDone + "%";
+            setStatus($("shift-status"), b.id + " · " + b.stage, true);
+          },
+          180000
+        );
+        renderShift(body.result);
+        setStatus($("shift-status"), body.id + " · complete · " + body.elapsed_sec + "s", false);
+      } catch (err) {
+        showError($("shift-error"), String(err.message || err));
+        setStatus($("shift-status"), "", false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function renderShift(result) {
+      $("shift-out").hidden = false;
+      const rows = result.regimes;
+      // Scale against the widest per-path outcome, not the mean, so the plotted
+      // points can never overflow the track they sit in.
+      let span = 0.05;
+      rows.forEach((r) => r.per_seed.forEach((s) => {
+        if (Math.abs(s.excess) > span) span = Math.abs(s.excess);
+      }));
+
+      $("shift-bars").innerHTML = rows
+        .map(function (r) {
+          const v = r.mean_excess_return;
+          const w = (Math.abs(v) / span) * 50;
+          const bar = v >= 0
+            ? '<i class="up" style="width:' + w + '%"></i>'
+            : '<i class="dn" style="width:' + w + '%"></i>';
+          const ac = r.per_seed.length
+            ? r.per_seed.reduce((a, x) => a + x.realised_autocorr, 0) / r.per_seed.length
+            : 0;
+          // Every individual path, so a wide spread is visible rather than
+          // hidden behind an average.
+          const dots = r.per_seed
+            .map(function (x) {
+              const left = 50 + (x.excess / span) * 50;
+              return '<b class="path-dot" style="left:' + Math.max(1, Math.min(99, left)) +
+                     '%" title="path ' + x.seed + ": " + fmt.pct(x.excess, 1) + '"></b>';
+            })
+            .join("");
+
+          return '<div class="rbar-row' + (r.is_reference ? " is-reference" : "") + '">' +
+                 '<span class="rbar-name">' + r.label +
+                 (r.is_reference ? ' <em class="ref-tag">in-distribution</em>' : "") +
+                 "<small>lag-1 autocorr " + fmt.signed(ac, 3) +
+                 " · agent " + fmt.pct(r.mean_agent_return, 0) +
+                 " vs b&h " + fmt.pct(r.mean_benchmark_return, 0) + "</small></span>" +
+                 '<span class="rbar-track">' + bar + dots + "</span>" +
+                 '<span class="rbar-val ' + (r.excess_excludes_zero ? fmt.cls(v) : "muted-val") + '">' +
+                 fmt.pct(v, 1) +
+                 "<small>" + (r.excess_excludes_zero ? "" : "not distinguishable · ") +
+                 "&plusmn;" + fmt.pct(r.std_excess, 0).replace("+", "") +
+                 " over " + r.n_seeds + "</small></span></div>";
+        })
+        .join("");
+
+      // Say plainly whether anything actually separated from the reference.
+      const ref = rows.find((r) => r.is_reference);
+      const separated = rows.filter((r) => !r.is_reference && r.excess_excludes_zero);
+      let verdict;
+      if (!ref) {
+        verdict = "";
+      } else if (!separated.length) {
+        verdict =
+          "<b>Nothing broke.</b> Across this many paths no regime's excess return " +
+          "separates from zero by more than sampling noise — including the shifted " +
+          "ones. That is a statement about the sample size as much as the agent: " +
+          "add paths before concluding either way.";
+      } else {
+        verdict =
+          "<b>" + separated.length + " of " + (rows.length - 1) + "</b> shifted regimes " +
+          "produced an excess return distinguishable from zero at this sample size. " +
+          "Compare each against the in-distribution reference rather than against zero.";
+      }
+
+      $("shift-notes").innerHTML =
+        (verdict ? '<div class="gen-verdict">' + verdict + "</div>" : "") +
+        '<div class="caveat">' + result.reference_note + "</div>" +
+        '<div class="caveat">' + result.sampling_note + "</div>" +
+        '<div class="caveat">' + result.note + "</div>" +
+        '<div class="caveat">' + result.inference_note + "</div>";
+    }
+
+    function bindSeg(node, onChange) {
+      if (!node) return;
+      node.addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-val]");
+        if (!btn) return;
+        node.dataset.value = btn.dataset.val;
+        node.querySelectorAll("button").forEach((b) =>
+          b.setAttribute("aria-pressed", String(b === btn))
+        );
+        if (onChange) onChange(btn.dataset.val);
+      });
+    }
+
+    function init() {
+      if (!$("gen-ab")) return;
+      bindSeg($("gen-market"), function (v) { market = v; render(); $("gen-stat-out").innerHTML = ""; });
+      bindSeg($("shift-market"));
+      $("gen-test").addEventListener("click", runTest);
+      $("shift-run").addEventListener("click", runShift);
+      $("shift-seeds").addEventListener("input", function (e) {
+        $("shift-seeds-val").textContent = e.target.value;
+      });
+      load();
+    }
+
+    return { init };
+  })();
+
   /* ── backend status ─────────────────────────────────────── */
   async function initStatus() {
     const pill = $("lab-api-status");
@@ -799,11 +1072,12 @@
     initStatus();
     Playground.init();
     XRay.init();
+    Generalization.init();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
-  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, Playground, XRay };
+  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, Playground, XRay, Generalization };
 })();

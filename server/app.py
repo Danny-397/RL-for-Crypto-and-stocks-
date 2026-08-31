@@ -341,6 +341,23 @@ def api_statistics():
     seed = int(payload.get("seed", 0))
 
     try:
+        # Two caller-supplied arms, paired element-wise. Used for arm-vs-arm
+        # comparisons where both were trained on the *same* seed set (e.g. the
+        # ablation), which is a genuinely paired design — testing one arm against
+        # the other's scalar mean would be a weaker and different question.
+        if payload.get("values_a") is not None or payload.get("values_b") is not None:
+            a, b = payload.get("values_a"), payload.get("values_b")
+            if not (isinstance(a, list) and isinstance(b, list) and a and b):
+                return jsonify(error="'values_a' and 'values_b' must be non-empty lists"), 400
+            if len(a) > 1000 or len(b) > 1000:
+                return jsonify(error="at most 1000 values per arm"), 400
+            out = stats_api.compare(
+                a, b, n_perm=n_perm, confidence=confidence, n_boot=n_boot, seed=seed,
+                axis=str(payload.get("axis", "paired"))[:40],
+            )
+            out["live_computation"] = True
+            return jsonify(out)
+
         key = payload.get("dataset")
         if key and key.startswith("assets:"):
             pa = precomputed.paired_asset_datasets().get(key)

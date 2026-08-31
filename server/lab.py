@@ -27,11 +27,12 @@ import numpy as np
 import pandas as pd
 
 from rl_trader.config.training_config import crypto_config, stock_config
-from rl_trader.data.data_loader import FEATURE_GROUPS, market_data_from_df
+from rl_trader.data.data_loader import FEATURE_GROUPS, market_data_from_df, market_regime
 from rl_trader.envs import make_env
 
 from . import regimes
 from .experiments import Experiment, progress_reporter
+from .regimes import REGIMES
 from .rollout import counterfactual, observation_detail, run_trace
 
 REWARD_KINDS = ("return", "dsr")
@@ -147,6 +148,35 @@ def _feature_groups() -> List[dict]:
     the observation readable (momentum first, market context last).
     """
     return [{"label": k, "features": list(v)} for k, v in FEATURE_GROUPS.items()]
+
+
+def _regime_label(key: str) -> str:
+    return next((r["label"] for r in regimes.list_regimes() if r["key"] == key), key)
+
+
+def reference_regime(market: str) -> str:
+    """Which synthetic regime is closest to what these agents trained against.
+
+    Domain-randomized training draws paths from
+    :func:`rl_trader.data.data_loader.market_regime`, so the shift test needs a
+    named *in-distribution* baseline to shift away from — otherwise every bar is
+    a number with nothing to be compared to. Chosen by nearest parameters rather
+    than hard-coded, so it stays correct if the training regime is retuned.
+    """
+    vol, drift, mom = market_regime(market)
+    best, best_d = None, float("inf")
+    for spec in REGIMES.values():
+        p = spec.params
+        # Volatility and autocorrelation are the axes that actually characterise
+        # these regimes; drift is a distant third and weighted accordingly.
+        d = (
+            ((p["annual_vol"] - vol) / max(vol, 1e-6)) ** 2
+            + (p["momentum"] - mom) ** 2
+            + 0.1 * ((p["annual_drift"] - drift) / max(abs(drift), 1e-6)) ** 2
+        )
+        if d < best_d:
+            best, best_d = spec.key, d
+    return best or "random_walk"
 
 
 def _frame_hash(df: pd.DataFrame) -> str:
@@ -307,6 +337,7 @@ def make_shift_runner(policy, config, regime_keys, seeds, fetch_ohlcv, market_in
         total = max(1, len(regime_keys) * len(seeds))
         report = progress_reporter(exp, total=total, stage="evaluating regimes")
         exp.provenance["policy"] = policy.describe()
+        reference = reference_regime(config["market"])
 
         rows: List[dict] = []
         done = 0
@@ -343,7 +374,12 @@ def make_shift_runner(policy, config, regime_keys, seeds, fetch_ohlcv, market_in
                 report(done)
 
             agent = np.array([r["agent_return"] for r in per_seed], dtype=float)
+            bench = np.array([r["benchmark_return"] for r in per_seed], dtype=float)
             excess = np.array([r["excess"] for r in per_seed], dtype=float)
+            sharpe = np.array([r["sharpe"] for r in per_seed], dtype=float)
+            # A mean over a handful of paths says little on its own; the spread is
+            # reported beside it so a wide interval cannot be mistaken for a result.
+            sem = float(excess.std(ddof=1) / np.sqrt(len(excess))) if len(excess) > 1 else 0.0
             rows.append(
                 {
                     "regime": key,
@@ -352,8 +388,17 @@ def make_shift_runner(policy, config, regime_keys, seeds, fetch_ohlcv, market_in
                     ),
                     "n_seeds": len(per_seed),
                     "mean_agent_return": round(float(agent.mean()), 6),
+                    "mean_benchmark_return": round(float(bench.mean()), 6),
                     "mean_excess_return": round(float(excess.mean()), 6),
+                    "mean_sharpe": round(float(sharpe.mean()), 6),
                     "std_excess": round(float(excess.std(ddof=1)), 6) if len(excess) > 1 else 0.0,
+                    "sem_excess": round(sem, 6),
+                    # Does the spread of outcomes even exclude zero? Usually not at
+                    # small path counts — which is the honest reading.
+                    "excess_excludes_zero": bool(
+                        len(excess) > 1 and abs(excess.mean()) > 2 * sem
+                    ),
+                    "is_reference": key == reference,
                     "per_seed": per_seed,
                 }
             )
@@ -361,11 +406,22 @@ def make_shift_runner(policy, config, regime_keys, seeds, fetch_ohlcv, market_in
         return {
             "market": config["market"],
             "regimes": rows,
+            "reference_regime": reference,
             "synthetic": True,
             "note": (
                 "Controlled synthetic distributions, not realistic market simulators. "
                 "They exist to measure how a fixed policy behaves as the distribution "
                 "moves away from what it was trained on."
+            ),
+            "reference_note": (
+                f"'{_regime_label(reference)}' is the closest match to the synthetic "
+                f"regime these agents were trained against, so it is the in-distribution "
+                f"reference; the others are shifted away from it."
+            ),
+            "sampling_note": (
+                "Each bar averages a small number of random paths, so the spreads are "
+                "wide. Read the per-path points, not the bar alone — and add paths "
+                "before drawing a conclusion."
             ),
             "inference_note": INFERENCE_NOTE,
         }

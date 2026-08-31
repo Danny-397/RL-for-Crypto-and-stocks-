@@ -483,6 +483,7 @@
         <div class="lab-tabs" role="tablist" aria-label="Laboratory sections">
           <button class="lab-tab" role="tab" data-panel="playground" aria-selected="true">Agent Playground</button>
           <button class="lab-tab" role="tab" data-panel="xray" aria-selected="false">Agent X-Ray</button>
+          <button class="lab-tab" role="tab" data-panel="generalization" aria-selected="false">Can You Break It?</button>
         </div>
 
         <!-- PLAYGROUND -->
@@ -708,6 +709,89 @@
                   <div id="xr-notes"></div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CAN YOU BREAK THE AGENT? -->
+        <section class="lab-panel" id="panel-generalization" role="tabpanel">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Can you break the agent?</h2>
+            <p>Strong training performance is not evidence of a strategy. These two experiments
+               separate <b>memorising a price path</b> from <b>learning something transferable</b>.</p>
+          </div>
+
+          <!-- 1. the real ablation -->
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>1 &middot; Trained two ways <span class="tag-precomputed">Real &middot; precomputed</span></h3>
+              <div class="seg gen-market" id="gen-market" data-value="stock">
+                <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
+                <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+              </div>
+            </div>
+            <p class="xr-hint">Two identical PPO agents. <b>A</b> trained on one fixed price path;
+               <b>B</b> trained on a freshly resampled path every episode. Both evaluated on paths
+               neither had seen.</p>
+
+            <div id="gen-error" hidden></div>
+            <div class="ab-grid" id="gen-ab"></div>
+
+            <div class="gen-verdict" id="gen-verdict"></div>
+
+            <div class="gen-stats">
+              <h4>Held-out difference, tested live</h4>
+              <p class="xr-hint">A paired permutation test over the same seed set, recomputed on request.</p>
+              <div class="stat-controls">
+                <label>Permutations
+                  <select id="gen-nperm">
+                    <option value="1000">1,000</option>
+                    <option value="20000" selected>20,000</option>
+                    <option value="100000">100,000</option>
+                  </select>
+                </label>
+                <button class="run-btn run-btn-sm" id="gen-test" type="button">Run test</button>
+              </div>
+              <div class="lab-status" id="gen-stat-status"></div>
+              <div id="gen-stat-out"></div>
+            </div>
+
+            <dl class="receipt" id="gen-receipt"></dl>
+          </div>
+
+          <!-- 2. break the deployed agent live -->
+          <div class="panel-card">
+            <h3>2 &middot; Break the deployed agent <span class="tag-real">Live</span></h3>
+            <p class="xr-hint">Now take the <b>actual deployed policy</b> and move the world out from
+               under it. Each regime is a controlled distribution: the agent is unchanged, only the
+               data generating process differs.</p>
+
+            <div class="shift-controls">
+              <div class="ctl">
+                <label>Market</label>
+                <div class="seg" id="shift-market" data-value="stock">
+                  <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
+                  <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+                </div>
+              </div>
+              <div class="ctl">
+                <label for="shift-seeds">Paths per regime <span class="ctl-val" id="shift-seeds-val">5</span></label>
+                <input type="range" id="shift-seeds" min="2" max="10" step="1" value="5" />
+              </div>
+              <button class="run-btn" id="shift-run" type="button">Run shift test</button>
+            </div>
+
+            <div class="bar" id="shift-bar"><i></i></div>
+            <div class="lab-status" id="shift-status"></div>
+            <div id="shift-error" hidden></div>
+
+            <div id="shift-out" hidden>
+              <div class="chart-head" style="margin-top:18px">
+                <span class="chart-title">Mean excess return vs buy &amp; hold, by regime</span>
+              </div>
+              <div id="shift-bars"></div>
+              <div id="shift-notes"></div>
             </div>
           </div>
         </section>

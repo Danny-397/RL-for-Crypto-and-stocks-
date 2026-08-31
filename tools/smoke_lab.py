@@ -167,6 +167,47 @@ def run(api: str, port: int, shot: str | None) -> None:
         time.sleep(1.2)
         check("X-Ray scrub moves the decision", page.inner_text("#xr-action") != act_before)
 
+        # ── Can you break the agent? ───────────────────────────────────────
+        print("\nCan you break the agent?")
+        page.click('.lab-tab[data-panel="generalization"]')
+        page.wait_for_function(
+            "() => document.querySelectorAll('.ab-card').length === 2", timeout=20000
+        )
+        time.sleep(0.5)
+
+        check("both agents rendered",
+              page.eval_on_selector_all(".ab-card", "els => els.length") == 2)
+        dots = page.eval_on_selector_all(".seed-dot", "els => els.length")
+        check("per-seed points shown", dots == 20, f"{dots} dots (2 arms x 2 splits x 5 seeds)")
+        check("verdict names the failure",
+              "lies" in page.inner_text("#gen-verdict").lower(),
+              page.inner_text("#gen-verdict")[:70].strip())
+        check("ablation is labelled precomputed",
+              page.is_visible(".tag-precomputed"))
+        check("regeneration command shown",
+              "ablation_multiseed" in page.inner_text("#gen-receipt"))
+
+        # Paired significance test, recomputed live.
+        page.click("#gen-test")
+        page.wait_for_selector("#gen-stat-out .stat-out", timeout=30000)
+        time.sleep(0.5)
+        stat_text = page.inner_text("#gen-stat-out")
+        check("paired test ran", "p-value" in stat_text.lower())
+        check("resolution floor is disclosed",
+              "cannot reach significance" in stat_text.lower() or "never fall below" in stat_text.lower(),
+              "floor explained")
+
+        # Live shift test against the deployed policy.
+        page.eval_on_selector("#shift-seeds",
+                              "el => { el.value = 2; el.dispatchEvent(new Event('input')); }")
+        page.click("#shift-run")
+        page.wait_for_selector("#shift-out:not([hidden])", timeout=180000)
+        time.sleep(0.5)
+        n_rows = page.eval_on_selector_all(".rbar-row", "els => els.length")
+        check("every regime evaluated", n_rows == 5, f"{n_rows} regimes")
+        check("regimes report realised autocorrelation",
+              "autocorr" in page.inner_text("#shift-bars").lower())
+
         page.click('.lab-tab[data-panel="playground"]')
         time.sleep(0.3)
 

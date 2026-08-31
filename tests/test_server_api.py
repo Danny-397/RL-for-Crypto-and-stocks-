@@ -399,3 +399,67 @@ def test_synthetic_paths_declare_their_inert_features(client):
     })
     meta2 = _await(client, r2.get_json()["id"])["result"]["meta"]
     assert "inert_features" not in meta2
+
+
+def test_statistics_supports_paired_arms(client):
+    """Ablation arms share a seed set, so arm-vs-arm must be a paired test."""
+    gen = client.get("/api/generalization").get_json()
+    stock = gen["markets"]["stock"]
+    a = stock["domain"]["held_out"]["per_seed"]
+    b = stock["single"]["held_out"]["per_seed"]
+
+    r = client.post("/api/statistics", json={
+        "values_a": a, "values_b": b, "axis": "training_seed", "n_perm": 20000,
+    })
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body["n_pairs"] == len(a)
+    assert body["axis"] == "training_seed"
+    # Domain randomization holds up out of sample; the single-path agent does not.
+    assert body["mean_a"] > body["mean_b"]
+    assert body["mean_difference"] > 0
+    assert body["a_wins"] == len(a)
+    # At n=5 the sign-flip test bottoms out at 0.0625 and must say so.
+    assert body["resolution"]["can_reach_05"] is False
+    assert body["p_value"] >= body["resolution"]["min_attainable_p"]
+
+
+def test_statistics_rejects_malformed_paired_arms(client):
+    assert client.post("/api/statistics", json={"values_a": [1.0]}).status_code == 400
+    assert client.post("/api/statistics",
+                       json={"values_a": [1.0, 2.0], "values_b": [1.0]}).status_code == 400
+
+
+def test_shift_sweep_reports_uncertainty_and_a_reference(client):
+    """A mean over a few random paths is not a result unless its spread is shown."""
+    r = client.post("/api/experiments", json={
+        "kind": "distribution_shift",
+        "regimes": ["momentum", "mean_reversion", "high_volatility"],
+        "seeds": [0, 1, 2, 3],
+        "config": {"market": "stock", "mode": "synthetic", "n_steps": 300},
+    })
+    body = _await(client, r.get_json()["id"], timeout=90)
+    assert body["status"] == "done", body.get("error")
+    result = body["result"]
+
+    # The training distribution is momentum-like, so that is the in-distribution
+    # baseline the shifted regimes are measured against.
+    assert result["reference_regime"] == "momentum"
+    refs = [row for row in result["regimes"] if row["is_reference"]]
+    assert len(refs) == 1 and refs[0]["regime"] == "momentum"
+
+    for row in result["regimes"]:
+        assert row["n_seeds"] == 4
+        # Both sides of the excess must be visible, not just the difference.
+        assert "mean_agent_return" in row and "mean_benchmark_return" in row
+        assert row["mean_excess_return"] == pytest.approx(
+            row["mean_agent_return"] - row["mean_benchmark_return"], abs=1e-3
+        )
+        # Spread is reported, and "distinguishable" is a computed claim.
+        assert row["std_excess"] >= 0 and row["sem_excess"] >= 0
+        assert isinstance(row["excess_excludes_zero"], bool)
+        if row["excess_excludes_zero"]:
+            assert abs(row["mean_excess_return"]) > 2 * row["sem_excess"]
+
+    assert "wide" in result["sampling_note"]
+    assert "in-distribution" in result["reference_note"]

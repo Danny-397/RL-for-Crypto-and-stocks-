@@ -339,3 +339,141 @@
 .xr-feat.is-inert .fname { color: var(--faint); font-style: italic; }
 .xr-feat.is-inert .fbar { opacity: .35; }
 .fval.inert { color: var(--faint); }
+
+/* ── Can you break the agent? ────────────────────────────── */
+.gen-intro { max-width: 68ch; margin-bottom: 22px; }
+.gen-title {
+  font-family: var(--font-display); font-size: clamp(22px, 3vw, 30px);
+  font-weight: 700; letter-spacing: -0.02em; margin-bottom: 10px;
+}
+.gen-intro p { color: var(--muted); font-size: 15px; }
+
+.gen-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 6px;
+}
+.gen-head h3 { margin-bottom: 0; }
+.gen-market { max-width: 210px; }
+
+/* Agent A vs Agent B, side by side, same scale. */
+.ab-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px; margin-top: 18px;
+}
+.ab-card {
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; background: var(--bg-soft);
+}
+.ab-card.is-winner { border-color: rgba(93, 242, 160, 0.42); }
+.ab-name {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em;
+  color: var(--text); margin-bottom: 3px;
+}
+.ab-sub { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint);
+          text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 14px; }
+
+.ab-row {
+  display: grid; grid-template-columns: 74px 1fr auto; gap: 10px;
+  align-items: center; padding: 7px 0;
+}
+.ab-row .lbl { font-family: var(--font-mono); font-size: 10.5px;
+               text-transform: uppercase; letter-spacing: 0.1em; color: var(--faint); }
+.ab-row .val { font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+               font-variant-numeric: tabular-nums; text-align: right; }
+.ab-row .ci { font-family: var(--font-mono); font-size: 10px; color: var(--faint);
+              display: block; font-weight: 400; }
+
+/* Per-seed dots: five training runs, shown as five points. */
+.seed-strip { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.seed-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex: none;
+  border: 1px solid var(--border-2);
+}
+.seed-dot.up { background: var(--pos); border-color: transparent; }
+.seed-dot.dn { background: var(--neg); border-color: transparent; }
+
+.ab-gap {
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.ab-gap .lbl { font-family: var(--font-mono); font-size: 10px;
+               letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.ab-gap .val { font-family: var(--font-mono); font-size: 17px; font-weight: 700;
+               font-variant-numeric: tabular-nums; }
+
+.gen-verdict {
+  margin-top: 18px; padding: 14px 16px; border-radius: 11px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  font-size: 14px; line-height: 1.6; color: var(--text);
+}
+.gen-verdict b { color: var(--volt); }
+
+.gen-stats { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
+.gen-stats h4 {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--cyan); font-weight: 500; margin-bottom: 6px;
+}
+.stat-controls { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
+.stat-controls label {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.stat-controls select {
+  padding: 8px 10px; background: var(--bg-soft); color: var(--text);
+  border: 1px solid var(--border-2); border-radius: 8px;
+  font-family: var(--font-mono); font-size: 12px; min-width: 120px;
+}
+.run-btn-sm { width: auto; margin-top: 0; padding: 9px 20px; font-size: 11px; }
+
+.stat-out {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1px; background: var(--border); border: 1px solid var(--border);
+  border-radius: 11px; overflow: hidden; margin-top: 14px;
+}
+
+.shift-controls {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 18px; align-items: end; margin: 18px 0 6px;
+}
+.shift-controls .run-btn { margin-top: 0; }
+
+/* Regime bars: one row per distribution, diverging from zero. */
+.rbar-row {
+  display: grid; grid-template-columns: 150px 1fr 96px;
+  gap: 12px; align-items: center; padding: 7px 0;
+}
+.rbar-name { font-family: var(--font-mono); font-size: 12px; color: var(--text); }
+.rbar-name small { display: block; color: var(--faint); font-size: 10px; }
+.rbar-track { position: relative; height: 20px; background: var(--bg-soft); border-radius: 4px; }
+.rbar-track::before {
+  content: ""; position: absolute; left: 50%; top: 0; bottom: 0;
+  width: 1px; background: var(--border-2);
+}
+.rbar-track > i { position: absolute; top: 3px; bottom: 3px; border-radius: 3px; }
+.rbar-track > i.up { background: var(--pos); left: 50%; }
+.rbar-track > i.dn { background: var(--neg); right: 50%; }
+.rbar-val {
+  font-family: var(--font-mono); font-size: 12.5px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rbar-val small { display: block; color: var(--faint); font-size: 10px; }
+/* Per-path points on each regime bar: the spread must be visible, not averaged away. */
+.rbar-track > .path-dot {
+  position: absolute; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+  border-radius: 50%; background: var(--text); opacity: .75;
+  border: 1px solid var(--bg); pointer-events: auto;
+}
+.rbar-row.is-reference .rbar-name { color: var(--volt); }
+.ref-tag {
+  font-family: var(--font-mono); font-size: 9px; font-style: normal;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--volt);
+  border: 1px solid rgba(212,255,63,.35); border-radius: 4px; padding: 1px 5px;
+  margin-left: 6px; vertical-align: middle;
+}
+/* A mean that does not separate from noise is not coloured as a win or a loss. */
+.rbar-val.muted-val { color: var(--muted); }
+/* Keep the reference tag on one line; it wraps awkwardly beside a long label. */
+.ref-tag { white-space: nowrap; }
+.rbar-row { grid-template-columns: minmax(150px, 190px) 1fr 96px; }
+.rbar-name { line-height: 1.35; }
