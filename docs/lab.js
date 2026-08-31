@@ -1575,6 +1575,216 @@
   })();
 
 
+  /* -- Walk-forward ---------------------------------------- */
+  /* Disjoint chronological folds, each with its own scaler, plus a direct
+   * measurement of what fitting that scaler on the test block costs.
+   *
+   * The one thing this panel must never imply is that it retrained per fold. It
+   * cannot — the backend has no torch — so the same fixed policy is evaluated on
+   * every fold, and the backend's own note saying so is rendered with the
+   * results rather than tucked into a tooltip. */
+  const WalkForward = (function () {
+    let tickers = null;
+    let last = null;
+
+    function mode() { return $("wf-mode").dataset.value; }
+    function market() { return $("wf-market").dataset.value; }
+
+    async function fillSources() {
+      const sel = $("wf-source");
+      sel.innerHTML = "";
+      if (mode() === "historical") {
+        $("wf-source-label").textContent = "Ticker";
+        if (!tickers) {
+          try { tickers = await api.get("/api/tickers"); }
+          catch (err) { tickers = { stock: ["SPY"], crypto: ["BTC-USD"] }; }
+        }
+        (tickers[market()] || []).forEach((t) => sel.add(new Option(t, t)));
+        return;
+      }
+      $("wf-source-label").textContent = "Regime";
+      try {
+        const body = await api.get("/api/regimes");
+        body.regimes.forEach((r) => sel.add(new Option(r.label, r.key)));
+        sel.value = "momentum";
+      } catch (err) { sel.add(new Option("Momentum", "momentum")); }
+    }
+
+    function config() {
+      const cfg = { market: market(), mode: mode() };
+      if (mode() === "historical") cfg.ticker = $("wf-source").value;
+      else {
+        cfg.regime = $("wf-source").value;
+        cfg.seed = 3;
+        // Folds need history: a 650-bar default would leave blocks too short to
+        // step through once the feature warm-up is taken off the front.
+        cfg.n_steps = 1600;
+      }
+      return cfg;
+    }
+
+    function timeline(res) {
+      const total = res.n_rows || 1;
+      return res.plan
+        .map((f) => {
+          const l = (f.train_start / total) * 100;
+          const w = ((f.train_end - f.train_start) / total) * 100;
+          const tl = (f.test_start / total) * 100;
+          const tw = ((f.test_end - f.test_start) / total) * 100;
+          const range = f.test_from ? `${f.test_from} → ${f.test_to}` :
+            `bars ${f.test_start}–${f.test_end}`;
+          return (
+            `<div class="wf-row"><span class="wf-row-k">Fold ${f.fold + 1}</span>` +
+            `<span class="wf-track">` +
+            `<i class="wf-train" style="left:${l}%;width:${w}%"></i>` +
+            `<i class="wf-test" style="left:${tl}%;width:${tw}%"></i></span>` +
+            `<span class="wf-row-v">${range}</span></div>`
+          );
+        })
+        .join("");
+    }
+
+    function table(res) {
+      const head =
+        "<thead><tr><th>Fold</th><th>Train bars</th><th>Test bars</th>" +
+        "<th>Agent</th><th>Buy &amp; hold</th><th>Excess</th></tr></thead>";
+      const body = res.folds
+        .map(
+          (f) =>
+            `<tr><td>${f.fold + 1}</td><td>${f.train_bars}</td><td>${f.test_bars}</td>` +
+            `<td class="${fmt.cls(f.agent_return)}">${fmt.pct(f.agent_return, 1)}</td>` +
+            `<td class="${fmt.cls(f.benchmark_return)}">${fmt.pct(f.benchmark_return, 1)}</td>` +
+            `<td class="${fmt.cls(f.excess_return)}"><b>${fmt.pct(f.excess_return, 1)}</b></td></tr>`
+        )
+        .join("");
+      return head + "<tbody>" + body + "</tbody>";
+    }
+
+    function render(body) {
+      const res = body.result;
+      last = res;
+      $("wf-timeline").innerHTML = timeline(res);
+      $("wf-table").innerHTML = table(res);
+
+      const s = res.summary;
+      $("wf-summary").innerHTML =
+        `<div class="pc-score">` +
+        metric("Mean excess", fmt.pct(s.mean_excess_return, 1), fmt.cls(s.mean_excess_return),
+               "across " + s.n_folds + " folds") +
+        metric("Worst fold", fmt.pct(s.worst_fold_excess, 1), "neg") +
+        metric("Best fold", fmt.pct(s.best_fold_excess, 1), "pos") +
+        metric("Folds beaten", s.folds_beaten + " / " + s.n_folds, "neutral") +
+        `</div><p class="pc-verdict">${s.spread_note}</p>`;
+
+      const lk = res.leakage;
+      $("wf-leakage").innerHTML = lk
+        ? `<h4 class="attr-h">What fitting the scaler on the test block costs</h4>` +
+          `<div class="wf-table-wrap"><table class="wf-table"><thead><tr><th>Fold</th>` +
+          `<th>Scaler on train rows</th><th>Scaler on everything</th><th>Difference</th>` +
+          `</tr></thead><tbody>` +
+          lk.per_fold
+            .map(
+              (r) =>
+                `<tr><td>${r.fold + 1}</td>` +
+                `<td>${fmt.pct(r.train_only_return, 1)}</td>` +
+                `<td>${fmt.pct(r.full_sample_return, 1)}</td>` +
+                `<td class="${fmt.cls(r.delta)}"><b>${fmt.pct(r.delta, 1)}</b></td></tr>`
+            )
+            .join("") +
+          `</tbody></table></div>` +
+          `<p class="xr-hint">Largest single-fold difference: <b>${fmt.pct(lk.max_abs_delta, 1)}</b>. ` +
+          `${lk.note}</p>`
+        : "";
+
+      $("wf-caveat").innerHTML =
+        `<p class="attr-method">${res.fixed_policy_note}</p>` +
+        `<ul><li>${res.scheme_note}</li><li>${res.inference_note}</li></ul>`;
+
+      const m = res.meta;
+      $("wf-receipt").innerHTML = [
+        ["Experiment", body.id],
+        ["Data", m.synthetic ? `synthetic · ${m.regime} · seed ${m.seed}`
+                             : `${m.ticker} · ${m.provider}`],
+        ["Dataset hash", m.dataset_hash],
+        ["Rows after feature warm-up", String(res.n_rows)],
+        ["Scheme", `${res.scheme} · first training window ${Math.round(res.train_min_frac * 100)}%`],
+        ["Scaler", "fit per fold on training rows only"],
+        ["Policy", "the single deployed policy, unchanged across folds"],
+      ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+
+      $("wf-out").hidden = false;
+    }
+
+    async function run() {
+      const btn = $("wf-run");
+      btn.disabled = true;
+      showError($("wf-error"), null);
+      $("wf-out").hidden = true;
+      setStatus($("wf-status"), "splitting and evaluating…", true);
+      const fill = $("wf-bar").firstElementChild;
+      fill.style.width = "0%";
+      try {
+        const body = await api.runExperiment(
+          {
+            kind: "walk_forward",
+            n_folds: Number($("wf-folds").value),
+            scheme: $("wf-scheme").value,
+            compare_leakage: true,
+            config: config(),
+          },
+          (b) => { fill.style.width = Math.round((b.progress || 0) * 100) + "%"; }
+        );
+        fill.style.width = "100%";
+        render(body);
+        setStatus($("wf-status"), `${body.id} · ${body.elapsed_sec}s`, false);
+      } catch (err) {
+        showError($("wf-error"), String(err.message || err));
+        setStatus($("wf-status"), "", false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function bindSeg(id, onChange) {
+      const seg = $(id);
+      seg.addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-val]");
+        if (!btn) return;
+        seg.dataset.value = btn.dataset.val;
+        seg.querySelectorAll("button").forEach((b) =>
+          b.setAttribute("aria-pressed", String(b === btn))
+        );
+        onChange(btn.dataset.val);
+      });
+    }
+
+    async function showSchemeNote() {
+      try {
+        const meta = await api.get("/api/meta");
+        const key = $("wf-scheme").value;
+        const row = (meta.walk_forward.schemes || []).find((s) => s.key === key);
+        $("wf-scheme-note").textContent = row ? row.description : "";
+      } catch (err) { /* the note is nice to have, not load-bearing */ }
+    }
+
+    function init() {
+      if (!$("wf-run")) return;
+      bindSeg("wf-market", fillSources);
+      bindSeg("wf-mode", fillSources);
+      $("wf-folds").addEventListener("input", (e) => {
+        $("wf-folds-val").textContent = e.target.value;
+      });
+      $("wf-scheme").addEventListener("change", showSchemeNote);
+      $("wf-run").addEventListener("click", run);
+      if (!api.ok) return;
+      fillSources();
+      showSchemeNote();
+    }
+
+    return { init, get last() { return last; } };
+  })();
+
+
   /* -- What is it reading? (occlusion attribution) --------- */
   /* Ranks the agent's inputs by how far the target position moves when each one
    * is removed. Every bar here is a real forward pass through the deployed
@@ -2157,7 +2367,8 @@
    * to find it. Keyboard behaviour follows the ARIA tabs pattern: arrows move
    * between tabs, Home/End jump to the ends, and a roving tabindex keeps a
    * single stop in the page's tab order. */
-  const PANELS = ["perception", "playground", "xray", "generalization", "seeds", "notebook"];
+  const PANELS = ["perception", "playground", "xray", "generalization",
+                  "walkforward", "seeds", "notebook"];
 
   function showPanel(name, updateHash) {
     if (PANELS.indexOf(name) === -1) name = PANELS[0];
@@ -2219,6 +2430,7 @@
     XRay.init();
     Attribution.init();
     Generalization.init();
+    WalkForward.init();
     Seeds.init();
     WhatIf.init();
     Notebook.init();
@@ -2229,6 +2441,6 @@
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
   window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel,
-                   Perception, Playground, XRay, Attribution, Generalization, Seeds,
-                   WhatIf, Notebook };
+                   Perception, Playground, XRay, Attribution, Generalization,
+                   WalkForward, Seeds, WhatIf, Notebook };
 })();

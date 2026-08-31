@@ -27,10 +27,15 @@ import numpy as np
 import pandas as pd
 
 from rl_trader.config.training_config import crypto_config, stock_config
-from rl_trader.data.data_loader import FEATURE_GROUPS, market_data_from_df, market_regime
+from rl_trader.data.data_loader import (
+    FEATURE_GROUPS,
+    add_technical_indicators,
+    market_data_from_df,
+    market_regime,
+)
 from rl_trader.envs import make_env
 
-from . import attribution, regimes
+from . import attribution, regimes, walkforward
 from .experiments import Experiment, progress_reporter
 from .regimes import REGIMES
 from .rollout import counterfactual, observation_detail, run_trace
@@ -541,3 +546,92 @@ def attribution_at(
     if config["mode"] == "synthetic":
         out["inert_note"] = meta.get("inert_features_note")
     return out
+
+
+def make_walkforward_runner(
+    policy, config, n_folds, scheme, train_min_frac, compare_leakage,
+    fetch_ohlcv, market_index,
+):
+    """Runner for the rolling walk-forward panel.
+
+    Only the *evaluation* half runs here — see :mod:`server.walkforward` for why,
+    and note that the response repeats it rather than relying on the reader
+    having seen the docs.
+    """
+
+    def run(exp: Experiment) -> Dict[str, Any]:
+        exp.stage = "fetching prices"
+        market = config["market"]
+        cfg_obj = apply_config(_base_config(market), config)
+
+        if config["mode"] == "historical":
+            df, err = fetch_ohlcv(config["ticker"])
+            if df is None:
+                raise ValueError(err or f"no price data for {config['ticker']}")
+            raw_dates = [str(d)[:10] for d in df.index] if df.index is not None else None
+            idx = market_index(market)
+            frame = df.copy()
+            if idx is not None:
+                frame["_mkt_close"] = idx["close"].reindex(frame.index).ffill().bfill()
+            frame = frame.reset_index(drop=True)
+            source = {"source": "real", "synthetic": False, "ticker": config["ticker"],
+                      "provider": "Yahoo Finance (yfinance), ~2y daily bars",
+                      "dataset_hash": _frame_hash(df)}
+        else:
+            spec = REGIMES.get(config["regime"])
+            frame = regimes.build_regime_frame(
+                config["regime"], seed=config["seed"], n_steps=config["n_steps"]
+            )
+            raw_dates = None
+            source = {"source": "synthetic", "synthetic": True,
+                      "regime": config["regime"], "seed": config["seed"],
+                      "params": dict(spec.params) if spec else {},
+                      "dataset_hash": _frame_hash(frame)}
+
+        # add_technical_indicators drops the warm-up rows; realign date labels so
+        # a fold's stated calendar range is the one it actually covers.
+        featured_rows = len(add_technical_indicators(frame))
+        dates = raw_dates[len(raw_dates) - featured_rows:] if raw_dates else None
+
+        exp.stage = "evaluating folds"
+        report = progress_reporter(exp, total=max(1, int(n_folds)), stage="folds")
+        rows = walkforward.evaluate_folds(
+            policy, frame, market, cfg_obj,
+            n_folds=n_folds, scheme=scheme, train_min_frac=train_min_frac,
+            scaling="train_only", dates=dates, progress=report,
+        )
+        if not rows:
+            raise ValueError(
+                "no fold had enough bars to evaluate — reduce the fold count or "
+                "use a longer series"
+            )
+
+        out: Dict[str, Any] = {
+            "market": market,
+            "scheme": scheme,
+            "scheme_note": walkforward.SCHEME_NOTES[scheme],
+            "train_min_frac": train_min_frac,
+            "n_rows": featured_rows,
+            "plan": walkforward.fold_plan(
+                featured_rows, n_folds, scheme, train_min_frac, dates
+            ),
+            "folds": rows,
+            "summary": walkforward.summarise(rows),
+            "fixed_policy_note": walkforward.FIXED_POLICY_NOTE,
+            "inference_note": INFERENCE_NOTE,
+            "meta": source,
+        }
+        exp.provenance.update(source)
+        exp.provenance["policy"] = policy.describe()
+
+        if compare_leakage:
+            exp.stage = "measuring the cost of leakage"
+            leaked = walkforward.evaluate_folds(
+                policy, frame, market, cfg_obj,
+                n_folds=n_folds, scheme=scheme, train_min_frac=train_min_frac,
+                scaling="full_sample", dates=dates,
+            )
+            out["leakage"] = walkforward.leakage_delta(rows, leaked)
+        return out
+
+    return run

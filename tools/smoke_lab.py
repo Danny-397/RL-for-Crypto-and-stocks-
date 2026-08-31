@@ -380,6 +380,47 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("regimes report realised autocorrelation",
               "autocorr" in page.inner_text("#shift-bars").lower())
 
+        # ── Walk-forward ───────────────────────────────────────────────────
+        print("\nWalk-forward")
+        page.click('.lab-tab[data-panel="walkforward"]')
+        page.wait_for_selector("#wf-run", state="visible", timeout=20000)
+        # Synthetic keeps this off the network and gives every fold enough bars.
+        page.click('#wf-mode button[data-val="synthetic"]')
+        page.wait_for_function(
+            "() => document.getElementById('wf-source').options.length >= 4", timeout=30000
+        )
+        page.click("#wf-run")
+        page.wait_for_selector("#wf-out:not([hidden])", timeout=180000)
+        time.sleep(0.5)
+
+        n_folds = page.eval_on_selector_all("#wf-timeline .wf-row", "els => els.length")
+        check("every fold is drawn", n_folds == 4, f"{n_folds} folds")
+        check("fold results are tabulated",
+              page.eval_on_selector_all("#wf-table tbody tr", "els => els.length") == 4)
+
+        # The methodological claim, checked geometrically: the training block
+        # must end before the test block starts, on every fold.
+        overlaps = page.eval_on_selector_all(
+            "#wf-timeline .wf-row",
+            "els => els.filter(r => {"
+            "const a = r.querySelector('.wf-train'), b = r.querySelector('.wf-test');"
+            "return parseFloat(a.style.left) + parseFloat(a.style.width)"
+            " > parseFloat(b.style.left) + 0.01; }).length",
+        )
+        check("train and test blocks never overlap", overlaps == 0, f"{overlaps} overlapping")
+
+        summary = page.inner_text("#wf-summary")
+        check("fold-to-fold spread is reported",
+              "beat buy-and-hold on" in summary, summary.splitlines()[-1][:70])
+        check("the sign-test floor is disclosed",
+              "cannot produce a p-value below" in summary)
+        check("leakage is measured, not asserted",
+              page.eval_on_selector_all("#wf-leakage tbody tr", "els => els.length") == 4)
+        check("the fixed-policy caveat is shown with the results",
+              "not a retrained walk-forward" in page.inner_text("#wf-caveat"))
+        check("the receipt states how the scaler was fit",
+              "training rows only" in page.inner_text("#wf-receipt"))
+
         # ── Real or luck? ──────────────────────────────────────────────────
         print("\nReal or luck?")
         page.click('.lab-tab[data-panel="seeds"]')
@@ -541,9 +582,9 @@ def run(api: str, port: int, shot: str | None) -> None:
               home.eval_on_selector(".hero-cta .btn-primary", "el => el.getAttribute('href')")
               == "#lab")
         n_cards = home.eval_on_selector_all(".lab-card", "els => els.length")
-        check("every panel is advertised", n_cards == 6, f"{n_cards} cards")
+        check("every panel is advertised", n_cards == 7, f"{n_cards} cards")
         check("each card declares whether it is live",
-              home.eval_on_selector_all(".lab-card-tag", "els => els.length") == 6)
+              home.eval_on_selector_all(".lab-card-tag", "els => els.length") == 7)
         check("the training caveat is on the home page",
               "training" in home.inner_text(".lab-strip-note").lower())
 

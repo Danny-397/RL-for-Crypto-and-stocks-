@@ -113,7 +113,7 @@
       <div class="stat-cell"><div class="num" data-count="16">16</div><div class="lbl">Real tickers backtested</div></div>
       <div class="stat-cell"><div class="num" data-count="5">5</div><div class="lbl">Seeds in the significance study</div></div>
       <div class="stat-cell"><div class="num" data-count="28">28</div><div class="lbl">Engineered features</div></div>
-      <div class="stat-cell"><div class="num" data-count="155">155</div><div class="lbl">Tests passing</div></div>
+      <div class="stat-cell"><div class="num" data-count="196">196</div><div class="lbl">Tests passing</div></div>
     </section>
 
     <!-- ─────────────────────── FEATURES ─────────────────────── -->
@@ -169,7 +169,7 @@
       <div class="section-head">
         <div class="kicker">THE LAB</div>
         <h2>Don't just read the result. Test it.</h2>
-        <p>Six experiments, each one runnable against the deployed agent or the
+        <p>Seven experiments, each one runnable against the deployed agent or the
            project's real committed results. Nothing on these pages is a mock-up.</p>
       </div>
 
@@ -206,8 +206,16 @@
           <span class="lab-card-tag tag-mixed">Real data · live stats</span>
         </a>
 
-        <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
+        <a class="lab-card" href="#lab/walkforward" data-view="lab" data-panel="walkforward">
           <span class="lab-card-n">05</span>
+          <h3>Walk-Forward</h3>
+          <p>Disjoint chronological folds, each with its own scaler &mdash; plus a direct
+             measurement of what fitting that scaler on the test block costs you.</p>
+          <span class="lab-card-tag tag-mixed">Live evaluation</span>
+        </a>
+
+        <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
+          <span class="lab-card-n">06</span>
           <h3>Real or Luck?</h3>
           <p>A <b>+275%</b> single-seed headline beside what five seeds actually say.
              Re-run the bootstrap and the permutation test yourself.</p>
@@ -215,7 +223,7 @@
         </a>
 
         <a class="lab-card" href="#lab/notebook" data-view="lab" data-panel="notebook">
-          <span class="lab-card-n">06</span>
+          <span class="lab-card-n">07</span>
           <h3>Research Notebook</h3>
           <p>Every experiment you run, with the exact config that produced it —
              and a button that replays it to the same numbers.</p>
@@ -555,6 +563,7 @@
           <button class="lab-tab" role="tab" id="tab-playground" data-panel="playground" aria-controls="panel-playground" aria-selected="false" tabindex="-1">Agent Playground</button>
           <button class="lab-tab" role="tab" id="tab-xray" data-panel="xray" aria-controls="panel-xray" aria-selected="false" tabindex="-1">Agent X-Ray</button>
           <button class="lab-tab" role="tab" id="tab-generalization" data-panel="generalization" aria-controls="panel-generalization" aria-selected="false" tabindex="-1">Can You Break It?</button>
+          <button class="lab-tab" role="tab" id="tab-walkforward" data-panel="walkforward" aria-controls="panel-walkforward" aria-selected="false" tabindex="-1">Walk-Forward</button>
           <button class="lab-tab" role="tab" id="tab-seeds" data-panel="seeds" aria-controls="panel-seeds" aria-selected="false" tabindex="-1">Real or Luck?</button>
           <button class="lab-tab" role="tab" id="tab-notebook" data-panel="notebook" aria-controls="panel-notebook" aria-selected="false" tabindex="-1">Notebook</button>
         </div>
@@ -973,6 +982,77 @@
               </div>
               <div id="shift-bars"></div>
               <div id="shift-notes"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- WALK-FORWARD -->
+        <section class="lab-panel" id="panel-walkforward" role="tabpanel" aria-labelledby="tab-walkforward" tabindex="0">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Does it hold up over time?</h2>
+            <p>One backtest is one slice of history, and that slice might just have been kind.
+               Rolling walk-forward re-asks the question on several disjoint, chronological
+               blocks &mdash; and refits the feature scaler on each block's training rows
+               <b>only</b>, so no fold ever sees its own test data. Then it runs the same folds
+               the wrong way, with the scaler fit on everything, to measure what that shortcut
+               actually costs.</p>
+          </div>
+
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>Run the folds <span class="tag-mixed">Live evaluation &middot; fixed policy</span></h3>
+              <div class="seg" id="wf-market" data-value="stock">
+                <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
+                <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+              </div>
+            </div>
+
+            <div class="shift-controls">
+              <div class="ctl">
+                <label>Data</label>
+                <div class="seg" id="wf-mode" data-value="historical">
+                  <button type="button" data-val="historical" aria-pressed="true">Real</button>
+                  <button type="button" data-val="synthetic" aria-pressed="false">Synthetic</button>
+                </div>
+              </div>
+              <div class="ctl">
+                <label for="wf-source" id="wf-source-label">Ticker</label>
+                <select id="wf-source"></select>
+              </div>
+              <div class="ctl">
+                <label for="wf-folds">Folds <span class="ctl-val" id="wf-folds-val">4</span></label>
+                <input type="range" id="wf-folds" min="2" max="8" step="1" value="4" />
+              </div>
+              <div class="ctl">
+                <label for="wf-scheme">Scheme</label>
+                <select id="wf-scheme">
+                  <option value="expanding" selected>Expanding (anchored)</option>
+                  <option value="sliding">Sliding (fixed window)</option>
+                </select>
+              </div>
+              <button class="run-btn" id="wf-run" type="button">Run walk-forward</button>
+            </div>
+
+            <p class="xr-hint" id="wf-scheme-note"></p>
+            <div class="bar" id="wf-bar"><i></i></div>
+            <div class="lab-status" id="wf-status"></div>
+            <div id="wf-error" hidden></div>
+
+            <div id="wf-out" hidden>
+              <h4 class="attr-h">Fold geometry</h4>
+              <p class="xr-hint">Each row is one fold. The dim block is what the scaler was fit
+                 on; the bright block is the out-of-sample test window it was then scored on.
+                 They never overlap.</p>
+              <div class="wf-timeline" id="wf-timeline"></div>
+
+              <h4 class="attr-h">Out-of-sample result, fold by fold</h4>
+              <div class="wf-table-wrap"><table class="wf-table" id="wf-table"></table></div>
+
+              <div class="wf-summary" id="wf-summary"></div>
+              <div id="wf-leakage"></div>
+              <div class="attr-caveats" id="wf-caveat"></div>
+              <dl class="receipt" id="wf-receipt"></dl>
             </div>
           </div>
         </section>

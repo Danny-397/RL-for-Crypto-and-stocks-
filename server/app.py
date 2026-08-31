@@ -28,6 +28,8 @@ Lab
     GET  /api/experiments/<id>/xray?step= the full observation at one bar
     GET  /api/experiments/<id>/attribution which of those inputs move the action
 
+Experiment kinds: rollout, counterfactual, distribution_shift, walk_forward
+
 What is and is not live
 -----------------------
 Rollouts, counterfactuals, distribution-shift sweeps and all statistical
@@ -63,7 +65,14 @@ from rl_trader.config.training_config import crypto_config, stock_config  # noqa
 from rl_trader.data.data_loader import market_data_from_df  # noqa: E402
 from rl_trader.envs import make_env  # noqa: E402
 from rl_trader.evaluation.evaluate_agent import ANNUALISATION, compute_metrics  # noqa: E402
-from server import lab, perception, precomputed, regimes, stats_api  # noqa: E402
+from server import (  # noqa: E402
+    lab,
+    perception,
+    precomputed,
+    regimes,
+    stats_api,
+    walkforward,
+)
 from server.experiments import ExperimentManager, code_version  # noqa: E402
 from server.policy import load_policies  # noqa: E402
 
@@ -268,6 +277,7 @@ def api_meta():
         policies={name: p.describe() for name, p in _POLICIES.items()},
         markets=sorted(_POLICIES),
         reward_kinds=list(lab.REWARD_KINDS),
+        walk_forward=walkforward.describe(),
         evaluation_modes=list(lab.EVALUATION_MODES),
         tickers=TICKERS,
         live={
@@ -277,6 +287,7 @@ def api_meta():
             "statistics": True,
             "perception_test": True,
             "attribution": True,
+            "walk_forward": True,
             "training": False,
         },
         training_note=(
@@ -495,6 +506,19 @@ def api_create_experiment():
         runner = lab.make_counterfactual_runner(
             policy, config, step, actions, horizon, _fetch_ohlcv, _market_index
         )
+    elif kind == "walk_forward":
+        n_folds = max(2, min(8, int(payload.get("n_folds", 4) or 4)))
+        scheme = str(payload.get("scheme", "expanding")).lower()
+        if scheme not in walkforward.SCHEMES:
+            return jsonify(error=f"unknown scheme {scheme!r}",
+                           supported=list(walkforward.SCHEMES)), 400
+        frac = float(payload.get("train_min_frac", 0.4) or 0.4)
+        if not 0.1 <= frac <= 0.8:
+            return jsonify(error="'train_min_frac' must be between 0.1 and 0.8"), 400
+        runner = lab.make_walkforward_runner(
+            policy, config, n_folds, scheme, frac,
+            bool(payload.get("compare_leakage", True)), _fetch_ohlcv, _market_index,
+        )
     elif kind == "distribution_shift":
         keys = payload.get("regimes") or [r["key"] for r in regimes.list_regimes()]
         known = {r["key"] for r in regimes.list_regimes()}
@@ -509,7 +533,8 @@ def api_create_experiment():
     else:
         return jsonify(
             error=f"unknown experiment kind {kind!r}",
-            supported=["rollout", "counterfactual", "distribution_shift"],
+            supported=["rollout", "counterfactual", "distribution_shift",
+                       "walk_forward"],
         ), 400
 
     # The caller's own research question, if they stated one. Recorded verbatim

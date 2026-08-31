@@ -434,6 +434,7 @@ and its panels are the research questions made runnable.
 | **Agent Playground** | Configure market, data source, capital, costs, reward, shorting — then run a real episode and scrub it bar by bar against buy-&-hold. | ✅ live |
 | **Agent X-Ray** | At any bar, read the actual observation → policy → action → reward → position chain, all 28 features grouped as the pipeline defines them, plus the 20-bar window as a heatmap — and an occlusion pass ranking which of those inputs actually move the action. | ✅ live |
 | **Can You Break It?** | The real domain-randomization ablation (Agent A vs Agent B) with per-seed points and CIs, plus a live shift test that drops the deployed policy onto controlled synthetic regimes. | mixed — see below |
+| **Walk-Forward** | Disjoint chronological folds from the research code's own splitter, each scaled on its training rows alone, with the deployed policy scored on every out-of-sample block — plus a second pass with the scaler fit on everything, measuring what that shortcut costs. | mixed — see below |
 | **Real or Luck?** | The published single-seed headline beside the five-seed distribution, with the bootstrap and permutation machinery re-runnable at your own confidence level and resample count. | mixed — see below |
 | **Notebook** | Every experiment this session, with its config, receipt, and a Reproduce button that replays it exactly. | ✅ live |
 
@@ -500,6 +501,32 @@ exactly the kind of output a reader takes for causation:
 It does earn one clean structural check: on synthetic paths the four cross-asset
 features have no reference index and come back at exactly zero, which the panel
 names rather than leaving as four unexplained flat bars.
+
+### Walk-forward, and the price of a leaky scaler
+
+The leakage controls were the least visible thing in the project: a claim in this
+README and a few lines in `rl_trader/evaluation/walk_forward.py`. The panel runs
+that same splitter — imported, not reimplemented — over a real series, fits a
+**separate feature scaler on each fold's training rows**, and scores the deployed
+policy on every out-of-sample block.
+
+**It is not a retrained walk-forward, and it says so on every response.** This
+backend has no PyTorch, so the policy is fixed across folds. What that measures is
+still worth seeing: on a 1,200-bar momentum path with four folds, one unchanged
+policy's excess return over buy-and-hold ran from **−21.7% to +18.7%** across
+chronological blocks. A single backtest would have reported any one of those.
+
+Then it runs the identical folds a second time with the scaler fit on the whole
+series, test block included — the standard mistake — and reports the difference
+fold by fold. Same policy, same prices, only the scaler's fitting window changes.
+On that series the largest single-fold gap was **4.1 percentage points**. Nothing
+about that is asserted in advance; it is whatever it comes out as, and a test
+fails if the two arms ever come back identical, because then the comparison would
+be showing nothing and should not be displayed.
+
+The aggregate carries the same resolution warning as everything else: a sign test
+over four folds cannot produce a p-value below `2/2⁴ = 0.125`, so that design
+cannot reach 0.05 whatever the effect size.
 
 ### Testing the reader, not just the agent
 
@@ -572,6 +599,7 @@ paper.
 | `GET /api/experiments/<id>/config` | The exact config needed to reproduce it |
 | `GET /api/experiments/<id>/xray?step=` | The full observation at one bar |
 | `GET /api/experiments/<id>/attribution` | Occlusion attribution: which inputs move the action |
+| `POST /api/experiments` `kind=walk_forward` | Rolling folds, per-fold scaling, and the leakage comparison |
 | `GET /api/results`, `/api/live`, `/api/tickers` | The original dashboard endpoints (unchanged) |
 
 ### Run an experiment

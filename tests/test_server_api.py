@@ -666,3 +666,79 @@ def test_attribution_404s_on_an_unknown_experiment(client):
 
 def test_meta_advertises_attribution(client):
     assert client.get("/api/meta").get_json()["live"]["attribution"] is True
+
+
+# --------------------------------------------------------------------------- #
+# Walk-forward                                                                 #
+# --------------------------------------------------------------------------- #
+def test_walk_forward_experiment(client):
+    r = client.post("/api/experiments", json={
+        "kind": "walk_forward", "n_folds": 4, "scheme": "expanding",
+        "compare_leakage": True,
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 2, "n_steps": 1200},
+    })
+    assert r.status_code == 202
+    body = _await(client, r.get_json()["id"], timeout=60)
+    assert body["status"] == "done", body.get("error")
+    res = body["result"]
+
+    assert len(res["folds"]) == 4
+    assert res["summary"]["n_folds"] == 4
+    # Disjoint, chronological, and stated as such.
+    for fold in res["folds"]:
+        assert fold["train_end"] <= fold["test_start"]
+    assert "not a retrained walk-forward" in res["fixed_policy_note"]
+    assert res["leakage"]["identical"] is False
+
+
+def test_walk_forward_reports_fold_to_fold_variance(client):
+    """The panel's point: one fixed policy swings across chronological blocks."""
+    r = client.post("/api/experiments", json={
+        "kind": "walk_forward", "n_folds": 4,
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 2, "n_steps": 1200},
+    })
+    res = _await(client, r.get_json()["id"], timeout=60)["result"]
+    s = res["summary"]
+    assert s["best_fold_excess"] > s["worst_fold_excess"]
+    assert s["sign_test_floor"] == pytest.approx(2 / 2 ** 4)
+    assert s["sign_test_can_reach_05"] is False
+
+
+def test_walk_forward_sliding_scheme(client):
+    r = client.post("/api/experiments", json={
+        "kind": "walk_forward", "n_folds": 3, "scheme": "sliding",
+        "compare_leakage": False,
+        "config": {"market": "stock", "mode": "synthetic", "regime": "random_walk",
+                   "seed": 8, "n_steps": 1200},
+    })
+    res = _await(client, r.get_json()["id"], timeout=60)["result"]
+    sizes = [f["train_end"] - f["train_start"] for f in res["folds"]]
+    assert len(set(sizes)) == 1          # fixed-size window
+    assert "leakage" not in res           # not requested, so not invented
+
+
+@pytest.mark.parametrize("payload", [
+    {"scheme": "sideways"}, {"train_min_frac": 0.95},
+])
+def test_walk_forward_validates_its_options(client, payload):
+    body = {"kind": "walk_forward",
+            "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                       "seed": 1, "n_steps": 900}}
+    body.update(payload)
+    r = client.post("/api/experiments", json=body)
+    assert r.status_code == 400
+
+
+def test_meta_describes_the_walk_forward_options(client):
+    meta = client.get("/api/meta").get_json()
+    assert meta["live"]["walk_forward"] is True
+    assert {s["key"] for s in meta["walk_forward"]["schemes"]} == {"expanding", "sliding"}
+
+
+def test_unknown_experiment_kind_lists_walk_forward(client):
+    r = client.post("/api/experiments", json={"kind": "telepathy", "config": {
+        "market": "stock", "mode": "synthetic", "regime": "momentum"}})
+    assert r.status_code == 400
+    assert "walk_forward" in r.get_json()["supported"]
