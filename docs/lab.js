@@ -1431,6 +1431,292 @@
     return { init };
   })();
 
+
+  /* -- Research notebook ----------------------------------- */
+  /* Every experiment this session has run, with the config that produced it.
+   *
+   * Two things are deliberately NOT done here. The notebook never writes a
+   * hypothesis on the visitor's behalf — an invented research question is the
+   * notebook's version of a fabricated result — so an experiment run without one
+   * is shown as "no question stated". And the "finding" line is derived only
+   * from numbers the backend actually returned; a failed or pending experiment
+   * gets no finding at all. */
+  const Notebook = (function () {
+    let rows = [];
+    let openId = null;
+
+    async function loadRegimes() {
+      try {
+        const body = await api.get("/api/regimes");
+        $("nb-regime").innerHTML = body.regimes
+          .map((r) => '<option value="' + r.key + '">' + r.label + "</option>")
+          .join("");
+      } catch (err) {
+        /* the selector stays empty; running will surface the real error */
+      }
+    }
+
+    function kindLabel(kind) {
+      if (kind === "rollout") return "Rollout";
+      if (kind === "distribution_shift") return "Shift sweep";
+      if (kind === "counterfactual") return "Counterfactual";
+      return kind;
+    }
+
+    function configLine(row) {
+      const c = row.config || {};
+      const bits = [c.market];
+      if (c.mode === "historical") bits.push(c.ticker);
+      else bits.push(c.regime || "synthetic", "seed " + c.seed);
+      bits.push(fmt.money(c.initial_balance));
+      bits.push(Math.round((c.transaction_cost || 0) * 10000) + " bps");
+      bits.push(c.reward === "dsr" ? "diff. sharpe" : "return");
+      return bits.filter(Boolean).join(" · ");
+    }
+
+    /* Only ever derived from numbers the backend returned. */
+    function finding(row) {
+      if (row.status === "error") {
+        return '<span class="neg">failed</span><small>' +
+               (row.error || "").slice(0, 40) + "</small>";
+      }
+      if (row.status !== "done") {
+        return '<span class="muted-val">' + Math.round((row.progress || 0) * 100) +
+               "%</span><small>" + (row.stage || row.status) + "</small>";
+      }
+      const r = row._result;
+      if (!r) return '<span class="muted-val">—</span><small>open to load</small>';
+      if (row.kind === "rollout" && r.metrics) {
+        const a = r.metrics.total_return;
+        const b = r.bench_metrics ? r.bench_metrics.total_return : null;
+        return '<span class="' + fmt.cls(a) + '">' + fmt.pct(a, 1) + "</span><small>" +
+               (b === null ? "" : "b&h " + fmt.pct(b, 1)) + "</small>";
+      }
+      if (row.kind === "distribution_shift" && r.regimes) {
+        const sep = r.regimes.filter((x) => x.excess_excludes_zero).length;
+        return '<span class="muted-val">' + r.regimes.length + " regimes</span><small>" +
+               sep + " separated from zero</small>";
+      }
+      if (row.kind === "counterfactual" && r.candidates) {
+        return '<span class="muted-val">' + r.candidates.length +
+               " actions</span><small>horizon " + r.horizon + "</small>";
+      }
+      return '<span class="muted-val">done</span><small>' + row.elapsed_sec + "s</small>";
+    }
+
+    function render() {
+      const list = $("nb-list");
+      if (!rows.length) {
+        list.innerHTML =
+          '<div class="nb-empty">No experiments yet. Every run from any panel in ' +
+          "this session appears here.</div>";
+        $("nb-count").textContent = "";
+        return;
+      }
+      $("nb-count").textContent =
+        rows.length + (rows.length === 1 ? " experiment" : " experiments") + " this session";
+
+      list.innerHTML = rows
+        .map(function (row) {
+          const when = new Date(row.created_at * 1000).toLocaleTimeString("en-US", {
+            hour: "2-digit", minute: "2-digit", second: "2-digit",
+          });
+          const q = row.question
+            ? '<div class="nb-q">' + escapeHtml(row.question) + "</div>"
+            : '<div class="nb-q is-unstated">no question stated</div>';
+          return '<div class="nb-row" data-id="' + row.id + '">' +
+                 '<span class="nb-id">' + row.id + "<small>" + kindLabel(row.kind) +
+                 "</small></span>" +
+                 '<span class="nb-main">' + q +
+                 '<div class="nb-cfg">' + configLine(row) + " · " + when + "</div></span>" +
+                 '<span class="nb-find">' + finding(row) + "</span>" +
+                 "</div>";
+        })
+        .join("");
+    }
+
+    function escapeHtml(str) {
+      const d = document.createElement("div");
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    async function refresh() {
+      try {
+        const body = await api.get("/api/experiments?limit=50");
+        $("nb-storage").textContent = body.storage;
+        const previous = {};
+        rows.forEach((r) => { if (r._result) previous[r.id] = r._result; });
+        rows = body.experiments.map(function (r) {
+          r._result = previous[r.id] || null;
+          return r;
+        });
+        render();
+      } catch (err) {
+        showError($("nb-error"), "Could not load history: " + err.message);
+      }
+    }
+
+    async function open(id) {
+      openId = id;
+      const card = $("nb-detail-card");
+      card.hidden = false;
+      $("nb-detail-title").textContent = "Experiment " + id;
+      $("nb-detail").innerHTML = '<div class="lab-status">loading…</div>';
+      try {
+        const body = await api.get("/api/experiments/" + id);
+        const row = rows.find((r) => r.id === id);
+        if (row) { row._result = body.result || null; render(); }
+
+        const receipt = body.receipt || {};
+        const prov = receipt.provenance || {};
+        const cfg = body.config || {};
+
+        const entries = [
+          ["Experiment", body.id],
+          ["Kind", kindLabel(body.kind)],
+          ["Question", body.question || "— not stated —"],
+          ["Status", body.status + (body.error ? " · " + body.error : "")],
+          ["Started", receipt.created_at_utc],
+          ["Elapsed", body.elapsed_sec + "s"],
+          ["Code version", receipt.code_version || "unknown"],
+          ["Market", cfg.market],
+          ["Mode", cfg.mode === "historical" ? "real data · " + cfg.ticker
+                                             : "synthetic · " + cfg.regime + " · seed " + cfg.seed],
+          ["Starting capital", fmt.money(cfg.initial_balance)],
+          ["Transaction cost", Math.round(cfg.transaction_cost * 10000) + " bps"],
+          ["Slippage", Math.round(cfg.slippage * 10000) + " bps"],
+          ["Reward", cfg.reward === "dsr" ? "differential Sharpe" : "risk-aware return"],
+          ["Shorting", cfg.allow_short ? "allowed" : "long only"],
+          ["Dataset hash", prov.dataset_hash],
+          ["Bars", prov.bars],
+          ["Policy", prov.policy ? prov.policy.name + " · " + prov.policy.sha256 : null],
+          ["Critic", prov.policy
+            ? (prov.policy.has_value_head ? "exported" : "not in this archive")
+            : null],
+          ["Storage", receipt.storage],
+        ];
+
+        $("nb-detail").innerHTML =
+          '<dl class="receipt">' +
+          entries.filter((e) => e[1] !== undefined && e[1] !== null)
+                 .map((e) => "<dt>" + e[0] + "</dt><dd>" + escapeHtml(String(e[1])) + "</dd>")
+                 .join("") +
+          "</dl>" +
+          '<div class="caveat">This config round-trips exactly: replaying it rebuilds ' +
+          "an identical environment and reproduces these numbers.</div>";
+      } catch (err) {
+        $("nb-detail").innerHTML =
+          '<div class="lab-error">Could not load ' + id + ": " + err.message + "</div>";
+      }
+    }
+
+    async function reproduce() {
+      if (!openId) return;
+      const btn = $("nb-reproduce");
+      btn.disabled = true;
+      setStatus($("nb-status"), "reproducing " + openId + "…", true);
+      try {
+        const cfgBody = await api.get("/api/experiments/" + openId + "/config");
+        const original = rows.find((r) => r.id === openId);
+        const body = await api.runExperiment({
+          kind: cfgBody.kind,
+          config: cfgBody.config,
+          question: (original && original.question)
+            ? "Reproduction of " + openId + ": " + original.question
+            : "Reproduction of " + openId,
+        }, null, 180000);
+        await refresh();
+        await open(body.id);
+        setStatus($("nb-status"), body.id + " reproduced " + openId, false);
+      } catch (err) {
+        showError($("nb-error"), "Reproduction failed: " + err.message);
+        setStatus($("nb-status"), "", false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function run() {
+      const btn = $("nb-run");
+      btn.disabled = true;
+      showError($("nb-error"), null);
+      $("nb-bar").firstElementChild.style.width = "0%";
+      const kind = $("nb-kind").value;
+      const question = $("nb-question").value.trim();
+
+      const payload = {
+        kind: kind,
+        question: question || undefined,
+        config: {
+          market: $("nb-market").dataset.value || "stock",
+          mode: "synthetic",
+          regime: $("nb-regime").value || "random_walk",
+          seed: Number($("nb-seed").value) || 0,
+          n_steps: 650,
+        },
+      };
+      if (kind === "distribution_shift") payload.seeds = [0, 1, 2, 3, 4];
+
+      try {
+        const body = await api.runExperiment(payload, function (b) {
+          $("nb-bar").firstElementChild.style.width =
+            Math.round((b.progress || 0) * 100) + "%";
+          setStatus($("nb-status"), b.id + " · " + b.stage, true);
+        }, 180000);
+        await refresh();
+        await open(body.id);
+        setStatus($("nb-status"), body.id + " · complete · " + body.elapsed_sec + "s", false);
+      } catch (err) {
+        showError($("nb-error"), String(err.message || err));
+        setStatus($("nb-status"), "", false);
+        await refresh();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function syncKind() {
+      const isShift = $("nb-kind").value === "distribution_shift";
+      // A sweep chooses its own regimes, so the single-regime picker is irrelevant.
+      $("nb-regime-ctl").style.display = isShift ? "none" : "";
+    }
+
+    function init() {
+      if (!$("nb-list")) return;
+      const seg = $("nb-market");
+      seg.addEventListener("click", function (e) {
+        const b = e.target.closest("button[data-val]");
+        if (!b) return;
+        seg.dataset.value = b.dataset.val;
+        seg.querySelectorAll("button").forEach((x) =>
+          x.setAttribute("aria-pressed", String(x === b))
+        );
+      });
+      $("nb-kind").addEventListener("change", syncKind);
+      $("nb-run").addEventListener("click", run);
+      $("nb-refresh").addEventListener("click", refresh);
+      $("nb-reproduce").addEventListener("click", reproduce);
+      $("nb-close").addEventListener("click", function () {
+        $("nb-detail-card").hidden = true;
+        openId = null;
+      });
+      $("nb-list").addEventListener("click", function (e) {
+        const row = e.target.closest(".nb-row[data-id]");
+        if (row) open(row.dataset.id);
+      });
+      // Any panel's run shows up here, so refresh whenever this tab is opened.
+      window.addEventListener("lab:panel", function (e) {
+        if (e.detail.panel === "notebook") refresh();
+      });
+      syncKind();
+      loadRegimes();
+      refresh();
+    }
+
+    return { init, refresh };
+  })();
+
   /* ── backend status ─────────────────────────────────────── */
   async function initStatus() {
     const pill = $("lab-api-status");
@@ -1475,11 +1761,12 @@
     Generalization.init();
     Seeds.init();
     WhatIf.init();
+    Notebook.init();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
-  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, Playground, XRay, Generalization, Seeds, WhatIf };
+  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, Playground, XRay, Generalization, Seeds, WhatIf, Notebook };
 })();

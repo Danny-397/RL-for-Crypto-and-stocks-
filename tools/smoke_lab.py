@@ -75,7 +75,15 @@ def run(api: str, port: int, shot: str | None) -> None:
             ),
         )
         page.goto(url, wait_until="load")
-        time.sleep(1.5)
+
+        # Wait for the handshake rather than sleeping a fixed interval: a cold
+        # free-tier backend can take several seconds, and a fixed sleep turns
+        # that into a flaky failure that looks like a real one.
+        page.wait_for_function(
+            "() => { const el = document.getElementById('lab-api-status');"
+            "return el && !/connecting/i.test(el.textContent); }",
+            timeout=60000,
+        )
 
         check("lab view routes from #lab",
               page.eval_on_selector("#view-lab", "el => el.classList.contains('active')"))
@@ -84,7 +92,9 @@ def run(api: str, port: int, shot: str | None) -> None:
               page.inner_text("#lab-api-status").strip())
 
         page.click('#pg-mode button[data-val="synthetic"]')
-        time.sleep(0.4)
+        page.wait_for_function(
+            "() => document.getElementById('pg-regime').options.length >= 4", timeout=30000
+        )
         check("synthetic controls appear", page.is_visible("#pg-syn-row"))
         n_regimes = page.eval_on_selector("#pg-regime", "el => el.options.length")
         check("regimes loaded from API", n_regimes >= 4, f"{n_regimes} regimes")
@@ -262,6 +272,61 @@ def run(api: str, port: int, shot: str | None) -> None:
 
         paper = page.inner_text("#sd-paper")
         check("published ticker-axis test shown", "p-value" in paper.lower())
+
+        # ── Research notebook ──────────────────────────────────────────────
+        print("\nResearch notebook")
+        page.click('.lab-tab[data-panel="notebook"]')
+        page.wait_for_selector("#nb-list .nb-row", timeout=20000)
+        time.sleep(0.5)
+
+        n_before = page.eval_on_selector_all("#nb-list .nb-row", "els => els.length")
+        check("earlier runs are listed", n_before >= 3, f"{n_before} experiments")
+        check("storage is declared ephemeral",
+              "ephemeral" in page.inner_text("#nb-storage").lower())
+        check("runs with no stated question say so",
+              page.eval_on_selector_all("#nb-list .nb-q.is-unstated", "els => els.length") > 0)
+
+        # Run one with a question of our own.
+        question = "Does the agent survive mean reversion?"
+        page.fill("#nb-question", question)
+        page.select_option("#nb-regime", "mean_reversion")
+        page.click("#nb-run")
+        page.wait_for_selector("#nb-detail-card:not([hidden])", timeout=90000)
+        time.sleep(0.8)
+
+        detail = page.inner_text("#nb-detail")
+        # inner_text returns *rendered* text and .receipt dt is uppercased in CSS,
+        # so compare case-insensitively rather than against the source casing.
+        lower = detail.lower()
+        check("the question is recorded verbatim", question in detail)
+        check("receipt names the dataset hash", "dataset hash" in lower)
+        check("receipt states critic availability", "critic" in lower)
+        n_after = page.eval_on_selector_all("#nb-list .nb-row", "els => els.length")
+        check("history grew by one", n_after == n_before + 1, f"{n_before} -> {n_after}")
+
+        # Reproducing must land on the same numbers.
+        first_id = page.inner_text("#nb-detail-title").replace("Experiment", "").strip()
+        finding_before = page.eval_on_selector(
+            f'#nb-list .nb-row[data-id="{first_id}"] .nb-find span',
+            "el => el.textContent.trim()",
+        )
+        page.click("#nb-reproduce")
+        page.wait_for_function(
+            f"() => !document.getElementById('nb-detail-title').textContent.includes('{first_id}')",
+            timeout=90000,
+        )
+        time.sleep(1.0)
+        repro_id = page.inner_text("#nb-detail-title").replace("Experiment", "").strip()
+        check("reproduction is a new experiment", repro_id != first_id,
+              f"{first_id} -> {repro_id}")
+        check("reproduction cites the original",
+              first_id in page.inner_text("#nb-detail"))
+        finding_after = page.eval_on_selector(
+            f'#nb-list .nb-row[data-id="{repro_id}"] .nb-find span',
+            "el => el.textContent.trim()",
+        )
+        check("reproduction matches the original result",
+              finding_before == finding_after, f"{finding_before} vs {finding_after}")
 
         page.click('.lab-tab[data-panel="playground"]')
         time.sleep(0.3)

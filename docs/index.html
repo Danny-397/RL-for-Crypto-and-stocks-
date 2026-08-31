@@ -485,6 +485,7 @@
           <button class="lab-tab" role="tab" data-panel="xray" aria-selected="false">Agent X-Ray</button>
           <button class="lab-tab" role="tab" data-panel="generalization" aria-selected="false">Can You Break It?</button>
           <button class="lab-tab" role="tab" data-panel="seeds" aria-selected="false">Real or Luck?</button>
+          <button class="lab-tab" role="tab" data-panel="notebook" aria-selected="false">Notebook</button>
         </div>
 
         <!-- PLAYGROUND -->
@@ -897,6 +898,79 @@
                actually resolve a p-value.</p>
             <div class="lab-status" id="sd-paper-status"></div>
             <div id="sd-paper"></div>
+          </div>
+        </section>
+
+        <!-- RESEARCH NOTEBOOK -->
+        <section class="lab-panel" id="panel-notebook" role="tabpanel">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Research notebook</h2>
+            <p>Every experiment run in this session, with the exact configuration that produced it.
+               Any of them can be replayed &mdash; the config is a fixed point, so a replay rebuilds
+               an identical environment.</p>
+          </div>
+
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>Run a new experiment</h3>
+              <div class="nb-count" id="nb-count"></div>
+            </div>
+
+            <div class="nb-builder">
+              <div class="ctl ctl-wide">
+                <label for="nb-question">Research question <span class="ctl-opt">optional</span></label>
+                <input type="text" id="nb-question" maxlength="200"
+                       placeholder="e.g. Does the agent still work when returns mean-revert?" />
+              </div>
+              <div class="ctl">
+                <label for="nb-kind">Experiment</label>
+                <select id="nb-kind">
+                  <option value="rollout">Rollout &mdash; one full episode</option>
+                  <option value="distribution_shift">Distribution shift &mdash; across regimes</option>
+                </select>
+              </div>
+              <div class="ctl">
+                <label>Market</label>
+                <div class="seg" id="nb-market" data-value="stock">
+                  <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
+                  <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+                </div>
+              </div>
+              <div class="ctl" id="nb-regime-ctl">
+                <label for="nb-regime">Regime</label>
+                <select id="nb-regime"></select>
+              </div>
+              <div class="ctl">
+                <label for="nb-seed">Path seed</label>
+                <input type="number" id="nb-seed" value="0" min="0" step="1" />
+              </div>
+              <button class="run-btn" id="nb-run" type="button">Run experiment</button>
+            </div>
+
+            <div class="bar" id="nb-bar"><i></i></div>
+            <div class="lab-status" id="nb-status"></div>
+            <div id="nb-error" hidden></div>
+          </div>
+
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>Session history</h3>
+              <button class="btn-link" id="nb-refresh" type="button">Refresh</button>
+            </div>
+            <p class="xr-hint" id="nb-storage"></p>
+            <div id="nb-list"></div>
+          </div>
+
+          <div class="panel-card" id="nb-detail-card" hidden>
+            <div class="gen-head">
+              <h3 id="nb-detail-title">Experiment</h3>
+              <div class="wi-ctl">
+                <button class="run-btn run-btn-sm" id="nb-reproduce" type="button">Reproduce this</button>
+                <button class="btn-link" id="nb-close" type="button">Close</button>
+              </div>
+            </div>
+            <div id="nb-detail"></div>
           </div>
         </section>
 

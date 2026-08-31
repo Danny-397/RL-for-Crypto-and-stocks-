@@ -456,7 +456,17 @@ def api_create_experiment():
             supported=["rollout", "counterfactual", "distribution_shift"],
         ), 400
 
-    exp = MANAGER.create(kind, config, runner, provenance={"api_version": API_VERSION})
+    # The caller's own research question, if they stated one. Recorded verbatim
+    # and never synthesised on their behalf.
+    question = payload.get("question")
+    if question is not None:
+        question = str(question).strip()[:400] or None
+
+    exp = MANAGER.create(
+        kind, config, runner,
+        provenance={"api_version": API_VERSION},
+        question=question,
+    )
     return jsonify(exp.summary()), 202
 
 

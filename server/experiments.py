@@ -94,6 +94,11 @@ class Experiment:
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     provenance: Dict[str, Any] = field(default_factory=dict)
+    # The question the person running this said they were asking. Kept beside the
+    # config rather than inside it, so the config stays a clean, round-trippable
+    # description of the environment. Never generated on their behalf: an
+    # invented hypothesis would be the notebook's version of a fabricated result.
+    question: Optional[str] = None
 
     # -- serialisation ---------------------------------------------------- #
     def summary(self) -> dict:
@@ -111,6 +116,7 @@ class Experiment:
             ),
             "error": self.error,
             "has_result": self.result is not None,
+            "question": self.question,
         }
 
     def full(self) -> dict:
@@ -134,6 +140,7 @@ class Experiment:
                 "%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.created_at)
             ),
             "config": self.config,
+            "question": self.question,
             "provenance": self.provenance,
             "storage": "ephemeral — the API keeps experiments in memory only",
         }
@@ -165,6 +172,7 @@ class ExperimentManager:
         config: Dict[str, Any],
         runner: Callable[["Experiment"], Dict[str, Any]],
         provenance: Optional[Dict[str, Any]] = None,
+        question: Optional[str] = None,
     ) -> Experiment:
         """Register an experiment and start it on a worker thread."""
         with self._lock:
@@ -173,6 +181,7 @@ class ExperimentManager:
                 kind=kind,
                 config=config,
                 provenance=provenance or {},
+                question=question,
             )
             self._experiments[exp.id] = exp
             self._evict_locked()

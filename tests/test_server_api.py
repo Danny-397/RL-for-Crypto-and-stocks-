@@ -481,3 +481,51 @@ def test_datasets_expose_the_single_seed_headline(client):
     assert stats["multi_seed"]["mean"] < 0.1
     assert stats["multi_seed"]["ci_low"] < 0 < stats["multi_seed"]["ci_high"]
     assert stats["multi_seed"]["ci_excludes_zero"] is False
+
+
+def test_experiment_records_the_callers_question(client):
+    """A stated research question is kept verbatim; an absent one stays absent."""
+    q = "Does the agent still work when returns mean-revert?"
+    r = client.post("/api/experiments", json={
+        "kind": "rollout", "question": q,
+        "config": {"market": "stock", "mode": "synthetic", "regime": "mean_reversion",
+                   "seed": 1, "n_steps": 300},
+    })
+    body = _await(client, r.get_json()["id"])
+    assert body["question"] == q
+    assert body["receipt"]["question"] == q
+    # It is metadata about the run, not part of the environment description, so
+    # it must not leak into the config that gets replayed.
+    assert "question" not in body["config"]
+
+    r2 = client.post("/api/experiments", json={
+        "kind": "rollout",
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 1, "n_steps": 300},
+    })
+    body2 = _await(client, r2.get_json()["id"])
+    # Never invented on the caller's behalf.
+    assert body2["question"] is None
+
+
+def test_experiment_question_is_bounded_and_trimmed(client):
+    r = client.post("/api/experiments", json={
+        "kind": "rollout", "question": "  " + ("x" * 900) + "  ",
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 2, "n_steps": 300},
+    })
+    body = _await(client, r.get_json()["id"])
+    assert len(body["question"]) == 400
+
+    blank = client.post("/api/experiments", json={
+        "kind": "rollout", "question": "   ",
+        "config": {"market": "stock", "mode": "synthetic", "regime": "momentum",
+                   "seed": 3, "n_steps": 300},
+    })
+    assert _await(client, blank.get_json()["id"])["question"] is None
+
+
+def test_experiment_listing_carries_questions(client):
+    body = client.get("/api/experiments?limit=50").get_json()
+    assert any(row.get("question") for row in body["experiments"])
+    assert all("question" in row for row in body["experiments"])

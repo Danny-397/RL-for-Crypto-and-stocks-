@@ -586,3 +586,67 @@
   text-transform: uppercase; color: var(--faint);
 }
 .wi-head-row span:nth-child(3), .wi-head-row span:nth-child(4) { text-align: right; }
+
+/* ── Research notebook ───────────────────────────────────── */
+.nb-builder {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px; align-items: end; margin-top: 16px;
+}
+.nb-builder .ctl-wide { grid-column: 1 / -1; }
+.nb-builder .run-btn { margin-top: 0; }
+.ctl-opt {
+  font-size: 9px; color: var(--faint); letter-spacing: 0.1em; margin-left: 5px;
+}
+#nb-question {
+  width: 100%; padding: 10px 12px; background: var(--bg-soft); color: var(--text);
+  border: 1px solid var(--border-2); border-radius: 9px;
+  font-family: var(--font-body); font-size: 13.5px;
+}
+#nb-question::placeholder { color: var(--faint); }
+.nb-count {
+  font-family: var(--font-mono); font-size: 11px; color: var(--faint);
+}
+.btn-link {
+  background: none; border: 0; cursor: pointer; padding: 4px 2px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--cyan);
+}
+.btn-link:hover { color: var(--volt); }
+
+/* One row per experiment: id, what it asked, what it found. */
+.nb-row {
+  display: grid; grid-template-columns: 96px 1fr auto;
+  gap: 14px; align-items: center; padding: 12px 10px;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+  border-radius: 8px; transition: background 0.12s ease;
+}
+.nb-row:hover { background: var(--surface-2); }
+.nb-row:last-child { border-bottom: 0; }
+.nb-id {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  color: var(--volt); letter-spacing: 0.02em;
+}
+.nb-id small {
+  display: block; font-weight: 400; color: var(--faint);
+  font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.nb-main { min-width: 0; }
+.nb-q { font-size: 13.5px; color: var(--text); margin-bottom: 3px; }
+.nb-q.is-unstated { color: var(--muted); font-style: italic; }
+.nb-cfg {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--faint);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.nb-find { font-family: var(--font-mono); font-size: 12px; text-align: right; }
+.nb-find small { display: block; color: var(--faint); font-size: 9.5px; }
+.nb-status-chip {
+  display: inline-block; font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.12em; text-transform: uppercase; padding: 2px 7px;
+  border-radius: 4px; border: 1px solid var(--border-2); color: var(--muted);
+}
+.nb-status-chip.done { color: var(--pos); border-color: rgba(93,242,160,.35); }
+.nb-status-chip.error { color: var(--neg); border-color: rgba(255,107,107,.35); }
+.nb-status-chip.running { color: var(--cyan); border-color: rgba(54,224,255,.35); }
+.nb-empty {
+  padding: 30px 10px; text-align: center; color: var(--muted); font-size: 14px;
+}
