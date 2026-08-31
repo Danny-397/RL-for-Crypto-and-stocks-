@@ -800,3 +800,54 @@
   margin-top: 14px; font-size: 13.5px; line-height: 1.65; color: var(--muted);
 }
 .pc-tie b { color: var(--volt); font-family: var(--font-mono); }
+
+/* ── Occlusion attribution ────────────────────────────────────────────────── */
+/* Bars are scaled to the largest effect measured, not to a total: correlated
+   features double-count, so this ranks — it does not decompose. */
+.attr-groups { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 16px; }
+.attr-chip {
+  display: flex; align-items: baseline; gap: 7px;
+  padding: 6px 11px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--border);
+}
+.attr-chip-k { font: 500 11.5px/1 var(--font-body); color: var(--muted); }
+.attr-chip-v { font: 700 12.5px/1 var(--font-mono); color: var(--volt); }
+
+.attr-cols {
+  display: grid; gap: 18px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+}
+@media (max-width: 780px) { .attr-cols { grid-template-columns: 1fr; } }
+.attr-h {
+  margin: 0 0 8px; font: 600 10.5px/1 var(--font-mono); color: var(--faint);
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.attr-row {
+  display: grid; grid-template-columns: 118px 1fr 52px;
+  align-items: center; gap: 9px; padding: 2px 0;
+}
+.attr-name {
+  font: 500 11.5px/1.3 var(--font-mono); color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.attr-track {
+  height: 9px; border-radius: 5px; background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+.attr-track > i {
+  display: block; height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg, var(--cyan), var(--volt));
+}
+.attr-val {
+  font: 500 11.5px/1 var(--font-mono); color: var(--text); text-align: right;
+}
+.attr-dead b { color: var(--text); font-family: var(--font-mono); }
+.attr-caveats {
+  margin-top: 16px; padding: 12px 14px; border-radius: 11px;
+  background: var(--bg-soft); border: 1px solid var(--border);
+}
+.attr-method { margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: var(--text); }
+.attr-caveats ul { margin: 0; padding-left: 18px; }
+.attr-caveats li {
+  font-size: 12.5px; line-height: 1.62; color: var(--muted); margin-bottom: 4px;
+}

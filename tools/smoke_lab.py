@@ -287,6 +287,40 @@ def run(api: str, port: int, shot: str | None) -> None:
         time.sleep(1.2)
         check("X-Ray scrub moves the decision", page.inner_text("#xr-action") != act_before)
 
+        # ── What is it reading? (occlusion attribution) ────────────────────
+        print("\nWhat is it reading?")
+        page.click("#attr-run")
+        page.wait_for_selector("#attr-out:not([hidden])", timeout=60000)
+        time.sleep(0.5)
+
+        n_rows = page.eval_on_selector_all("#attr-features .attr-row", "els => els.length")
+        check("every feature is attributed", n_rows == 28, f"{n_rows} rows")
+        check("account scalars are attributed separately",
+              page.eval_on_selector_all("#attr-account .attr-row", "els => els.length") == 3)
+        check("feature groups are summarised",
+              page.eval_on_selector_all(".attr-chip", "els => els.length") == 8)
+
+        # Ranked strongest-first, and the top bar must be a real effect.
+        vals = page.eval_on_selector_all(
+            "#attr-features .attr-val", "els => els.map(e => parseFloat(e.textContent))"
+        )
+        check("attribution is ranked", vals == sorted(vals, reverse=True))
+        check("occlusion moves the policy", vals[0] > 0.01, f"top delta {vals[0]}")
+
+        check("structurally inert features are named",
+              "rel_return_5" in page.inner_text("#attr-dead"),
+              page.inner_text("#attr-dead")[:60])
+        caveats = page.inner_text("#attr-caveats").lower()
+        check("the method's limits travel with the chart",
+              "not causal" in caveats and "correlated" in caveats)
+
+        # Switching scope must re-render the measurement already taken, not
+        # quietly run a different one behind the same label.
+        page.select_option("#attr-scope", "local")
+        time.sleep(0.5)
+        check("the local view is labelled as a single bar",
+              "one point in" in page.inner_text("#attr-caveats"))
+
         # ── What if? (counterfactual) ──────────────────────────────────────
         print("\nWhat if?")
         page.click("#wi-run")

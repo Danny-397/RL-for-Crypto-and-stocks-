@@ -432,7 +432,7 @@ and its panels are the research questions made runnable.
 |---|---|---|
 | **Signal or Noise?** | Before testing the agent, test yourself: tell charts carrying the agent's training-time autocorrelation from pure random walks, under a design where volatility and drift are standardised away. Scored with an exact binomial test, beside a power analysis and a one-line statistical rule run on the same charts. | ✅ live |
 | **Agent Playground** | Configure market, data source, capital, costs, reward, shorting — then run a real episode and scrub it bar by bar against buy-&-hold. | ✅ live |
-| **Agent X-Ray** | At any bar, read the actual observation → policy → action → reward → position chain, all 28 features grouped as the pipeline defines them, plus the 20-bar window as a heatmap. | ✅ live |
+| **Agent X-Ray** | At any bar, read the actual observation → policy → action → reward → position chain, all 28 features grouped as the pipeline defines them, plus the 20-bar window as a heatmap — and an occlusion pass ranking which of those inputs actually move the action. | ✅ live |
 | **Can You Break It?** | The real domain-randomization ablation (Agent A vs Agent B) with per-seed points and CIs, plus a live shift test that drops the deployed policy onto controlled synthetic regimes. | mixed — see below |
 | **Real or Luck?** | The published single-seed headline beside the five-seed distribution, with the bootstrap and permutation machinery re-runnable at your own confidence level and resample count. | mixed — see below |
 | **Notebook** | Every experiment this session, with its config, receipt, and a Reproduce button that replays it exactly. | ✅ live |
@@ -461,6 +461,45 @@ omitted and labelled, never filled in with a plausible number. The clearest
 example: the deployed policy archives contain the actor but **no critic head**,
 so the X-Ray's value slot reads *"not exported"* instead of showing an invented
 estimate.
+
+### What the agent is actually reading
+
+The X-Ray showed all 563 inputs but never said which mattered. An occlusion pass
+now answers that live: hold the observation fixed, replace one input with an
+uninformative baseline — a feature by its mean over the series, an account scalar
+by its value at reset — and measure how far the deterministic target position
+moves. Because a feature occupies a *column* of the flattened window, occluding
+it removes all 20 bars of that indicator, not one cell.
+
+Measured on 600-bar momentum paths (seed 1, 80 sampled bars), the answer is
+consistent and was not what I expected:
+
+| | Strongest inputs | Largest account-state effect |
+|---|---|---:|
+| **Stock** | `high_120_dist` 0.31 · `high_low_range` 0.23 · `atr_norm` 0.23 | 0.030 |
+| **Crypto** | `vol_regime` 0.22 · `vol_ratio` 0.22 · `bollinger_pct_b` 0.22 | 0.071 |
+
+Both policies are dominated by **long-horizon position-in-range and volatility**
+features — where price sits relative to its 120-day high, how wide the recent
+range is — rather than the short-horizon momentum features an intuitive reading
+would expect. And the three account scalars move the action by roughly an order
+of magnitude less than the top market features: these agents barely track their
+own book. Units are the action's own, so `high_120_dist` at 0.31 means removing
+it moves the requested exposure by 31% of equity.
+
+The panel ships its own limits alongside the chart, because a ranked bar chart is
+exactly the kind of output a reader takes for causation:
+
+- Occlusion is **local sensitivity, not causal importance**.
+- The 28 features are correlated, so a feature's information survives its own
+  removal through the others. Contributions are understated and a low bar is not
+  proof of irrelevance.
+- Replacing an input with its mean can produce a vector no real market would
+  generate.
+
+It does earn one clean structural check: on synthetic paths the four cross-asset
+features have no reference index and come back at exactly zero, which the panel
+names rather than leaving as four unexplained flat bars.
 
 ### Testing the reader, not just the agent
 
@@ -532,6 +571,7 @@ paper.
 | `GET /api/experiments/<id>` | Status, progress, result, receipt |
 | `GET /api/experiments/<id>/config` | The exact config needed to reproduce it |
 | `GET /api/experiments/<id>/xray?step=` | The full observation at one bar |
+| `GET /api/experiments/<id>/attribution` | Occlusion attribution: which inputs move the action |
 | `GET /api/results`, `/api/live`, `/api/tickers` | The original dashboard endpoints (unchanged) |
 
 ### Run an experiment

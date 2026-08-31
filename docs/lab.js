@@ -1575,6 +1575,128 @@
   })();
 
 
+  /* -- What is it reading? (occlusion attribution) --------- */
+  /* Ranks the agent's inputs by how far the target position moves when each one
+   * is removed. Every bar here is a real forward pass through the deployed
+   * policy — and every limit of the method travels with it, because a ranked
+   * bar chart is exactly the kind of output a reader will take for causation. */
+  const Attribution = (function () {
+    let expId = null;
+    let step = 0;
+    let last = null;
+
+    /* Bars are drawn relative to the strongest effect measured, so the chart
+     * says "relative to the largest", never "share of the decision". */
+    function bars(rows, valueKey, max) {
+      return rows
+        .map((r) => {
+          const v = r[valueKey];
+          const w = max > 1e-12 ? Math.max(1, (v / max) * 100) : 0;
+          return (
+            `<div class="attr-row"><span class="attr-name">${r.name}</span>` +
+            `<span class="attr-track"><i style="width:${w.toFixed(1)}%"></i></span>` +
+            `<span class="attr-val">${v.toFixed(3)}</span></div>`
+          );
+        })
+        .join("");
+    }
+
+    function render(out) {
+      last = out;
+      const scope = $("attr-scope").value;
+      const episode = scope === "episode" && out.episode;
+      const rows = episode ? out.episode.features : out.local.market;
+      const key = episode ? "mean_abs_delta" : "abs_delta";
+      const acctKey = episode ? "mean_abs_delta" : "abs_delta";
+      const acct = episode ? out.episode.account : out.local.account;
+      const max = Math.max.apply(null, rows.map((r) => r[key]).concat([0]));
+
+      $("attr-groups").innerHTML = out.groups
+        .slice()
+        .sort((a, b) => b.share - a.share)
+        .map(
+          (g) =>
+            `<div class="attr-chip"><span class="attr-chip-k">${g.label}</span>` +
+            `<span class="attr-chip-v">${(g.share * 100).toFixed(0)}%</span></div>`
+        )
+        .join("");
+
+      $("attr-features").innerHTML = bars(rows, key, max);
+      // Account scalars share the market block's scale, so the comparison
+      // between "what the market says" and "what my book says" is honest.
+      $("attr-account").innerHTML = bars(acct, acctKey, max);
+
+      const dead = episode ? out.episode.dead_features : [];
+      $("attr-dead").innerHTML = dead.length
+        ? `<p class="xr-hint attr-dead">Exactly zero everywhere sampled: ` +
+          `<b>${dead.join(", ")}</b>. ${out.inert_note || ""}</p>`
+        : "";
+
+      $("attr-caveats").innerHTML =
+        `<p class="attr-method">${out.method}</p><ul>` +
+        out.caveats.map((c) => `<li>${c}</li>`).join("") +
+        `</ul>` +
+        (episode
+          ? `<p class="xr-hint">Averaged over ${out.episode.bars_sampled} bars ` +
+            `sampled across the ${out.episode.bars_total}-bar episode ` +
+            `(every ${out.episode.stride}). Magnitudes are averaged, not signed: ` +
+            `a feature the agent leans on in both directions would otherwise ` +
+            `cancel itself out to zero.</p>`
+          : `<p class="xr-hint">Measured at bar ${out.step} only — one point in ` +
+            `input space. The episode view is the more stable ranking.</p>`);
+
+      $("attr-out").hidden = false;
+    }
+
+    async function run() {
+      if (!expId) return;
+      const btn = $("attr-run");
+      btn.disabled = true;
+      showError($("attr-error"), null);
+      setStatus($("attr-status"), "occluding each input…", true);
+      try {
+        const out = await api.get(
+          `/api/experiments/${expId}/attribution?step=${step}&bars=60`
+        );
+        render(out);
+        setStatus($("attr-status"), `${out.episode.bars_sampled} bars measured`, false);
+      } catch (err) {
+        showError($("attr-error"), String(err.message || err));
+        setStatus($("attr-status"), "", false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function init() {
+      if (!$("attr-run")) return;
+      $("attr-run").addEventListener("click", run);
+      // Switching scope re-renders what was already measured — it does not
+      // silently re-run a different experiment behind the label.
+      $("attr-scope").addEventListener("change", function () {
+        if (last) render(last);
+      });
+      window.addEventListener("lab:trace", function (e) {
+        expId = e.detail.body.id;
+        last = null;
+        $("attr-out").hidden = true;
+        setStatus($("attr-status"), "", false);
+      });
+      window.addEventListener("lab:cursor", function (e) {
+        if (step === e.detail.step) return;
+        step = e.detail.step;
+        // The local view belongs to a bar; keep it honest by clearing it.
+        if (last && $("attr-scope").value === "local") {
+          last = null;
+          $("attr-out").hidden = true;
+        }
+      });
+    }
+
+    return { init };
+  })();
+
+
   /* -- What if? (environment counterfactual) --------------- */
   /* Replays one bar under alternative actions from an identical environment
    * state. The alternatives are scored on price movement that already
@@ -2095,6 +2217,7 @@
     Perception.init();
     Playground.init();
     XRay.init();
+    Attribution.init();
     Generalization.init();
     Seeds.init();
     WhatIf.init();
@@ -2106,5 +2229,6 @@
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
   window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel,
-                   Perception, Playground, XRay, Generalization, Seeds, WhatIf, Notebook };
+                   Perception, Playground, XRay, Attribution, Generalization, Seeds,
+                   WhatIf, Notebook };
 })();

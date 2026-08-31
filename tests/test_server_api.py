@@ -592,3 +592,77 @@ def test_real_condition_uses_the_price_fetcher(client):
 
 def test_meta_advertises_the_perception_test(client):
     assert client.get("/api/meta").get_json()["live"]["perception_test"] is True
+
+
+# --------------------------------------------------------------------------- #
+# Feature attribution                                                          #
+# --------------------------------------------------------------------------- #
+def _rollout(client, **overrides):
+    config = {"market": "stock", "mode": "synthetic", "regime": "momentum",
+              "seed": 4, "n_steps": 340}
+    config.update(overrides)
+    r = client.post("/api/experiments", json={"kind": "rollout", "config": config})
+    exp_id = r.get_json()["id"]
+    _await(client, exp_id)
+    return exp_id
+
+
+def test_attribution_ranks_every_input(client):
+    exp_id = _rollout(client)
+    body = client.get(f"/api/experiments/{exp_id}/attribution?step=40&bars=25").get_json()
+
+    assert len(body["local"]["market"]) == 28
+    assert len(body["local"]["account"]) == 3
+    assert len(body["episode"]["features"]) == 28
+    assert len(body["groups"]) == 8
+    # Ranked, strongest first, on both passes.
+    local = [r["abs_delta"] for r in body["local"]["market"]]
+    episode = [r["mean_abs_delta"] for r in body["episode"]["features"]]
+    assert local == sorted(local, reverse=True)
+    assert episode == sorted(episode, reverse=True)
+
+
+def test_attribution_measures_a_real_effect(client):
+    """Occlusion must actually move the deployed policy, or it measures nothing."""
+    exp_id = _rollout(client)
+    body = client.get(f"/api/experiments/{exp_id}/attribution?bars=25").get_json()
+    assert body["episode"]["features"][0]["mean_abs_delta"] > 0.01
+    assert -1.0 <= body["base_action"] <= 1.0
+
+
+def test_attribution_reports_the_structurally_dead_features(client):
+    """A synthetic path has no reference index, so cross-asset inputs are inert.
+
+    Naming them is the honest alternative to letting a reader wonder why four
+    bars are flat.
+    """
+    exp_id = _rollout(client)
+    body = client.get(f"/api/experiments/{exp_id}/attribution?bars=25").get_json()
+    assert set(body["episode"]["dead_features"]) >= {
+        "rel_return_5", "rel_return_20", "market_trend", "market_ret_20"
+    }
+    market_ctx = next(g for g in body["groups"] if g["label"] == "Market context")
+    assert market_ctx["share"] == 0.0
+
+
+def test_attribution_ships_its_own_caveats(client):
+    exp_id = _rollout(client)
+    body = client.get(f"/api/experiments/{exp_id}/attribution?bars=20").get_json()
+    assert "occluded" in body["method"] or "occlude" in body["method"]
+    assert any("not causal" in c for c in body["caveats"])
+    assert body["live_computation"] is True
+
+
+def test_attribution_group_shares_sum_to_one(client):
+    exp_id = _rollout(client)
+    body = client.get(f"/api/experiments/{exp_id}/attribution?bars=20").get_json()
+    assert sum(g["share"] for g in body["groups"]) == pytest.approx(1.0, abs=1e-3)
+
+
+def test_attribution_404s_on_an_unknown_experiment(client):
+    r = client.get("/api/experiments/EXP-NOPE/attribution")
+    assert r.status_code == 404
+
+
+def test_meta_advertises_attribution(client):
+    assert client.get("/api/meta").get_json()["live"]["attribution"] is True

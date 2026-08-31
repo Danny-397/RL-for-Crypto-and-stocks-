@@ -833,6 +833,43 @@
               </div>
             </div>
 
+            <div class="panel-card" id="attr-card">
+              <div class="gen-head">
+                <h3>What is it reading? <span class="tag-real">Live occlusion</span></h3>
+                <div class="wi-ctl">
+                  <label for="attr-scope">Show</label>
+                  <select id="attr-scope">
+                    <option value="episode" selected>Averaged over the episode</option>
+                    <option value="local">At this bar only</option>
+                  </select>
+                  <button class="run-btn run-btn-sm" id="attr-run" type="button">Measure</button>
+                </div>
+              </div>
+              <p class="xr-hint">Each input is replaced by an uninformative baseline &mdash; a
+                 feature by its mean across this series, an account scalar by its value at
+                 reset &mdash; and the policy is re-evaluated. The bar is how far the
+                 <b>target position</b> moves when that input is taken away, so 0.30 means
+                 30% of equity.</p>
+              <div class="lab-status" id="attr-status"></div>
+              <div id="attr-error" hidden></div>
+
+              <div id="attr-out" hidden>
+                <div class="attr-groups" id="attr-groups"></div>
+                <div class="attr-cols">
+                  <div>
+                    <h4 class="attr-h">Market features</h4>
+                    <div id="attr-features"></div>
+                  </div>
+                  <div>
+                    <h4 class="attr-h">Account state</h4>
+                    <div id="attr-account"></div>
+                    <div id="attr-dead"></div>
+                  </div>
+                </div>
+                <div class="attr-caveats" id="attr-caveats"></div>
+              </div>
+            </div>
+
             <div class="panel-card" id="wi-card">
               <div class="gen-head">
                 <h3>What if? <span class="tag-real">Live counterfactual</span></h3>

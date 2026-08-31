@@ -30,7 +30,7 @@ from rl_trader.config.training_config import crypto_config, stock_config
 from rl_trader.data.data_loader import FEATURE_GROUPS, market_data_from_df, market_regime
 from rl_trader.envs import make_env
 
-from . import regimes
+from . import attribution, regimes
 from .experiments import Experiment, progress_reporter
 from .regimes import REGIMES
 from .rollout import counterfactual, observation_detail, run_trace
@@ -488,3 +488,56 @@ def xray_at(config, step: int, fetch_ohlcv, market_index, policy=None) -> Dict[s
                 "is shown. It is omitted rather than approximated."
             )
     return detail
+
+
+def attribution_at(
+    config, step: int, fetch_ohlcv, market_index, policy, bars: int = 60
+) -> Dict[str, Any]:
+    """Which inputs the policy is reading — at one bar, and across the episode.
+
+    Two passes, because they answer different questions. The local pass explains
+    *this* decision; the episode pass replays the whole episode and averages the
+    magnitude, which is the more stable ranking and the one worth quoting. Both
+    are genuine forward passes through the deployed policy — there is nothing
+    precomputed here.
+    """
+    if policy is None:
+        raise ValueError(f"no policy loaded for market {config.get('market')!r}")
+
+    env, cfg_obj, dates, meta = build_environment(config, fetch_ohlcv, market_index)
+    window = cfg_obj.env.window_size
+    names = list(env.data.feature_names)
+
+    obs, _info = env.reset()
+    target = max(0, int(step))
+    taken = 0
+    while taken < target:
+        out = policy.evaluate(obs)
+        obs, _r, term, trunc, _i = env.step(np.array([out.action], dtype=np.float32))
+        taken += 1
+        if term or trunc:
+            break
+
+    feature_means = np.asarray(env.data.features, dtype=np.float64).mean(axis=0)
+    local = attribution.local_attribution(policy, obs, feature_means, names, window)
+
+    # The episode pass needs a clean run, so it gets its own environment rather
+    # than rewinding the one that was just replayed to ``step``.
+    env2, _cfg2, _d2, _m2 = build_environment(config, fetch_ohlcv, market_index)
+    episode = attribution.episode_attribution(
+        policy, env2, names, window, max_bars=max(5, min(200, int(bars)))
+    )
+
+    out = attribution.summarise(local, episode, FEATURE_GROUPS)
+    out.update({
+        "step": taken,
+        "requested_step": target,
+        "market": config["market"],
+        "date": dates[min(env.t, len(dates) - 1)] if dates else None,
+        "window_size": window,
+        "meta": meta,
+        "policy": policy.describe(),
+    })
+    if config["mode"] == "synthetic":
+        out["inert_note"] = meta.get("inert_features_note")
+    return out

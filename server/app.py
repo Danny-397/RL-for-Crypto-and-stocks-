@@ -26,6 +26,7 @@ Lab
     GET  /api/experiments/<id>            status, progress, result, receipt
     GET  /api/experiments/<id>/config     the exact config needed to reproduce
     GET  /api/experiments/<id>/xray?step= the full observation at one bar
+    GET  /api/experiments/<id>/attribution which of those inputs move the action
 
 What is and is not live
 -----------------------
@@ -275,6 +276,7 @@ def api_meta():
             "distribution_shift": True,
             "statistics": True,
             "perception_test": True,
+            "attribution": True,
             "training": False,
         },
         training_note=(
@@ -565,6 +567,29 @@ def api_experiment_xray(experiment_id: str):
             lab.xray_at(
                 exp.config, step, _fetch_ohlcv, _market_index,
                 policy=_POLICIES.get(exp.config.get("market")),
+            )
+        )
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+
+
+@app.get("/api/experiments/<experiment_id>/attribution")
+def api_experiment_attribution(experiment_id: str):
+    """Which inputs the policy is actually reading, by occlusion.
+
+    Computed live against the deployed policy — one forward pass per occluded
+    input, at the requested bar and averaged across the episode.
+    """
+    exp = MANAGER.get(experiment_id.upper())
+    if exp is None:
+        return jsonify(error=f"no experiment {experiment_id!r}"), 404
+    step = request.args.get("step", default=0, type=int) or 0
+    bars = request.args.get("bars", default=60, type=int) or 60
+    try:
+        return jsonify(
+            lab.attribution_at(
+                exp.config, step, _fetch_ohlcv, _market_index,
+                policy=_POLICIES.get(exp.config.get("market")), bars=bars,
             )
         )
     except ValueError as exc:
