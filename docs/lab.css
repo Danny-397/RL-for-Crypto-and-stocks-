@@ -543,3 +543,46 @@
 .seed-row.is-best .sname { color: var(--volt); }
 
 #sd-hist { height: 150px; cursor: default; }
+
+/* ── What if? (counterfactual) ───────────────────────────── */
+#wi-card { margin-top: 20px; }
+.wi-ctl { display: flex; align-items: center; gap: 10px; }
+.wi-ctl label {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+}
+.wi-ctl select {
+  padding: 7px 10px; background: var(--bg-soft); color: var(--text);
+  border: 1px solid var(--border-2); border-radius: 8px;
+  font-family: var(--font-mono); font-size: 12px;
+}
+.wi-row {
+  display: grid; grid-template-columns: 128px 1fr 106px 92px;
+  gap: 12px; align-items: center; padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.wi-row:last-child { border-bottom: 0; }
+.wi-row.is-agent { background: rgba(212, 255, 63, 0.045); }
+.wi-name { font-family: var(--font-mono); font-size: 12px; color: var(--text); }
+.wi-name small { display: block; color: var(--faint); font-size: 10px; }
+.wi-row.is-agent .wi-name { color: var(--volt); }
+.wi-track { position: relative; height: 18px; background: var(--bg-soft); border-radius: 4px; }
+.wi-track::before {
+  content: ""; position: absolute; left: 50%; top: 0; bottom: 0;
+  width: 1px; background: var(--border-2);
+}
+.wi-track > i { position: absolute; top: 3px; bottom: 3px; border-radius: 3px; }
+.wi-track > i.up { background: var(--pos); left: 50%; }
+.wi-track > i.dn { background: var(--neg); right: 50%; }
+.wi-num {
+  font-family: var(--font-mono); font-size: 12.5px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.wi-num small { display: block; color: var(--faint); font-size: 10px; }
+.wi-head-row {
+  display: grid; grid-template-columns: 128px 1fr 106px 92px;
+  gap: 12px; padding-bottom: 7px; border-bottom: 1px solid var(--border-2);
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--faint);
+}
+.wi-head-row span:nth-child(3), .wi-head-row span:nth-child(4) { text-align: right; }

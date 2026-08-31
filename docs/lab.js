@@ -1302,6 +1302,135 @@
     return { init };
   })();
 
+
+  /* -- What if? (environment counterfactual) --------------- */
+  /* Replays one bar under alternative actions from an identical environment
+   * state. The alternatives are scored on price movement that already
+   * occurred, which is exactly what makes this a counterfactual rather than a
+   * forecast -- the copy says so, and the backend repeats it on every reply. */
+  const WhatIf = (function () {
+    let expId = null;
+    let config = null;
+    let step = 0;
+
+    const CANDIDATES = [
+      { a: 1.0, name: "Fully long", sub: "+1.00" },
+      { a: 0.5, name: "Half long", sub: "+0.50" },
+      { a: 0.0, name: "Flat", sub: "0.00" },
+      { a: -0.5, name: "Half short", sub: "-0.50" },
+      { a: -1.0, name: "Fully short", sub: "-1.00" },
+    ];
+
+    async function run() {
+      if (!expId || !config) return;
+      const btn = $("wi-run");
+      btn.disabled = true;
+      showError($("wi-error"), null);
+      setStatus($("wi-status"), "replaying alternatives…", true);
+      try {
+        // Include the agent's own action so it is measured on the same footing
+        // as the alternatives rather than quoted from elsewhere.
+        const agentAction = Playground.trace
+          ? Playground.trace.steps[step].action
+          : 0;
+        const actions = CANDIDATES.map((c) => c.a);
+        if (!actions.some((a) => Math.abs(a - agentAction) < 1e-6)) actions.push(agentAction);
+
+        const body = await api.runExperiment({
+          kind: "counterfactual",
+          step: step,
+          actions: actions,
+          horizon: Number($("wi-horizon").value),
+          config: config,
+        });
+        render(body.result);
+        setStatus($("wi-status"), body.id + " · " + body.elapsed_sec + "s", false);
+      } catch (err) {
+        showError($("wi-error"), String(err.message || err));
+        setStatus($("wi-status"), "", false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function label(a, isAgent) {
+      if (isAgent) return { name: "Agent's choice", sub: fmt.signed(a, 3) };
+      const known = CANDIDATES.find((c) => Math.abs(c.a - a) < 1e-6);
+      return known || { name: fmt.signed(a, 2), sub: "custom" };
+    }
+
+    function render(result) {
+      const rows = result.candidates.slice().sort((x, y) => y.action - x.action);
+      const span = Math.max(1e-6, ...rows.map((r) => Math.abs(r.return)));
+
+      const head =
+        '<div class="wi-head-row"><span>Action</span><span>Return over ' +
+        result.horizon + (result.horizon === 1 ? " bar" : " bars") +
+        "</span><span>End equity</span><span>Reward</span></div>";
+
+      const body = rows
+        .map(function (r) {
+          const l = label(r.action, r.is_agent_action);
+          const w = (Math.abs(r.return) / span) * 50;
+          const bar = r.return >= 0
+            ? '<i class="up" style="width:' + w + '%"></i>'
+            : '<i class="dn" style="width:' + w + '%"></i>';
+          return '<div class="wi-row' + (r.is_agent_action ? " is-agent" : "") + '">' +
+                 '<span class="wi-name">' + l.name + "<small>" + l.sub +
+                 (r.is_agent_action ? " · taken" : "") + "</small></span>" +
+                 '<span class="wi-track">' + bar + "</span>" +
+                 '<span class="wi-num ' + fmt.cls(r.return) + '">' + fmt.pct(r.return, 2) +
+                 "<small>" + fmt.money(r.end_equity) + "</small></span>" +
+                 '<span class="wi-num ' + fmt.cls(r.reward) + '">' + fmt.signed(r.reward, 4) +
+                 "</span></div>";
+        })
+        .join("");
+
+      // Was the agent's choice the best one available at this bar? Answering it
+      // plainly is the point of the panel -- and it is often "no", which is fine:
+      // one bar of hindsight is not a verdict on a policy.
+      const best = rows.reduce((a, b) => (b.return > a.return ? b : a));
+      const agent = rows.find((r) => r.is_agent_action);
+      let verdict = "";
+      if (agent && best) {
+        verdict = agent.is_agent_action && Math.abs(best.action - agent.action) < 1e-6
+          ? "At this bar the agent's action was the best of those tried."
+          : "At this bar <b>" + label(best.action, false).name.toLowerCase() +
+            "</b> would have returned <b>" + fmt.pct(best.return, 2) + "</b> against the " +
+            "agent's <b>" + fmt.pct(agent.return, 2) + "</b>. Hindsight on one bar is not " +
+            "evidence about the policy — it is the distribution over many bars that matters.";
+      }
+
+      $("wi-out").innerHTML =
+        head + body +
+        (verdict ? '<div class="caveat">' + verdict + "</div>" : "") +
+        '<div class="caveat">' + result.note + "</div>";
+    }
+
+    function init() {
+      if (!$("wi-run")) return;
+      $("wi-run").addEventListener("click", run);
+      $("wi-horizon").addEventListener("change", function () {
+        if ($("wi-out").innerHTML) run();
+      });
+      window.addEventListener("lab:trace", function (e) {
+        expId = e.detail.body.id;
+        config = e.detail.body.config;
+        $("wi-out").innerHTML = "";
+        setStatus($("wi-status"), "", false);
+      });
+      window.addEventListener("lab:cursor", function (e) {
+        // Moving the cursor invalidates the previous bar's answer.
+        if (step !== e.detail.step) {
+          step = e.detail.step;
+          $("wi-out").innerHTML = "";
+        }
+      });
+    }
+
+    return { init };
+  })();
+
   /* ── backend status ─────────────────────────────────────── */
   async function initStatus() {
     const pill = $("lab-api-status");
@@ -1345,11 +1474,12 @@
     XRay.init();
     Generalization.init();
     Seeds.init();
+    WhatIf.init();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
-  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, Playground, XRay, Generalization, Seeds };
+  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, Playground, XRay, Generalization, Seeds, WhatIf };
 })();

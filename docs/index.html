@@ -711,6 +711,28 @@
                 </div>
               </div>
             </div>
+
+            <div class="panel-card" id="wi-card">
+              <div class="gen-head">
+                <h3>What if? <span class="tag-real">Live counterfactual</span></h3>
+                <div class="wi-ctl">
+                  <label for="wi-horizon">Hold for</label>
+                  <select id="wi-horizon">
+                    <option value="1" selected>1 bar</option>
+                    <option value="5">5 bars</option>
+                    <option value="20">20 bars</option>
+                  </select>
+                  <button class="run-btn run-btn-sm" id="wi-run" type="button">Evaluate</button>
+                </div>
+              </div>
+              <p class="xr-hint">Replays this exact bar under different actions, from an identical
+                 environment state, on price movement that already happened. This is a
+                 counterfactual, <b>not</b> a prediction &mdash; the agent could not have known
+                 the outcome.</p>
+              <div class="lab-status" id="wi-status"></div>
+              <div id="wi-error" hidden></div>
+              <div id="wi-out"></div>
+            </div>
           </div>
         </section>
 

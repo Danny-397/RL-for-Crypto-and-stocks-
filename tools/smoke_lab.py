@@ -167,6 +167,24 @@ def run(api: str, port: int, shot: str | None) -> None:
         time.sleep(1.2)
         check("X-Ray scrub moves the decision", page.inner_text("#xr-action") != act_before)
 
+        # ── What if? (counterfactual) ──────────────────────────────────────
+        print("\nWhat if?")
+        page.click("#wi-run")
+        page.wait_for_selector("#wi-out .wi-row", timeout=60000)
+        time.sleep(0.5)
+
+        n_alt = page.eval_on_selector_all("#wi-out .wi-row", "els => els.length")
+        check("alternatives evaluated", n_alt >= 5, f"{n_alt} actions")
+        check("the agent's own action is among them",
+              page.eval_on_selector_all("#wi-out .wi-row.is-agent", "els => els.length") == 1)
+        # Long and short from the same state cannot land on the same number.
+        vals = page.eval_on_selector_all(
+            "#wi-out .wi-row .wi-num", "els => els.map(e => e.textContent.trim())"
+        )
+        check("outcomes differ by action", len(set(vals)) > 2, f"{len(set(vals))} distinct")
+        check("framed as counterfactual, not prediction",
+              "does not imply" in page.inner_text("#wi-out").lower())
+
         # ── Can you break the agent? ───────────────────────────────────────
         print("\nCan you break the agent?")
         page.click('.lab-tab[data-panel="generalization"]')
