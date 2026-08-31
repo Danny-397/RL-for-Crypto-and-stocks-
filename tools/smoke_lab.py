@@ -390,6 +390,11 @@ def run(api: str, port: int, shot: str | None) -> None:
         # The dashboard is meant to work fully static, and the home page's deep
         # links into the lab must land on the right panel without one.
         print("\nHome page and routing (static)")
+        # Its own browser again. Phase 2 deliberately points the page at an
+        # unreachable API, and under --single-process a renderer that goes down
+        # takes the whole browser with it — so reusing it here is not safe.
+        browser.close()
+        browser = p.chromium.launch(args=LEAN_ARGS)
         home_errors: list[str] = []
         home = browser.new_page(viewport={"width": 1280, "height": 900})
         home.on("pageerror", lambda e: home_errors.append(str(e)))
