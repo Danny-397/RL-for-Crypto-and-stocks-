@@ -380,6 +380,46 @@ def attribution_table() -> Optional[str]:
     return "\n".join(rows)
 
 
+def sweep_table() -> Optional[str]:
+    """One knob at a time, either side of each published default.
+
+    Served and rendered in published order, never ranked: the question is
+    whether the conclusion is fragile, not which recipe wins. Ranking nine noisy
+    configurations and quoting the top one is exactly the error the rest of this
+    document is about.
+    """
+    art = _asset("hyperparameter_sweep.json")
+    if not art:
+        return None
+    out: List[str] = []
+    for market, label in (("stock", "Stocks"), ("crypto", "Crypto")):
+        block = art.get("markets", {}).get(market)
+        if not block:
+            continue
+        rows = block.get("rows", [])
+        n_pos = sum(1 for r in rows if r["mean_edge"] > 0)
+        out.append(f"**{label}** — {len(rows)} configurations, "
+                   f"{n_pos} with a positive edge over buy-and-hold:")
+        out.append("")
+        out.append("| Configuration | Edge vs. buy & hold | 95% CI |")
+        out.append("|---|---:|---:|")
+        for r in rows:
+            name = r["config"] + (" *(published default)*" if r.get("knob") is None else "")
+            ci = r["edge_ci"]
+            out.append(f"| {name} | {pct(r['mean_edge'])} | "
+                       f"`[{pct(ci[1])}, {pct(ci[2])}]` |")
+        out.append("")
+    if not out:
+        return None
+    out.append(f"*{art.get('seeds_per_config', '?')} seeds per configuration, "
+               f"{art.get('timesteps', 0) // 1000}k steps each, one knob moved at a "
+               "time with everything else held at its default. Not a grid search: "
+               "the question is whether the negative result is fragile, not which "
+               "recipe wins. With this many seeds no single row is a significance "
+               "claim — the sign test cannot reach p ≤ 0.05 at that sample size.*")
+    return "\n".join(out)
+
+
 # --------------------------------------------------------------------------- #
 # The same results, as LaTeX                                                   #
 # --------------------------------------------------------------------------- #
@@ -484,6 +524,7 @@ BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "portfolio-table": portfolio_table,
     "significance-synth": significance_synth,
     "attribution-table": attribution_table,
+    "sweep-table": sweep_table,
     "tex-ablation": tex_ablation,
     "tex-significance": tex_significance,
     "tex-surrogate-control": tex_surrogate_control,

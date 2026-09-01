@@ -18,7 +18,12 @@ different actions, push the agent onto distributions it never trained on, and
 re-run the paper's own statistics with your own parameters. Every experiment gets
 an id and a reproducibility receipt, and any of them can be replayed.
 
-[![RL-Trader live demo](docs/assets/og.png)](https://rl-for-crypto-and-stocks.vercel.app/)
+[![RL-Trader lab — nine experiments, recorded live against the backend](docs/assets/lab-demo.gif)](https://rl-for-crypto-and-stocks.vercel.app/#lab)
+
+<sub>Recorded by `tools/make_demo.py`, which drives the real page in headless
+Chromium against a running backend. Every figure in it was computed during the
+capture — including the frame where the agent is beaten by all four naive
+baselines.</sub>
 
 ## Abstract
 

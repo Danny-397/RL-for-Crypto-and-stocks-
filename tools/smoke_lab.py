@@ -25,6 +25,7 @@ import argparse
 import functools
 import http.server
 import os
+import re
 import socketserver
 import sys
 import threading
@@ -511,10 +512,36 @@ def run(api: str, port: int, shot: str | None) -> None:
               page.eval_on_selector_all(".vp-card", "els => els.length") == 2)
 
         pair = page.inner_text("#sd-pair")
-        check("single-seed headline shown", "275" in pair, pair.split("\n")[1] if "\n" in pair else pair[:40])
-        check("interval reported as spanning zero", "spans zero" in pair.lower())
-        check("verdict states it does not survive",
-              "does not survive" in page.inner_text("#sd-verdict").lower())
+        # The published single-seed run, whatever it currently is. Pinning the
+        # literal "275" here meant this check could only ever pass against one
+        # build, and it went red the first time the study was legitimately
+        # re-run -- which is the mistake the panel itself is about.
+        # the kicker is upper-cased by CSS, so compare case-insensitively
+        check("the single run is shown beside the many",
+              "what one run says" in pair.lower() and "%" in pair,
+              " / ".join(pair.split("\n")[:2]))
+
+        # The flag and the verdict must agree with the interval they describe.
+        # Whether it contains zero is a property of the build; that the UI tells
+        # the truth about it is not.
+        ci = re.search(r"CI \[\s*([+\u2212-]?[\d.,]+)%\s*,\s*([+\u2212-]?[\d.,]+)%\s*\]", pair)
+        check("the interval is reported at all", ci is not None, pair[-90:])
+        if ci:
+            lo, hi = (float(g.replace("\u2212", "-").replace("+", "").replace(",", ""))
+                      for g in ci.groups())
+            contains_zero = lo <= 0 <= hi
+            says_spans = "spans zero" in pair.lower()
+            check("the zero flag matches the interval",
+                  says_spans == contains_zero,
+                  f"[{lo}, {hi}] flagged spans_zero={says_spans}")
+
+            verdict = page.inner_text("#sd-verdict").lower()
+            says_survives_not = "does not survive" in verdict
+            check("the verdict matches the interval",
+                  says_survives_not == contains_zero,
+                  f"contains_zero={contains_zero} verdict_says_fails={says_survives_not}")
+            check("the verdict quotes the spread it is arguing from",
+                  "luckiest" in verdict or "mean is" in verdict, verdict[:70])
 
         painted = page.eval_on_selector(
             "#sd-hist",
@@ -559,8 +586,21 @@ def run(api: str, port: int, shot: str | None) -> None:
         caveats = page.inner_text("#sg-caveats")
         check("a null is not sold as proof",
               "not proof of no structure" in caveats)
-        check("the artifacts' limits are on the receipt",
-              "summary statistics only" in page.inner_text("#sg-receipt"))
+        # Whether the committed artifacts can be re-analysed depends on when they
+        # were generated -- older ones recorded only summaries. The receipt has
+        # to say which is true, not one fixed answer, so this asserts the rule in
+        # both directions the way the critic check does.
+        receipt = page.inner_text("#sg-receipt")
+        reanalysable = page.evaluate(
+            "async () => { const r = await fetch(window.RL_API + '/api/surrogate');"
+            "const b = await r.json(); return b.reanalysable; }"
+        )
+        if reanalysable:
+            check("re-analysable artifacts say so",
+                  "recomputed live" in receipt, receipt[-120:])
+        else:
+            check("summary-only artifacts declare their limit",
+                  "summary statistics only" in receipt, receipt[-120:])
 
         # ── Research notebook ──────────────────────────────────────────────
         print("\nResearch notebook")
@@ -702,9 +742,19 @@ def run(api: str, port: int, shot: str | None) -> None:
 
         check("home view is the default",
               home.eval_on_selector("#view-home", "el => el.classList.contains('active')"))
-        check("primary CTA leads to the lab",
-              home.eval_on_selector(".hero-cta .btn-primary", "el => el.getAttribute('href')")
-              == "#lab")
+        # The hero leads with the evidence now, not the tour: the primary button
+        # goes to the result section and the lab is the secondary. What matters
+        # is that both targets exist and the lab stays one click away.
+        ctas = home.eval_on_selector_all(
+            ".hero-cta a", "els => els.map(e => e.getAttribute('href'))")
+        check("the hero offers exactly two routes", len(ctas) == 2, str(ctas))
+        # The primary target is an in-page section, so the element must exist --
+        # a hero button scrolling to nothing is the failure worth catching.
+        check("the primary CTA leads to the result section",
+              ctas and ctas[0] == "#result"
+              and home.eval_on_selector_all("#result", "els => els.length") == 1,
+              str(ctas[:1]))
+        check("the lab is still one click from the hero", "#lab" in ctas, str(ctas))
         n_cards = home.eval_on_selector_all(".lab-card", "els => els.length")
         check("every panel is advertised", n_cards == 9, f"{n_cards} cards")
         check("each card declares whether it is live",

@@ -263,6 +263,58 @@ This mirrors §2 exactly: on synthetic markets where a signal provably exists th
 agent is repeatably profitable but still statistically indistinguishable from
 buy-&-hold; on real markets, even the apparent edge evaporates under resampling.
 
+### 5b. Is it the seed, or the recipe?
+
+Section 5 asks whether the flat result survives a change of **random seed**. A
+reader is entitled to suspect something narrower: that it is an artifact of one
+unlucky learning rate. `tools/hyperparameter_sweep.py` asks that question
+directly — each of four PPO knobs moved to either side of its published default,
+everything else held fixed, retrained from scratch.
+
+`python tools/hyperparameter_sweep.py --seeds 3 --timesteps 60000`
+
+<!-- BEGIN GENERATED: sweep-table -->
+**Stocks** — 9 configurations, 0 with a positive edge over buy-and-hold:
+
+| Configuration | Edge vs. buy & hold | 95% CI |
+|---|---:|---:|
+| baseline *(published default)* | −252.2% | `[−256.2%, −248.9%]` |
+| learning_rate=0.0001 | −255.4% | `[−257.8%, −251.1%]` |
+| learning_rate=0.001 | −270.4% | `[−273.7%, −267.2%]` |
+| clip_ratio=0.1 | −248.0% | `[−264.1%, −238.7%]` |
+| clip_ratio=0.3 | −269.3% | `[−284.7%, −259.3%]` |
+| gae_lambda=0.9 | −248.4% | `[−257.0%, −242.8%]` |
+| gae_lambda=0.99 | −263.6% | `[−266.7%, −260.8%]` |
+| entropy_coef=0 | −254.4% | `[−257.6%, −248.1%]` |
+| entropy_coef=0.05 | −251.5% | `[−256.7%, −241.3%]` |
+
+**Crypto** — 9 configurations, 0 with a positive edge over buy-and-hold:
+
+| Configuration | Edge vs. buy & hold | 95% CI |
+|---|---:|---:|
+| baseline *(published default)* | −41.8% | `[−68.1%, −15.9%]` |
+| learning_rate=0.0001 | −31.1% | `[−43.3%, −18.0%]` |
+| learning_rate=0.001 | −69.8% | `[−91.4%, −29.0%]` |
+| clip_ratio=0.1 | −33.1% | `[−50.2%, −16.5%]` |
+| clip_ratio=0.3 | −42.6% | `[−84.7%, −19.0%]` |
+| gae_lambda=0.9 | −39.3% | `[−68.6%, +2.7%]` |
+| gae_lambda=0.99 | −43.1% | `[−55.9%, −18.6%]` |
+| entropy_coef=0 | −73.9% | `[−83.1%, −66.1%]` |
+| entropy_coef=0.05 | −42.1% | `[−74.7%, +22.2%]` |
+
+*3 seeds per configuration, 60k steps each, one knob moved at a time with everything else held at its default. Not a grid search: the question is whether the negative result is fragile, not which recipe wins. With this many seeds no single row is a significance claim — the sign test cannot reach p ≤ 0.05 at that sample size.*
+<!-- END GENERATED: sweep-table -->
+
+**Reading it:** not one of the eighteen configurations produced a positive edge.
+The equity result is not merely negative but *stable* — every recipe lands within
+about 22 points of the same answer — while crypto is noisier, as it is everywhere
+else in this document. Nothing here is a significance claim about any individual
+row; the point is the absence of an exception. Had one configuration come out
+ahead, the honest reading would have been "one of eighteen, at three seeds"
+rather than a discovery, and the panel on the site is written to say exactly that
+if it ever happens.
+
+
 ## 6. Signal or noise? — a surrogate-data falsification test
 
 §5 shows the agent doesn't beat the market. But that leaves a question the other
