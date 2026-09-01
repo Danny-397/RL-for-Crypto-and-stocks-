@@ -977,3 +977,36 @@ def test_both_buy_and_holds_are_reported(client):
     free = bl["cost_free_benchmark"]["total_return"]
     assert free == pytest.approx(result["bench_metrics"]["total_return"], abs=1e-6)
     assert costed <= free + 1e-9
+
+
+# --------------------------------------------------------------------------- #
+# Hyper-parameter sweep                                                        #
+# --------------------------------------------------------------------------- #
+def test_hyperparameter_endpoint_passes_the_sweep_through(client, monkeypatch):
+    from server import hpsweep
+
+    fixture = {
+        "generated": "2026-08-31", "timesteps": 60000, "seeds_per_config": 3,
+        "knobs": {"clip_ratio": [0.1, 0.3]}, "markets": [],
+        "design": "one factor at a time", "caveats": ["x"],
+        "source": "docs/assets/hyperparameter_sweep.json",
+        "generated_by": "python tools/hyperparameter_sweep.py",
+        "live_computation": False, "headline": "None of the 9 configurations",
+    }
+    monkeypatch.setattr(hpsweep, "results", lambda: fixture)
+    body = client.get("/api/hyperparameters").get_json()
+    assert body["headline"].startswith("None of the")
+    assert body["live_computation"] is False
+
+
+def test_a_missing_sweep_artifact_503s_rather_than_faking_one(client, monkeypatch):
+    from server import hpsweep
+
+    monkeypatch.setattr(hpsweep, "results", lambda: None)
+    r = client.get("/api/hyperparameters")
+    assert r.status_code == 503
+    assert "unavailable" in r.get_json()["error"]
+
+
+def test_meta_marks_the_sweep_as_not_live(client):
+    assert client.get("/api/meta").get_json()["live"]["hyperparameter_sweep"] is False

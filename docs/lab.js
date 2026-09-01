@@ -2301,6 +2301,81 @@
   })();
 
 
+  /* -- Hyper-parameter sensitivity ------------------------- */
+  /* The sibling of the seed study: does the conclusion survive a change of
+   * recipe? Rows are rendered in their published order and never sorted by
+   * outcome — ranking nine recipes and quoting the winner is exactly the
+   * p-hacking the rest of this lab argues against. */
+  const HyperParams = (function () {
+    function marketBlock(block) {
+      const s = block.summary || {};
+      const head =
+        "<thead><tr><th>Configuration</th><th>Edge vs buy &amp; hold</th>" +
+        "<th>95% CI across seeds</th><th>Seed range</th></tr></thead>";
+      const rows = block.rows
+        .map(function (r) {
+          const ciText = r.edge_ci
+            ? `${fmt.pct(r.edge_ci[1], 1)} to ${fmt.pct(r.edge_ci[2], 1)}`
+            : "—";
+          const range = r.worst_seed_edge != null
+            ? `${fmt.pct(r.worst_seed_edge, 1)} / ${fmt.pct(r.best_seed_edge, 1)}`
+            : "—";
+          return (
+            `<tr class="${r.is_baseline ? "is-agent" : ""}">` +
+            `<td>${r.config}${r.is_baseline ? " <span class=\"sg-ci\">published default</span>" : ""}</td>` +
+            `<td class="${fmt.cls(r.mean_edge)}"><b>${fmt.pct(r.mean_edge, 1)}</b></td>` +
+            `<td>${ciText}</td><td>${range}</td></tr>`
+          );
+        })
+        .join("");
+      return (
+        `<h4 class="attr-h">${block.market}</h4>` +
+        `<div class="wf-table-wrap"><table class="wf-table">${head}` +
+        `<tbody>${rows}</tbody></table></div>` +
+        (s.verdict ? `<p class="xr-hint">${s.verdict}</p>` : "") +
+        (s.power_note ? `<p class="xr-hint">${s.power_note}</p>` : "")
+      );
+    }
+
+    function render(body) {
+      $("hp-headline").textContent = body.headline;
+      $("hp-markets").innerHTML = body.markets.map(marketBlock).join("");
+      $("hp-caveats").innerHTML =
+        `<p class="attr-method">${body.design}</p><ul>` +
+        body.caveats.map((c) => `<li>${c}</li>`).join("") +
+        "</ul>";
+      const knobs = Object.keys(body.knobs || {})
+        .map((k) => `${k} → ${body.knobs[k].join(", ")}`)
+        .join(" · ");
+      $("hp-receipt").innerHTML = [
+        ["Knobs varied", knobs],
+        ["Seeds per configuration", String(body.seeds_per_config)],
+        ["Timesteps per run", String(body.timesteps)],
+        ["Generated", body.generated],
+        ["Source", body.source],
+        ["Regenerate with", `<code>${body.generated_by}</code>`],
+      ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+      $("hp-body").hidden = false;
+    }
+
+    async function load() {
+      if (!api.ok) return;
+      setStatus($("hp-status"), "loading the sweep…", true);
+      try {
+        render(await api.get("/api/hyperparameters"));
+        setStatus($("hp-status"), "", false);
+      } catch (err) {
+        setStatus($("hp-status"), "", false);
+        showError($("hp-error"), `Could not load the sweep: ${err.message}`);
+      }
+    }
+
+    function init() { if ($("hp-card")) load(); }
+
+    return { init };
+  })();
+
+
   /* -- Is there anything there? (surrogate-data test) ------- */
   /* The project's sharpest result, and the only one that can distinguish "the
    * agent is weak" from "the market is empty".
@@ -2826,6 +2901,7 @@
     WalkForward.init();
     Seeds.init();
     Surrogate.init();
+    HyperParams.init();
     WhatIf.init();
     Notebook.init();
   }
@@ -2836,6 +2912,6 @@
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
   window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel,
                    Perception, Human, Playground, XRay, Attribution,
-                   Generalization, WalkForward, Seeds, Surrogate, WhatIf,
-                   Notebook };
+                   Generalization, WalkForward, Seeds, Surrogate, HyperParams,
+                   WhatIf, Notebook };
 })();

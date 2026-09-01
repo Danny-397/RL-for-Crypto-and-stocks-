@@ -1244,6 +1244,24 @@
             <div class="lab-status" id="sd-paper-status"></div>
             <div id="sd-paper"></div>
           </div>
+
+          <!-- recipe luck, the sibling of seed luck -->
+          <div class="panel-card" id="hp-card">
+            <h3>Or is it the <em>recipe</em>? <span class="tag-precomputed">Real &middot; precomputed</span></h3>
+            <p class="xr-hint">Seeds are one way to get lucky; hyper-parameters are another.
+               Each configuration below moves <b>one</b> knob either side of its published
+               default, everything else held fixed, and is retrained from scratch. It is
+               deliberately <b>not</b> a grid search &mdash; the question is whether the
+               conclusion is fragile, not which recipe wins.</p>
+            <div class="lab-status" id="hp-status"></div>
+            <div id="hp-error" hidden></div>
+            <div id="hp-body" hidden>
+              <p class="pc-verdict" id="hp-headline"></p>
+              <div id="hp-markets"></div>
+              <div class="attr-caveats" id="hp-caveats"></div>
+              <dl class="receipt" id="hp-receipt"></dl>
+            </div>
+          </div>
         </section>
 
         <!-- IS THERE ANYTHING THERE? -->

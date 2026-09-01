@@ -10,6 +10,12 @@ The policy is a small MLP::
     h = obs
     for each trunk Linear (Tanh after all but the last):  h = act(h @ W.T + b)
     action = tanh(h @ W_mean.T + b_mean)      # target position in [-1, 1]
+    value  = h @ W_value.T + b_value          # the critic, sharing the trunk
+
+Both heads are exported. The critic is what lets the lab's X-Ray show the
+agent's own value estimate at a bar; archives produced before it was added
+simply omit ``wv``/``bv``, and the server reports the absence rather than
+substituting a plausible number.
 
 Run from the repo root (PyTorch needed here, not on the server):
 
@@ -38,6 +44,14 @@ def export(market: str, ckpt_dir: str = "checkpoints", out_dir: str = "server/mo
     arrays["wm"] = agent.ac.policy_mean.weight.detach().cpu().numpy().astype(np.float32)
     arrays["bm"] = agent.ac.policy_mean.bias.detach().cpu().numpy().astype(np.float32)
 
+    # The critic shares the trunk, so it costs one more small matrix and lets the
+    # lab show the agent's own value estimate at any bar. Earlier archives omitted
+    # it, and the X-Ray panel had to display "not exported" rather than invent a
+    # number — Policy.has_value keeps that behaviour for any archive still missing
+    # it, so old and new archives both serve correctly.
+    arrays["wv"] = agent.ac.value_head.weight.detach().cpu().numpy().astype(np.float32)
+    arrays["bv"] = agent.ac.value_head.bias.detach().cpu().numpy().astype(np.float32)
+
     # Carry the observation normaliser so the server standardises inputs exactly
     # as training did (otherwise the served policy sees out-of-distribution obs).
     if getattr(agent, "obs_rms", None) is not None:
@@ -48,7 +62,11 @@ def export(market: str, ckpt_dir: str = "checkpoints", out_dir: str = "server/mo
     os.makedirs(out_dir, exist_ok=True)
     out = os.path.join(out_dir, f"ppo_{market}.npz")
     np.savez(out, **arrays)
-    print(f"exported {market}: obs_dim={agent.obs_dim}, trunk_layers={len(trunk_linears)} -> {out}")
+    print(
+        f"exported {market}: obs_dim={agent.obs_dim}, "
+        f"trunk_layers={len(trunk_linears)}, critic=yes, "
+        f"normaliser={'yes' if 'obs_mean' in arrays else 'no'} -> {out}"
+    )
 
 
 def main() -> None:

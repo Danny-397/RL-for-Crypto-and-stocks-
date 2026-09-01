@@ -19,6 +19,7 @@ Lab
     GET  /api/datasets                    real committed per-seed datasets
     GET  /api/generalization              real single-path vs domain-random results
     GET  /api/surrogate                   the surrogate-data falsification test
+    GET  /api/hyperparameters             hyper-parameter sensitivity sweep
     GET  /api/perception/quiz             a controlled signal-vs-noise chart test
     POST /api/perception/score            exact binomial scoring of that test
     POST /api/statistics                  live bootstrap / permutation inference
@@ -70,6 +71,7 @@ from rl_trader.data.data_loader import market_data_from_df  # noqa: E402
 from rl_trader.envs import make_env  # noqa: E402
 from rl_trader.evaluation.evaluate_agent import ANNUALISATION, compute_metrics  # noqa: E402
 from server import (  # noqa: E402
+    hpsweep,
     human,
     lab,
     perception,
@@ -300,6 +302,7 @@ def api_meta():
             "walk_forward": True,
             "human_baseline": True,
             "surrogate_test": False,  # committed results; both arms are training runs
+            "hyperparameter_sweep": False,  # every cell is a training run
             "training": False,
         },
         training_note=(
@@ -351,6 +354,15 @@ def api_generalization():
     out = precomputed.generalization_results()
     if out is None:
         return jsonify(error="ablation results unavailable"), 503
+    return jsonify(out)
+
+
+@app.get("/api/hyperparameters")
+def api_hyperparameters():
+    """Does the conclusion survive a change of recipe, not just of seed?"""
+    out = hpsweep.results()
+    if out is None:
+        return jsonify(error="hyper-parameter sweep results unavailable"), 503
     return jsonify(out)
 
 
