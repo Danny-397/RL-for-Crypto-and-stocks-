@@ -144,145 +144,6 @@
       <div class="stat-cell"><div class="num" data-count="346">346</div><div class="lbl">Tests passing</div></div>
     </section>
 
-    <!-- ─────────────────────── FEATURES ─────────────────────── -->
-    <section id="features" class="section">
-      <div class="section-head">
-        <div class="kicker">THE FRAMEWORK</div>
-        <h2>Built from the algorithm up.</h2>
-        <p>PPO, both environments, the data pipeline, and the evaluation are implemented here — no <code>stable-baselines</code>, no wrappers. Each layer is a separate, individually tested module.</p>
-      </div>
-      <div class="grid">
-        <article class="card">
-          <h3>PPO, from scratch</h3>
-          <p>Clipped surrogate objective, GAE advantages, entropy bonus, orthogonal init and gradient clipping — implemented in PyTorch, not wrapped from a library.</p>
-        </article>
-        <article class="card">
-          <h3>Dual market environments</h3>
-          <p><code>StockTradingEnv</code> and <code>CryptoTradingEnv</code> share one <code>BaseTradingEnv</code>, so accounting, costs, and rewards never silently diverge.</p>
-        </article>
-        <article class="card">
-          <h3>Leakage control</h3>
-          <p>Chronological train / validation / test splits with scalers fit on training data only. The agent is scored on data it has never seen.</p>
-        </article>
-        <article class="card">
-          <h3>Risk-aware rewards</h3>
-          <p>Return <em>net of</em> transaction costs, plus drawdown and turnover penalties — discouraging reckless, over-leveraged noise-trading.</p>
-        </article>
-        <article class="card">
-          <h3>Honest backtests</h3>
-          <p>Total return, annualised Sharpe, and max drawdown on a held-out split — the metrics a quant actually cares about.</p>
-        </article>
-        <article class="card">
-          <h3>Swap the policy or the market</h3>
-          <p>The same PPO agent trades one asset <em>or</em> allocates across a whole basket (cross-sectional long/short). A recurrent (LSTM) policy is fully implemented, and new markets/algorithms drop in behind the same API.</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- ─────────────────────── ABOUT ─────────────────────── -->
-    <section id="about" class="section">
-      <div class="section-head">
-        <div class="kicker">ABOUT</div>
-        <h2>Why I built this.</h2>
-      </div>
-      <div class="about">
-        <p>I wanted to understand modern reinforcement learning by <em>building</em> it, not importing it — so I implemented <strong>PPO from scratch</strong> in PyTorch, wrote two custom environments, and engineered the whole data pipeline. But the real question I set out to study is a general one in RL: <strong>how do you know an agent has learned something real, rather than memorised its data or gotten lucky?</strong></p>
-        <p>The hardest — and most valuable — part wasn't the algorithm; it was the <strong>evaluation</strong>. An early run made the crypto agent look like it crushed the market. Instead of shipping that, I built a <strong>multi-seed significance test</strong> — and it showed the "win" was mostly luck of the random seed, statistically tied with buy-&amp;-hold. That's exactly the warning of Henderson et&nbsp;al.'s <em>Deep Reinforcement Learning that Matters</em> (2018), and I reproduced it in a domain of my own.</p>
-        <p>What it demonstrates: I can take a non-trivial ML research question end to end — algorithm, environment, training, and an evaluation held to a real scientific standard — and report the honest answer even when it's a negative result.</p>
-      </div>
-    </section>
-
-    <!-- ═══════════ WHAT YOU CAN RUN (deep links into the lab) ═══════════ -->
-    <section class="section lab-strip-section">
-      <div class="section-head">
-        <div class="kicker">THE LAB</div>
-        <h2>Don't just read the result. Test it.</h2>
-        <p>Nine experiments, each one runnable against the deployed agent or the
-           project's real committed results. Nothing on these pages is a mock-up.</p>
-      </div>
-
-      <div class="lab-strip">
-        <a class="lab-card" href="#lab/perception" data-view="lab" data-panel="perception">
-          <span class="lab-card-n">01</span>
-          <h3>Signal or Noise?</h3>
-          <p>Before you test the agent, test yourself. Tell trending charts from random
-             walks, then see the exact binomial verdict on your score.</p>
-          <span class="lab-card-tag tag-real">Live</span>
-        </a>
-
-        <a class="lab-card" href="#lab/human" data-view="lab" data-panel="human">
-          <span class="lab-card-n">02</span>
-          <h3>Your Turn</h3>
-          <p>Trade the same bars the agent trades, one at a time with no lookahead,
-             then get scored against it and against buy-&amp;-hold.</p>
-          <span class="lab-card-tag tag-real">Live</span>
-        </a>
-
-        <a class="lab-card" href="#lab/playground" data-view="lab" data-panel="playground">
-          <span class="lab-card-n">03</span>
-          <h3>Agent Playground</h3>
-          <p>Pick a market, a data source, costs and a reward function. Run a real
-             episode and scrub it bar by bar against buy-&amp;-hold.</p>
-          <span class="lab-card-tag tag-real">Live</span>
-        </a>
-
-        <a class="lab-card" href="#lab/xray" data-view="lab" data-panel="xray">
-          <span class="lab-card-n">04</span>
-          <h3>Agent X-Ray</h3>
-          <p>At any bar, see the actual 563-dimensional observation the agent
-             consumed, and follow it through to the action and the reward.</p>
-          <span class="lab-card-tag tag-real">Live</span>
-        </a>
-
-        <a class="lab-card" href="#lab/generalization" data-view="lab" data-panel="generalization">
-          <span class="lab-card-n">05</span>
-          <h3>Can You Break It?</h3>
-          <p>One agent memorised a single price path; the other saw a new one every
-             episode. Then push the deployed policy onto distributions it never met.</p>
-          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
-        </a>
-
-        <a class="lab-card" href="#lab/walkforward" data-view="lab" data-panel="walkforward">
-          <span class="lab-card-n">06</span>
-          <h3>Walk-Forward</h3>
-          <p>Disjoint chronological folds, each with its own scaler &mdash; plus a direct
-             measurement of what fitting that scaler on the test block costs you.</p>
-          <span class="lab-card-tag tag-mixed">Live evaluation</span>
-        </a>
-
-        <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
-          <span class="lab-card-n">07</span>
-          <h3>Real or Luck?</h3>
-          <p>A single-seed headline beside what five seeds actually say.
-             Re-run the bootstrap and the permutation test yourself.</p>
-          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
-        </a>
-
-        <a class="lab-card" href="#lab/surrogate" data-view="lab" data-panel="surrogate">
-          <span class="lab-card-n">08</span>
-          <h3>Anything There?</h3>
-          <p>Shuffle the returns and buy-&amp;-hold is unchanged, but every pattern is gone.
-             The sharpest question in the project: is the agent weak, or is the market empty?</p>
-          <span class="lab-card-tag tag-precomputed">Real &middot; precomputed</span>
-        </a>
-
-        <a class="lab-card" href="#lab/notebook" data-view="lab" data-panel="notebook">
-          <span class="lab-card-n">09</span>
-          <h3>Research Notebook</h3>
-          <p>Every experiment you run, with the exact config that produced it —
-             and a button that replays it to the same numbers.</p>
-          <span class="lab-card-tag tag-real">Live</span>
-        </a>
-      </div>
-
-      <p class="lab-strip-note">
-        <b>What isn't live:</b> training. Each seed of a multi-seed study is a full PPO
-        run, so those results are served from the repository's real committed
-        experiments, labelled with the command that regenerates them — never
-        simulated. The statistics computed over them do run live.
-      </p>
-    </section>
-
     <!-- ═══════════════════ WHAT I GOT WRONG ═══════════════════ -->
     <section class="section wrong-section" id="wrong">
       <div class="section-head">
@@ -454,6 +315,145 @@
         finding. What it does support is narrower and, I think, more useful: the
         evaluation is where the science is.
       </p>
+    </section>
+
+    <!-- ═══════════ WHAT YOU CAN RUN (deep links into the lab) ═══════════ -->
+    <section class="section lab-strip-section">
+      <div class="section-head">
+        <div class="kicker">THE LAB</div>
+        <h2>Don't just read the result. Test it.</h2>
+        <p>Nine experiments, each one runnable against the deployed agent or the
+           project's real committed results. Nothing on these pages is a mock-up.</p>
+      </div>
+
+      <div class="lab-strip">
+        <a class="lab-card" href="#lab/perception" data-view="lab" data-panel="perception">
+          <span class="lab-card-n">01</span>
+          <h3>Signal or Noise?</h3>
+          <p>Before you test the agent, test yourself. Tell trending charts from random
+             walks, then see the exact binomial verdict on your score.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/human" data-view="lab" data-panel="human">
+          <span class="lab-card-n">02</span>
+          <h3>Your Turn</h3>
+          <p>Trade the same bars the agent trades, one at a time with no lookahead,
+             then get scored against it and against buy-&amp;-hold.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/playground" data-view="lab" data-panel="playground">
+          <span class="lab-card-n">03</span>
+          <h3>Agent Playground</h3>
+          <p>Pick a market, a data source, costs and a reward function. Run a real
+             episode and scrub it bar by bar against buy-&amp;-hold.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/xray" data-view="lab" data-panel="xray">
+          <span class="lab-card-n">04</span>
+          <h3>Agent X-Ray</h3>
+          <p>At any bar, see the actual 563-dimensional observation the agent
+             consumed, and follow it through to the action and the reward.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/generalization" data-view="lab" data-panel="generalization">
+          <span class="lab-card-n">05</span>
+          <h3>Can You Break It?</h3>
+          <p>One agent memorised a single price path; the other saw a new one every
+             episode. Then push the deployed policy onto distributions it never met.</p>
+          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
+        </a>
+
+        <a class="lab-card" href="#lab/walkforward" data-view="lab" data-panel="walkforward">
+          <span class="lab-card-n">06</span>
+          <h3>Walk-Forward</h3>
+          <p>Disjoint chronological folds, each with its own scaler &mdash; plus a direct
+             measurement of what fitting that scaler on the test block costs you.</p>
+          <span class="lab-card-tag tag-mixed">Live evaluation</span>
+        </a>
+
+        <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
+          <span class="lab-card-n">07</span>
+          <h3>Real or Luck?</h3>
+          <p>A single-seed headline beside what five seeds actually say.
+             Re-run the bootstrap and the permutation test yourself.</p>
+          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
+        </a>
+
+        <a class="lab-card" href="#lab/surrogate" data-view="lab" data-panel="surrogate">
+          <span class="lab-card-n">08</span>
+          <h3>Anything There?</h3>
+          <p>Shuffle the returns and buy-&amp;-hold is unchanged, but every pattern is gone.
+             The sharpest question in the project: is the agent weak, or is the market empty?</p>
+          <span class="lab-card-tag tag-precomputed">Real &middot; precomputed</span>
+        </a>
+
+        <a class="lab-card" href="#lab/notebook" data-view="lab" data-panel="notebook">
+          <span class="lab-card-n">09</span>
+          <h3>Research Notebook</h3>
+          <p>Every experiment you run, with the exact config that produced it —
+             and a button that replays it to the same numbers.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+      </div>
+
+      <p class="lab-strip-note">
+        <b>What isn't live:</b> training. Each seed of a multi-seed study is a full PPO
+        run, so those results are served from the repository's real committed
+        experiments, labelled with the command that regenerates them — never
+        simulated. The statistics computed over them do run live.
+      </p>
+    </section>
+
+    <!-- ─────────────────────── FEATURES ─────────────────────── -->
+    <section id="features" class="section">
+      <div class="section-head">
+        <div class="kicker">THE FRAMEWORK</div>
+        <h2>Built from the algorithm up.</h2>
+        <p>PPO, both environments, the data pipeline, and the evaluation are implemented here — no <code>stable-baselines</code>, no wrappers. Each layer is a separate, individually tested module.</p>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <h3>PPO, from scratch</h3>
+          <p>Clipped surrogate objective, GAE advantages, entropy bonus, orthogonal init and gradient clipping — implemented in PyTorch, not wrapped from a library.</p>
+        </article>
+        <article class="card">
+          <h3>Dual market environments</h3>
+          <p><code>StockTradingEnv</code> and <code>CryptoTradingEnv</code> share one <code>BaseTradingEnv</code>, so accounting, costs, and rewards never silently diverge.</p>
+        </article>
+        <article class="card">
+          <h3>Leakage control</h3>
+          <p>Chronological train / validation / test splits with scalers fit on training data only. The agent is scored on data it has never seen.</p>
+        </article>
+        <article class="card">
+          <h3>Risk-aware rewards</h3>
+          <p>Return <em>net of</em> transaction costs, plus drawdown and turnover penalties — discouraging reckless, over-leveraged noise-trading.</p>
+        </article>
+        <article class="card">
+          <h3>Honest backtests</h3>
+          <p>Total return, annualised Sharpe, and max drawdown on a held-out split — the metrics a quant actually cares about.</p>
+        </article>
+        <article class="card">
+          <h3>Swap the policy or the market</h3>
+          <p>The same PPO agent trades one asset <em>or</em> allocates across a whole basket (cross-sectional long/short). A recurrent (LSTM) policy is fully implemented, and new markets/algorithms drop in behind the same API.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── ABOUT ─────────────────────── -->
+    <section id="about" class="section">
+      <div class="section-head">
+        <div class="kicker">ABOUT</div>
+        <h2>Why I built this.</h2>
+      </div>
+      <div class="about">
+        <p>I wanted to understand modern reinforcement learning by <em>building</em> it, not importing it — so I implemented <strong>PPO from scratch</strong> in PyTorch, wrote two custom environments, and engineered the whole data pipeline. But the real question I set out to study is a general one in RL: <strong>how do you know an agent has learned something real, rather than memorised its data or gotten lucky?</strong></p>
+        <p>The hardest — and most valuable — part wasn't the algorithm; it was the <strong>evaluation</strong>. An early run made the crypto agent look like it crushed the market. Instead of shipping that, I built a <strong>multi-seed significance test</strong> — and it showed the "win" was mostly luck of the random seed, statistically tied with buy-&amp;-hold. That's exactly the warning of Henderson et&nbsp;al.'s <em>Deep Reinforcement Learning that Matters</em> (2018), and I reproduced it in a domain of my own.</p>
+        <p>What it demonstrates: I can take a non-trivial ML research question end to end — algorithm, environment, training, and an evaluation held to a real scientific standard — and report the honest answer even when it's a negative result.</p>
+      </div>
     </section>
 
     <!-- ═══════════════════════ REPRODUCE ═══════════════════════ -->
