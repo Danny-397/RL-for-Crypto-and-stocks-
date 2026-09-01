@@ -16,6 +16,7 @@ Run from the repo root (uses cached real OHLCV; pass --synthetic for no data):
 from __future__ import annotations
 
 import argparse
+import json
 import os
 
 from rl_trader.config.training_config import crypto_config, stock_config
@@ -42,6 +43,44 @@ def _train_one(args, splits, seed: int):
     cfg.train.checkpoint_dir = os.path.join("checkpoints", "_portfolio")
     agent, _ = train_portfolio(cfg, splits)
     return agent, cfg
+
+
+
+def _record(args, tickers, rows: dict) -> None:
+    """Merge this market's table into docs/assets/portfolio.json.
+
+    Until now this experiment only printed, so RESULTS.md carried the table
+    typed by hand -- and it drifted: the run that produced the published
+    numbers put the allocator at -43.4% where the pinned rebuild puts it at
+    +38.7%. Written per market and merged, because the two markets are run as
+    separate commands and neither should clobber the other's result.
+
+    tools/sync_docs.py regenerates the table in RESULTS.md from this file.
+    """
+    import datetime
+    out = os.path.join("docs", "assets", "portfolio.json")
+    payload = {"markets": {}}
+    if os.path.exists(out):
+        try:
+            with open(out, encoding="utf-8") as fh:
+                payload = json.load(fh)
+        except json.JSONDecodeError:
+            pass
+    payload.setdefault("markets", {})[args.market] = {
+        "generated": datetime.date.today().isoformat(),
+        "seed": args.seed,
+        "timesteps": args.timesteps,
+        "n_assets": len(tickers),
+        "tickers": list(tickers),
+        "strategies": {
+            name: {k: float(m[k]) for k in ("total_return", "sharpe", "max_drawdown")}
+            for name, m in rows.items()
+        },
+    }
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with open(out, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2)
+    print(f"\nwrote {out}")
 
 
 def main() -> None:
@@ -80,6 +119,7 @@ def main() -> None:
         print("-" * 56)
         for name, m in rows.items():
             print(f"{name:<28}{m['total_return']:>+9.1%}{m['sharpe']:>9.2f}{m['max_drawdown']:>9.1%}")
+        _record(args, tickers, rows)
     else:
         seed_returns = []
         for s in range(args.seeds):

@@ -32,6 +32,9 @@ from rl_trader.evaluation.evaluate_agent import backtest  # noqa: E402
 from rl_trader.models.ppo_agent import PPOAgent  # noqa: E402
 
 ASSETS = os.path.join("docs", "assets")
+
+# Filled by fig_baselines_and_equity(); written out by dump_baselines().
+DETAIL: dict = {}
 BG = "#0e141d"
 FG = "#e7edf5"
 VOLT = "#d4ff3f"
@@ -123,24 +126,44 @@ def _agent_and_baselines(market):
     agent = PPOAgent.from_checkpoint(os.path.join("checkpoints", f"ppo_{market}.pt"))
     basket = _basket(market)
     agent_runs, baseline_acc, equities = [], {}, []
+    # Sharpe and drawdown are collected alongside return so RESULTS.md can be
+    # generated from the same pass that draws the figure, instead of having the
+    # table transcribed by hand and then drifting away from it.
+    agent_metrics, wins = [], 0
     for ticker, splits in basket.items():
         test = splits["test"]
         env = make_env(market, test, cfg.env, cfg.reward, random_start=False)
         res = backtest(agent, env, market=market)
         agent_runs.append(res.metrics["total_return"])
+        agent_metrics.append(res.metrics)
         w = cfg.env.window_size
         prices = test.prices[w - 1:]
         bench = cfg.env.initial_balance * (prices / prices[0])
         equities.append((res.metrics["total_return"], res.equity_curve, bench, ticker))
-        for name, m in evaluate_baselines(test, cfg.env, cfg.reward, market=market).items():
-            baseline_acc.setdefault(name, []).append(m["total_return"])
+        bl = evaluate_baselines(test, cfg.env, cfg.reward, market=market)
+        for name, m in bl.items():
+            baseline_acc.setdefault(name, []).append(m)
+        bh = bl.get("buy_and_hold")
+        if bh is not None and res.metrics["total_return"] > bh["total_return"]:
+            wins += 1
     means = {"PPO agent": float(np.mean(agent_runs))}
     for name, vals in baseline_acc.items():
-        means[name] = float(np.mean(vals))
+        means[name] = float(np.mean([m["total_return"] for m in vals]))
+
+    keys = ("total_return", "sharpe", "max_drawdown")
+    detail = {
+        "n_tickers": len(agent_runs),
+        "agent_beats_bh": wins,
+        "strategies": {
+            "PPO agent": {k: float(np.mean([m[k] for m in agent_metrics])) for k in keys},
+            **{name: {k: float(np.mean([m[k] for m in vals])) for k in keys}
+               for name, vals in baseline_acc.items()},
+        },
+    }
     # Representative equity = ticker with median agent return.
     equities.sort(key=lambda e: e[0])
     rep = equities[len(equities) // 2]
-    return means, rep
+    return means, rep, detail
 
 
 def fig_baselines_and_equity():
@@ -155,7 +178,8 @@ def fig_baselines_and_equity():
     efig, eaxes = plt.subplots(1, 2, figsize=(10, 4.0))
 
     for bax, eax, market in zip(baxes, eaxes, ("stock", "crypto")):
-        means, rep = _agent_and_baselines(market)
+        means, rep, detail = _agent_and_baselines(market)
+        DETAIL[market] = detail
         names = [n for n in order if n in means]
         vals = [means[n] * 100 for n in names]
         bax.bar([labels[n] for n in names], vals,
@@ -191,10 +215,35 @@ def fig_baselines_and_equity():
     print(f"wrote {eout}")
 
 
+
+def dump_baselines():
+    """Write the numbers behind fig_baselines.png so the prose can cite them.
+
+    The figure showed the comparison; RESULTS.md restated it in a table typed by
+    hand, which is how that table came to claim a +275.5% crypto agent long after
+    the run behind it had been superseded. tools/sync_docs.py regenerates the
+    table from this file.
+    """
+    if not DETAIL:
+        return
+    import datetime
+    out = os.path.join(ASSETS, "baselines.json")
+    payload = {
+        "generated": datetime.date.today().isoformat(),
+        "note": ("Mean over the held-out basket, one training seed. Read with the "
+                 "multi-seed study -- a single seed is not evidence."),
+        "markets": DETAIL,
+    }
+    with open(out, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2)
+    print(f"wrote {out}")
+
+
 def main():
     os.makedirs(ASSETS, exist_ok=True)
     fig_ablation()
     fig_baselines_and_equity()
+    dump_baselines()
 
 
 if __name__ == "__main__":

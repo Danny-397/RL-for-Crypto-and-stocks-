@@ -18,6 +18,7 @@ Run from the repo root:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 
 import numpy as np
@@ -34,6 +35,45 @@ def _holdout_paths(market: str, n_paths: int, seed: int = 9_999):
     """A fixed bank of held-out synthetic paths, shared across every agent."""
     rng = np.random.default_rng(seed)
     return [synthetic_market_data(market, seed=int(rng.integers(1e9))) for _ in range(n_paths)]
+
+
+
+def _record(args, ret_ci, sharpe_ci, bh_mean, diff, p_value, seed_returns) -> None:
+    """Merge this market's synthetic-data study into docs/assets/significance_synth.json.
+
+    This experiment only printed, so RESULTS.md carried its table typed by hand and
+    nothing could tell whether the numbers still matched a run. The two markets are
+    separate commands, so each merges into the file rather than replacing it.
+
+    tools/sync_docs.py regenerates the table in RESULTS.md from this file.
+    """
+    import datetime
+    out = os.path.join("docs", "assets", "significance_synth.json")
+    payload = {"markets": {}}
+    if os.path.exists(out):
+        try:
+            with open(out, encoding="utf-8") as fh:
+                payload = json.load(fh)
+        except json.JSONDecodeError:
+            pass
+    payload.setdefault("markets", {})[args.market] = {
+        "generated": datetime.date.today().isoformat(),
+        "seeds": args.seeds,
+        "timesteps": args.timesteps,
+        "eval_paths": args.eval_paths,
+        "return_mean": float(ret_ci.mean),
+        "return_ci": [float(ret_ci.low), float(ret_ci.high)],
+        "sharpe_mean": float(sharpe_ci.mean),
+        "sharpe_ci": [float(sharpe_ci.low), float(sharpe_ci.high)],
+        "bh_mean": bh_mean,
+        "diff": float(diff),
+        "p": float(p_value),
+        "seed_returns": [float(v) for v in seed_returns],
+    }
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with open(out, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2)
+    print("wrote " + out)
 
 
 def main() -> None:
@@ -112,6 +152,9 @@ def main() -> None:
     verdict = "DISTINGUISHABLE from B&H" if p_value < 0.05 else "NOT distinguishable from B&H"
     print(f"Verdict          : agent is {verdict} at alpha=0.05")
     print("=" * 64)
+
+    _record(args, ret_ci, sharpe_ci, float(bh_returns.mean()), obs_diff, p_value,
+            seed_mean_returns)
 
 
 if __name__ == "__main__":

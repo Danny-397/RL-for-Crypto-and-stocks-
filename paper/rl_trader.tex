@@ -42,7 +42,9 @@ single price trajectory and whether \emph{domain randomization} repairs it;
 testing; and (RQ4) whether the same holds for cross-sectional allocation. Our
 headline result is negative, and that is the point: on real markets the agent
 has \emph{no seed-robust edge} over buy-and-hold, and our own significance
-tooling catches a single-seed ``$+275\pc$'' run as a false positive. We further
+tooling catches it: an earlier build of this study published a $+275\pc$
+single-seed crypto run that survived neither reseeding nor a two-month extension
+of the evaluation window. We further
 introduce a \textbf{surrogate-data falsification test} that separates ``the agent
 is weak'' from ``there is no signal to find,'' and validate it with a positive
 control on synthetic data with known structure. In doing so the project
@@ -141,10 +143,12 @@ figure is its return on the very path the single-path agent memorized.}
 \toprule
 Market & Train & In-sample & Held-out [95\pc\ CI]\\
 \midrule
-Stock  & single & $+$17k--30k   & $-26$ {\scriptsize$[-37,-9]$}\\
-Stock  & domain & $-6$--$139$   & $\mathbf{+36}$ {\scriptsize$[+27,+46]$}\\
-Crypto & single & $+$322k--4.0M & $-51$ {\scriptsize$[-62,-39]$}\\
-Crypto & domain & $-19$--$292$  & $\mathbf{+132}$ {\scriptsize$[+69,+219]$}\\
+% BEGIN GENERATED: tex-ablation
+Stock  & single & $+17k$--$+30k$ & $-26$ {\scriptsize$[-37,-9]$}\\
+Stock  & domain & $-1$--$+128$ & $\mathbf{+47}$ {\scriptsize$[+31,+64]$}\\
+Crypto & single & $+322k$--$+4.0M$ & $-51$ {\scriptsize$[-62,-39]$}\\
+Crypto & domain & $+5$--$+154$ & $\mathbf{+129}$ {\scriptsize$[+82,+185]$}\\
+% END GENERATED: tex-ablation
 \bottomrule
 \end{tabular}
 \end{table}
@@ -180,14 +184,20 @@ wide. Figure~\ref{fig:ablation} plots the individual seeds for exactly this reas
 \subsection{RQ3: Does the edge survive multiple seeds?}
 \label{sec:sig}
 A single backtest is an anecdote. On synthetic markets where a signal provably
-exists, the agent is repeatably profitable across 5 seeds (stock
-$+18.3\pc$, 95\pc\ CI $[+9.2,+29.9]$; crypto $+63.0\pc$, $[+37.5,+88.5]$) yet
-remains statistically indistinguishable from buy-and-hold (permutation
-$p{=}0.53$ and $0.96$). On \emph{real} markets the picture is starker
-(Table~\ref{tab:real}): a favorable single seed shows the crypto agent at
-$+275\pc$ vs.\ buy-and-hold's $+19\pc$, but across 5 seeds the expected outcome is
-a small loss whose confidence interval straddles zero, and on equities the agent
-is significantly \emph{worse} than a $+260\pc$ bull market.
+exists, the agent is repeatably profitable across 5 seeds --- its bootstrap
+interval excludes zero in both markets --- yet remains statistically
+indistinguishable from buy-and-hold under a paired permutation test. On
+\emph{real} markets the two markets fail differently (Table~\ref{tab:real}). On
+equities the agent is significantly \emph{worse} than the mega-cap bull. On crypto
+the mean across seeds is positive and its interval excludes zero, so the agent did
+make money on average; what it did not do is beat buy-and-hold, which the paired
+test cannot distinguish it from. The per-seed returns span more than an order of
+magnitude, and with 5 seeds a sign-flip test on that axis cannot reach $p{\le}0.05$
+even in principle --- its floor is $2/2^5{=}0.0625$. An earlier build of this study
+(commit \texttt{d4c0ef9}) published the crypto agent at $+275\pc$ against
+buy-and-hold's $+19\pc$; rebuilding the identical recipe --- same code, same seed,
+same budget --- against a data snapshot pinned two months later erased that
+headline entirely. The run was not merely seed-lucky but window-lucky.
 
 \begin{table}[t]\centering\small
 \caption{Real-market multi-seed significance (5 seeds, held-out walk-forward). The
@@ -197,15 +207,17 @@ lucky single-seed crypto ``win'' does not survive resampling.}
 \toprule
 Market & Agent (95\pc\ CI) & vs.\ B\&H & Verdict\\
 \midrule
-Crypto & $-2.7\pc$ $[-31,+27]$ & $-22\pc$ & indist.\ ($p{\approx}0.97$)\\
-Stock  & $-19\pc$ $[-29,-7]$   & $-278\pc$ & worse ($p{\approx}0.002$)\\
+% BEGIN GENERATED: tex-significance
+Crypto & $+79.7\pc$ $[+1,+163]$ & $+46\pc$ & indist. ($p{=}0.8191$)\\
+Stock  & $-21.5\pc$ $[-29,-15]$ & $-261\pc$ & worse ($p{=}0.0021$)\\
+% END GENERATED: tex-significance
 \bottomrule
 \end{tabular}
 \end{table}
 
 This is exactly the warning of Henderson~et~al.\ \cite{henderson2018}: a single run is not evidence.
-A naive project ships the $+275\pc$ table; the significance test is what catches
-it. \emph{Reporting the catch is the contribution.}
+A naive project ships the lucky table; the significance test is what catches it.
+\emph{Reporting the catch is the contribution.}
 
 \subsection{RQ (original): A surrogate-data falsification test}
 \label{sec:surrogate}
@@ -226,10 +238,11 @@ edge once shuffling removes it. This is our positive control
 (Table~\ref{tab:surrogate}), and it confirms the test has power. Applied to real
 markets, the test finds \emph{no} significant difference between real and
 return-shuffled data: on equities the agent does no better on real prices than on
-structure-free surrogates ($\Delta$ not significant, $p{\approx}0.50$), the clean
+structure-free surrogates ($\Delta$ nowhere near significant), the clean
 null predicted by \S\ref{sec:sig}. The crypto arm is inconclusive --- heavy-tailed
 returns produce occasional blow-ups on reshuffled paths that inflate the surrogate
-loss and dominate the mean ($p{\approx}0.16$); a median-based or exposure-capped
+loss and dominate the mean, and the gap is not significant; a median-based or
+exposure-capped
 statistic is the natural remedy. Neither market shows demonstrable exploited
 structure, corroborating \S\ref{sec:sig} from a fresh angle and turning ``markets
 are efficient'' from an appeal to authority into a falsifiable test.
@@ -245,8 +258,10 @@ edge sharply negative --- the test has power in both markets.}
 \toprule
 Market & Structured & Surrogate & $\Delta$ & $p$\\
 \midrule
-Stock  & $+3.4\pc$  & $-42.7\pc$ & $+46.1\pc$ & $0.0006$\\
-Crypto & $+99.0\pc$ & $-65.3\pc$ & $+164.3\pc$ & $0.0032$\\
+% BEGIN GENERATED: tex-surrogate-control
+Crypto & $+68.6\pc$ & $-55.7\pc$ & $+124.3\pc$ & $0.0075$\\
+Stock  & $+1.8\pc$ & $-47.7\pc$ & $+49.5\pc$ & $0.0026$\\
+% END GENERATED: tex-surrogate-control
 \bottomrule
 \end{tabular}
 \end{table}
@@ -256,8 +271,9 @@ Single-asset timing is only half the problem. The same PPO agent generalizes to 
 \texttt{PortfolioTradingEnv} that observes a whole basket and emits an
 $N$-dimensional long/short weight vector under a gross-exposure budget, benchmarked
 against an equal-weight ($1/N$) portfolio and a cross-sectional momentum factor. On
-both markets the learned allocator beats random but is decisively beaten by
-equal-weight (stock: $-43\pc$ vs.\ $+164\pc$; crypto: $-80\pc$ vs.\ $-4\pc$). The
+equities the learned allocator clears both random weights and the momentum factor
+yet is beaten by equal-weight by more than 150 points of return; on crypto it is
+level with random weights on return, ahead only on a risk-adjusted basis. The
 contribution is the working, budget-constrained RL allocator and its
 apples-to-apples evaluation --- the same lesson at a harder problem: naive
 diversification is hard to beat when the per-asset signal is weak.

@@ -21,15 +21,18 @@ respectively.
    reliably positive — **all four bootstrap CIs exclude zero**, in both markets.
    This is the same lesson as Tobin et al. (2017) and Cobbe et al. (2019),
    reproduced from scratch.
-2. **A single seed can *look* like a real-market win — and that's the trap.** The
-   bundled dashboard run (seed 42) shows the crypto agent at **+275% vs. buy-&-hold's
-   +19%**, winning 4 of 6 coins. Taken alone, that's a tempting headline.
-3. **Multi-seed evaluation dissolves the illusion (RQ3).** Re-run across **5 seeds**
-   and the real crypto agent *averages a small loss* — **−2.7%, 95% CI [−31%, +27%]**,
-   statistically indistinguishable from buy-&-hold (permutation p ≈ 0.97). On
-   equities it is significantly **worse** than the +260% bull (−19%, p ≈ 0.002).
-   There is **no reliable, seed-robust edge on real markets** — consistent with
-   weak-form market efficiency (Fama, 1970), even with the cross-asset features.
+2. **A single seed can *look* like a real-market win — and that's the trap.** An
+   earlier build of this study (commit `d4c0ef9`) published the crypto agent at
+   **+275% against buy-&-hold's +19%**, winning 4 of 6 coins. Taken alone, that is a
+   tempting headline. It was not one: it survived neither reseeding (§5) nor moving
+   the evaluation window forward by two months (§4).
+3. **Multi-seed evaluation dissolves the illusion (RQ3).** Across **5 seeds** the
+   crypto agent's individual returns span more than an order of magnitude — one seed
+   more than triples capital, another loses money — and the paired permutation test
+   cannot distinguish the agent from buy-&-hold. On equities it is significantly
+   **worse** than the mega-cap bull. There is **no reliable, seed-robust edge on real
+   markets** — consistent with weak-form market efficiency (Fama, 1970), even with
+   the cross-asset features. The numbers are in §5.
 4. **Catching that is the result.** This is Henderson et al.'s (2018) *Deep RL that
    Matters* finding — single-run RL numbers are unreliable — reproduced in a new
    domain: the framework's own significance tooling exposed a false positive that a
@@ -70,12 +73,16 @@ every arm and seed) with a bootstrap 95% CI across seeds. In-sample is given as 
 **range** over seeds, not a mean — it is one leveraged compounding return on a
 memorized path and spans orders of magnitude.
 
-| Market | Training | In-sample (range over seeds) | Out-of-sample (mean, 95% CI) |
-|---|---|---|---|
-| Stock | single-path | +17k% to +30k% | **−26%** [−37%, −9%] |
-| Stock | domain-random | −6% to +139% | **+36%** [+27%, +46%] |
-| Crypto | single-path | +322k% to +4.0M% | **−51%** [−62%, −39%] |
-| Crypto | domain-random | −19% to +292% | **+132%** [+69%, +219%] |
+<!-- BEGIN GENERATED: ablation-table -->
+| Training setup | In-sample (range over seeds) | Held-out return (mean, 95% CI) |
+|---|---:|---:|
+| Stocks · single asset | +17k% to +30k% | **−26%** `[−37%, −9%]` |
+| Stocks · across tickers | −1% to +128% | **+47%** `[+31%, +64%]` |
+| Crypto · single asset | +322k% to +4.0M% | **−51%** `[−62%, −39%]` |
+| Crypto · across tickers | +5% to +154% | **+129%** `[+82%, +185%]` |
+
+*5 seeds × 60k steps, bootstrap 95% CI, held-out paths held identical across arms. In-sample is a range rather than a mean because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that is not there.*
+<!-- END GENERATED: ablation-table -->
 
 ![Domain randomization ablation](docs/assets/fig_ablation.png)
 
@@ -129,10 +136,12 @@ and a paired permutation test of the agent vs. buy-&-hold across paths.
 
 `python tools/significance.py --market crypto --seeds 5 --timesteps 40000`
 
+<!-- BEGIN GENERATED: significance-synth -->
 | Market | Agent OOS return (95% CI) | Agent OOS Sharpe (95% CI) | Buy & hold | Agent − B&H | p-value |
 |---|---:|---:|---:|---:|---:|
 | Stock | +18.3% `[+9.2%, +29.9%]` | +0.32 `[0.18, 0.47]` | +30.3% | −12.0% | 0.53 |
 | Crypto | +63.0% `[+37.5%, +88.5%]` | +0.50 `[0.34, 0.64]` | +65.2% | −2.2% | 0.96 |
+<!-- END GENERATED: significance-synth -->
 
 **Reading it:** the confidence intervals are *tight and positive* — the agent
 reliably makes risk-adjusted money across seeds, not by luck. But the permutation
@@ -152,27 +161,38 @@ synthetic paths. That is exactly the discipline I apply to the real-data win bel
 > what happens across many seeds, and the honest picture is very different. This
 > single-seed table is shown for transparency, not as the headline result.
 
+**The published run:**
+
+<!-- BEGIN GENERATED: headline-run -->
+Seed 42, 200,000 timesteps, test window ending 2026-08-28:
+
+- **Crypto** — agent +38.7% vs. buy-and-hold +33.5%, beating buy-and-hold on 2 of 6 tickers (Sharpe +0.21, max drawdown 66.6%).
+- **Stock** — agent −4.7% vs. buy-and-hold +239.5%, beating buy-and-hold on 0 of 10 tickers (Sharpe −0.09, max drawdown 35.0%).
+<!-- END GENERATED: headline-run -->
+
 ![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
 
-**Equities** — mean over 10 held-out tickers:
+<!-- BEGIN GENERATED: baselines-table -->
+**Stocks** — mean over 10 held-out tickers (the agent beats buy-and-hold on 0 of 10):
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| PPO agent | −2.3% | −0.12 | 36.7% |
-| Buy & hold | **+259.3%** | **1.06** | 26.9% |
-| MA crossover | +79.4% | 0.74 | **22.7%** |
-| Flat (cash) | 0.0% | 0.00 | 0.0% |
-| Random | −32.2% | −0.72 | 43.6% |
+| **PPO agent** | −14.1% | −0.22 | 37.9% |
+| Buy & hold | +239.3% | +1.12 | 26.9% |
+| MA crossover | +74.5% | +0.78 | 23.4% |
+| Flat (cash) | +0.0% | +0.00 | 0.0% |
+| Random | −37.8% | −0.98 | 51.9% |
 
-**Crypto** — mean over 6 held-out tickers (agent wins on 4 of 6):
+**Crypto** — mean over 6 held-out tickers (the agent beats buy-and-hold on 2 of 6):
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| **PPO agent** | **+275.5%** | **+0.81** | 57.0% |
-| Buy & hold | +19.3% | +0.31 | 74.0% |
-| MA crossover | +9.0% | +0.22 | 58.2% |
-| Flat (cash) | 0.0% | 0.00 | 0.0% |
-| Random | −77.7% | −1.50 | 79.8% |
+| **PPO agent** | +1.4% | +0.09 | 70.5% |
+| Buy & hold | +33.2% | +0.38 | 73.7% |
+| MA crossover | +8.3% | +0.24 | 59.9% |
+| Flat (cash) | +0.0% | +0.00 | 0.0% |
+| Random | −77.7% | −1.82 | 78.6% |
+<!-- END GENERATED: baselines-table -->
 
 ---
 
@@ -182,16 +202,21 @@ A representative held-out equity curve for each market (the median-return ticker
 
 ## 4. Discussion — why the single-seed table is misleading
 
-- **Seed 42 is a favorable draw, not a representative one.** On this seed the crypto
-  agent posts +275% and wins 4 of 6 coins. It is tempting — and wrong — to stop here.
-  Training is fully seeded so the number *reproduces*, but reproducing a lucky seed
-  doesn't make it typical. §5 re-runs the experiment across many seeds and finds the
-  average crypto outcome collapses to a confidence interval that comfortably
-  straddles zero.
+- **A favorable draw is not a representative one.** The superseded build at commit
+  `d4c0ef9` posted +275% on crypto and won 4 of 6 coins. Training is fully seeded, so
+  that number *reproduces* — but reproducing a lucky seed does not make it typical.
+  §5 re-runs the experiment across seeds and finds a spread wide enough that no
+  single run carries information about the next one.
+- **And the evaluation window mattered as much as the seed.** Rebuilding the
+  identical recipe — same code, same seed 42, same 200k steps — against a snapshot
+  pinned two months later moved that crypto headline from +275% to the figure in the
+  table above, against a benchmark that had itself risen. Nothing about the model
+  changed. The window is part of the claim, which is why `data/SNAPSHOT.json` pins
+  it.
 - **The equities single seed is already an honest loss.** Even on the displayed
-  seed the stock agent loses (−2.3%) against the +259% mega-cap bull, and the
-  hand-coded MA-crossover (+79%) beat it — a reminder that model complexity is not a
-  virtue by itself. Across seeds (§5) it is no better than buy-&-hold.
+  seed the stock agent loses against the mega-cap bull, and the hand-coded
+  MA-crossover beats it — see the table above — a reminder that model complexity is
+  not a virtue by itself. Across seeds (§5) it is significantly worse.
 - **This is what weak-form market efficiency looks like.** Raw daily OHLCV carries
   little exploitable structure; an agent trading on it gets whipsawed and pays costs.
   Any single backtest is dominated by seed and split luck — which is exactly why a
@@ -206,19 +231,33 @@ vs. buy-&-hold *across the held-out tickers*.
 
 `python tools/real_significance.py --seeds 5 --timesteps 150000`
 
-| Market | Agent return (95% CI across seeds) | Mean win-rate | Buy & hold | Agent − B&H | p-value | Verdict |
-|---|---:|---:|---:|---:|---:|---|
-| Stock | **−18.8%** `[−29.3%, −6.6%]` | 0% | +259.6% | −278.4% | **0.002** | significantly **worse** than B&H |
-| Crypto | **−2.7%** `[−31.4%, +26.5%]` | 57% | +19.6% | −22.2% | 0.97 | **indistinguishable** from B&H |
+<!-- BEGIN GENERATED: significance-full -->
+| Market | Agent return (95% CI across seeds) | Buy & hold | Agent − B&H | p-value | Verdict |
+|---|---:|---:|---:|---:|---|
+| Stock | **−21.5%** `[−29.0%, −14.9%]` | +239.5% | −261.1% | **0.0021** | significantly **worse** than B&H |
+| Crypto | **+79.7%** `[+1.1%, +163.3%]` | +33.5% | +46.2% | 0.82 | **indistinguishable** from B&H |
 
-**Reading it (28-feature model, incl. cross-asset features):** the crypto
-confidence interval straddles zero by a wide margin — the **+275%** single-seed run
-in §3 sits in the lucky right tail, while the *expected* outcome is roughly flat.
-The permutation test cannot distinguish the crypto agent from buy-&-hold (p ≈ 0.97),
-and on equities the agent is *significantly worse* (p ≈ 0.002). **There is no
-reliable, seed-robust edge on real markets** — even after adding relative-strength
-and market-regime features. A naive project would have shipped the §3 table as a
-win; the multi-seed test is what catches it.
+*5 independent training seeds per market. The p-value is a paired permutation test of agent vs. buy-and-hold across the held-out tickers (10 equities, 6 crypto pairs), not across seeds — the two axes answer different questions and their p-values are not comparable.*
+<!-- END GENERATED: significance-full -->
+
+**Reading it (28-feature model, incl. cross-asset features).** The two markets fail
+differently, and the difference matters. On **equities** the agent is significantly
+*worse* than buy-and-hold — a clean negative result. On **crypto** the mean is
+positive and its bootstrap interval excludes zero, so the agent did make money on
+average across seeds; what it did *not* do is beat buy-and-hold, which the paired
+permutation test cannot distinguish it from. Per-seed returns were:
+
+<!-- BEGIN GENERATED: seed-spread -->
+- **Stock** — −20.9%, −23.6%, −12.2%, −14.5%, −36.5%
+- **Crypto** — +225.5%, +135.0%, −3.4%, −28.8%, +70.1%
+<!-- END GENERATED: seed-spread -->
+
+A study whose seeds range this widely cannot support a claim about any one of them,
+and with 5 seeds the sign-flip test on that axis could not reach p ≤ 0.05 even in
+principle (its floor is 2/2⁵ = 0.0625) — see the power calculator in the lab.
+**There is no reliable, seed-robust edge on real markets**, even after adding
+relative-strength and market-regime features. A naive project would have shipped the
+§3 table as a win; the multi-seed test is what catches it.
 
 This mirrors §2 exactly: on synthetic markets where a signal provably exists the
 agent is repeatably profitable but still statistically indistinguishable from
@@ -242,10 +281,12 @@ compare the agent's edge over buy-&-hold.
 
 **Positive control (synthetic, where a signal provably exists):**
 
-| Market | Edge vs. B&H (structured) | Edge vs. B&H (surrogate) | Δ | permutation p |
-|---|---:|---:|---:|---:|
-| Stock | **+3.4%** | −42.7% | +46.1% | **0.0006** |
-| Crypto | **+99.0%** | −65.3% | +164.3% | **0.0032** |
+<!-- BEGIN GENERATED: surrogate-control -->
+| Market | Edge vs. B&H (structured) | Edge vs. B&H (surrogate) | Δ | permutation p | pairs |
+|---|---:|---:|---:|---:|---:|
+| Crypto | **+68.6%** | −55.7% | +124.3% | **0.0075** | 12 |
+| Stock | **+1.8%** | −47.7% | +49.5% | **0.0026** | 12 |
+<!-- END GENERATED: surrogate-control -->
 
 **Reading it:** when a real AR(1) momentum signal is present, the agent earns a
 *positive* edge over buy-&-hold; once shuffling removes the signal, that edge
@@ -256,7 +297,8 @@ the agent is competent enough to capture it.
 
 An earlier version of this table ran 3 seeds at 30k steps and put crypto at
 p ≈ 0.059 — marginal, and not enough to claim the control had passed there. Raising
-the budget to 5 seeds / 60k steps moved it to p ≈ 0.0032. Worth stating explicitly
+the budget to 5 seeds / 60k steps moved it well clear of the line, to the value in
+the table above. Worth stating explicitly
 because it cuts the way one would prefer: the earlier number is the one that
 happened to be borderline, and reporting a positive control as "marginal" is exactly
 the situation where it is tempting to quietly re-run until it looks better. The
@@ -264,20 +306,23 @@ budget was chosen to match §2's protocol, not chosen after seeing this p-value.
 
 **Applying the validated test to real markets:**
 
-`python tools/surrogate_test.py --mode real --seeds 3 --timesteps 80000`
+`python tools/surrogate_test.py --mode real --seeds 3 --timesteps 120000`
 
-| Market | Edge vs. B&H (real) | Edge vs. B&H (surrogate) | Δ | permutation p |
-|---|---:|---:|---:|---:|
-| Stock | −297% | −197% | −100% | 0.50 |
-| Crypto | −6% | −1309%\* | +1304%\* | 0.16 |
+<!-- BEGIN GENERATED: surrogate-real -->
+| Market | Edge vs. B&H (structured) | Edge vs. B&H (surrogate) | Δ | permutation p | pairs |
+|---|---:|---:|---:|---:|---:|
+| Crypto | **−20.6%** | −977.0% | +956.4% | 0.1225 | 6 |
+| Stock | **−253.4%** | −136.3% | −117.1% | 0.4150 | 10 |
+<!-- END GENERATED: surrogate-real -->
 
 **Reading it:** unlike the synthetic positive control, the test finds **no
 statistically significant difference** between real and return-shuffled data on
 either market (both p > 0.05). For **stocks** this is the clean predicted null — the
-agent does no better on real prices than on structure-free surrogates (Δ p ≈ 0.50):
-there is no exploitable temporal structure for it to capture, exactly what §5's "no
-seed-robust edge" implies. For **crypto** the point estimate favours real data, but
-the gap is *not* significant (p ≈ 0.16) and the surrogate mean (\*) is inflated by
+agent does no better on real prices than on structure-free surrogates, and the
+difference is nowhere near significant: there is no exploitable temporal structure
+for it to capture, exactly what §5's "no seed-robust edge" implies. For **crypto**
+the point estimate favours real data, but the gap is *not* significant and the
+surrogate mean is inflated by
 pathological blow-ups — reshuffling crypto's fat-tailed returns occasionally creates
 paths on which a leveraged agent loses catastrophically, dominating the mean — so the
 crypto arm is **inconclusive** (a median-based or exposure-capped variant is the
@@ -297,30 +342,34 @@ momentum** factor.
 
 `python tools/portfolio_experiment.py --market stock`
 
-**Stock** — 10-name basket, held-out test:
+<!-- BEGIN GENERATED: portfolio-table -->
+**Stock** — 10-name basket, held-out test (seed 42, 150,000 steps):
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| PPO portfolio agent | −43.4% | −0.76 | 48.3% |
-| **Equal-weight (1/N)** | **+163.7%** | **1.48** | **19.9%** |
-| Cross-sectional momentum | +5.0% | 0.16 | 21.8% |
-| Random weights | −66.2% | −2.74 | 68.3% |
+| PPO portfolio agent | +38.7% | +0.62 | 25.1% |
+| **Equal-weight (1/N)** | +194.5% | +1.83 | 19.9% |
+| Cross-sectional momentum | −11.3% | −0.19 | 29.1% |
+| Random weights | −54.0% | −2.05 | 54.2% |
 
-**Crypto** — 6-coin basket:
+**Crypto** — 6-name basket, held-out test (seed 42, 150,000 steps):
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| PPO portfolio agent | −80.2% | −1.12 | 80.2% |
-| **Equal-weight (1/N)** | **−3.7%** | **0.30** | 68.1% |
-| Cross-sectional momentum | −21.9% | −0.36 | **37.2%** |
-| Random weights | −80.1% | −4.06 | 81.3% |
+| PPO portfolio agent | −80.2% | −0.99 | 85.0% |
+| **Equal-weight (1/N)** | +5.0% | +0.35 | 68.6% |
+| Cross-sectional momentum | −30.5% | −0.57 | 39.5% |
+| Random weights | −80.2% | −2.25 | 82.4% |
+<!-- END GENERATED: portfolio-table -->
 
-**Reading it:** the learned allocator beats random but is **crushed by the
-equal-weight basket** on both markets (by ~200 points on equities), and
-underperforms even the simple cross-sectional-momentum factor. The gap is far too
+**Reading it:** on equities the learned allocator clears both random weights and
+the cross-sectional-momentum factor, yet is still **crushed by the equal-weight
+basket** — by more than 150 points of return. On crypto it is *not* ahead of random
+weights at all: the two are level on return, and the allocator is better only on a
+risk-adjusted basis. Neither market is close to equal-weight. The gap is far too
 large to be seed luck — it's the single-asset story again at a harder problem: a
 from-scratch RL *allocator* does not out-allocate naive diversification on real
-data. The contribution here is the **capability** (a working cross-sectional,
+data, and on crypto it does not clearly out-allocate noise. The contribution here is the **capability** (a working cross-sectional,
 long/short, budget-constrained RL allocator) and the **apples-to-apples evaluation**
 against the benchmarks a quant actually uses — not a manufactured edge. It also
 crisply explains *why* the agents underperform: raw daily features carry little

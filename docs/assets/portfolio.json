@@ -1,0 +1,80 @@
+{
+  "markets": {
+    "stock": {
+      "generated": "2026-08-31",
+      "seed": 42,
+      "timesteps": 150000,
+      "n_assets": 10,
+      "tickers": [
+        "AAPL",
+        "AMZN",
+        "GOOGL",
+        "JNJ",
+        "JPM",
+        "MSFT",
+        "NVDA",
+        "QQQ",
+        "SPY",
+        "XOM"
+      ],
+      "strategies": {
+        "PPO portfolio agent": {
+          "total_return": 0.38678246509928926,
+          "sharpe": 0.6230520322615294,
+          "max_drawdown": 0.2512684492901936
+        },
+        "equal_weight": {
+          "total_return": 1.9447997532855115,
+          "sharpe": 1.8251638667617502,
+          "max_drawdown": 0.19866855820076496
+        },
+        "cross_sectional_momentum": {
+          "total_return": -0.11257616955428651,
+          "sharpe": -0.18666973006696877,
+          "max_drawdown": 0.29081427269729454
+        },
+        "random": {
+          "total_return": -0.540365778205208,
+          "sharpe": -2.047509141010708,
+          "max_drawdown": 0.5423094666726229
+        }
+      }
+    },
+    "crypto": {
+      "generated": "2026-08-31",
+      "seed": 42,
+      "timesteps": 150000,
+      "n_assets": 6,
+      "tickers": [
+        "ADA-USD",
+        "BTC-USD",
+        "ETH-USD",
+        "LTC-USD",
+        "SOL-USD",
+        "XRP-USD"
+      ],
+      "strategies": {
+        "PPO portfolio agent": {
+          "total_return": -0.801970273073454,
+          "sharpe": -0.9928261449158801,
+          "max_drawdown": 0.8496096875095526
+        },
+        "equal_weight": {
+          "total_return": 0.05003425165255404,
+          "sharpe": 0.3462768111315745,
+          "max_drawdown": 0.6857279870512809
+        },
+        "cross_sectional_momentum": {
+          "total_return": -0.3050316508180121,
+          "sharpe": -0.5712837277515584,
+          "max_drawdown": 0.39546553410512497
+        },
+        "random": {
+          "total_return": -0.8015452595080004,
+          "sharpe": -2.24654965257917,
+          "max_drawdown": 0.8235632892810741
+        }
+      }
+    }
+  }
+}

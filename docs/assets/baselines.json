@@ -1,0 +1,68 @@
+{
+  "generated": "2026-08-31",
+  "note": "Mean over the held-out basket, one training seed. Read with the multi-seed study -- a single seed is not evidence.",
+  "markets": {
+    "stock": {
+      "n_tickers": 10,
+      "agent_beats_bh": 0,
+      "strategies": {
+        "PPO agent": {
+          "total_return": -0.14108195440771967,
+          "sharpe": -0.21881652201597462,
+          "max_drawdown": 0.37853324366193764
+        },
+        "buy_and_hold": {
+          "total_return": 2.39258978941905,
+          "sharpe": 1.1150363310345839,
+          "max_drawdown": 0.2689155112296609
+        },
+        "flat": {
+          "total_return": 0.0,
+          "sharpe": 0.0,
+          "max_drawdown": 0.0
+        },
+        "random": {
+          "total_return": -0.3781956788701171,
+          "sharpe": -0.9826153498129532,
+          "max_drawdown": 0.5191432125555415
+        },
+        "ma_crossover": {
+          "total_return": 0.7454784431376443,
+          "sharpe": 0.7842877057001665,
+          "max_drawdown": 0.234290043090786
+        }
+      }
+    },
+    "crypto": {
+      "n_tickers": 6,
+      "agent_beats_bh": 2,
+      "strategies": {
+        "PPO agent": {
+          "total_return": 0.013587464312761107,
+          "sharpe": 0.09232256070374684,
+          "max_drawdown": 0.705232342778031
+        },
+        "buy_and_hold": {
+          "total_return": 0.33221498538359767,
+          "sharpe": 0.38492665093047607,
+          "max_drawdown": 0.7365156704725521
+        },
+        "flat": {
+          "total_return": 0.0,
+          "sharpe": 0.0,
+          "max_drawdown": 0.0
+        },
+        "random": {
+          "total_return": -0.7770887951453785,
+          "sharpe": -1.8172163866960338,
+          "max_drawdown": 0.7864376365886449
+        },
+        "ma_crossover": {
+          "total_return": 0.08279693080786367,
+          "sharpe": 0.23897906730777252,
+          "max_drawdown": 0.5988622944867832
+        }
+      }
+    }
+  }
+}

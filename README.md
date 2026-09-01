@@ -34,8 +34,10 @@ market regimes; **(2)** how badly does an RL agent overfit a single price trajec
 and does **domain randomization** fix it; and **(3)** does an apparent out-of-sample
 edge survive **multi-seed significance testing**? The headline result is negative and
 that is the point: on real markets the agent has **no seed-robust edge over
-buy-and-hold**, and the framework's own significance tooling catches a single-seed
-"+275%" run as a false positive. In doing so the project independently reproduces, in
+buy-and-hold**, and the framework's own significance tooling is what caught it: an
+earlier build of this study published the crypto agent at +275% (commit `d4c0ef9`),
+and that run survived neither reseeding nor a two-month extension of the evaluation
+window. In doing so the project independently reproduces, in
 a new domain, the central methodological finding of Henderson et al. (2018), *Deep
 Reinforcement Learning that Matters* — that single-run RL evaluations are unreliable —
 and quantifies the memorization-vs-generalization gap that domain randomization closes
@@ -69,21 +71,32 @@ out-of-sample. Trained on randomized paths, it generalizes:
 
 ![Domain randomization ablation](docs/assets/fig_ablation.png)
 
-**Measured like a researcher — across seeds, not one lucky run.** On one favorable
-seed the crypto agent looks like it crushes buy-&-hold (+275% vs. +19%, winning 4 of
-6 coins — the run the dashboard shows). The professional move is to repeat the whole
-walk-forward across many seeds and put a confidence interval + significance test on
-it:
+**Measured like a researcher — across seeds, not one lucky run.** An earlier build
+of this study published the crypto agent at +275% against buy-&-hold's +19% (commit
+`d4c0ef9`), winning 4 of 6 coins. The professional move is not to ship that but to
+repeat the whole walk-forward across many seeds and put a confidence interval and a
+significance test on it:
 
-| Market | Agent return (95% CI, 5 seeds) | vs. buy-&-hold | Verdict |
+<!-- BEGIN GENERATED: significance-brief -->
+| Market | Agent return (95% CI, seeds) | Buy & hold | Verdict |
 |---|---:|---:|---|
-| Crypto | **−2.7%** `[−31%, +27%]` | +20% | indistinguishable (p ≈ 0.97) |
-| Stock | **−19%** `[−29%, −7%]` | +260% | significantly **worse** (p ≈ 0.002) |
+| Crypto | **+79.7%** `[+1%, +163%]` | +33% | indistinguishable (p = 0.82) |
+| Stock | **−21.5%** `[−29%, −15%]` | +240% | significantly **worse** (p = 0.0021) |
+<!-- END GENERATED: significance-brief -->
 
-The crypto confidence interval straddles zero — the +275% run sits in the lucky
-right tail, not the centre. **There is no reliable, seed-robust edge on real
-markets**, exactly as weak-form market efficiency predicts. A naive project ships
-the lucky backtest; `tools/real_significance.py` is what catches it.
+Read the spread, not the mean. The individual seeds returned:
+
+<!-- BEGIN GENERATED: seed-spread -->
+- **Stock** — −20.9%, −23.6%, −12.2%, −14.5%, −36.5%
+- **Crypto** — +225.5%, +135.0%, −3.4%, −28.8%, +70.1%
+<!-- END GENERATED: seed-spread -->
+
+One crypto seed more than tripled capital while another lost money, on identical
+code and identical data. The crypto mean is positive, but the paired test against
+buy-&-hold across the held-out pairs cannot tell the two apart, and on equities the
+agent is significantly *worse* than simply holding. **There is no reliable,
+seed-robust edge on real markets**, as weak-form market efficiency predicts. A naive
+project ships the lucky backtest; `tools/real_significance.py` is what catches it.
 
 ![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
 
@@ -140,8 +153,11 @@ itself a research skill. The experiments are designed as concrete instances of:
 - **Evaluation rigor / the reproducibility crisis in deep RL.** Henderson et al.,
   *Deep Reinforcement Learning that Matters* (AAAI 2018), showed that deep-RL results
   swing wildly across random seeds and that single-run numbers are unreliable. RQ3
-  reproduces exactly this in a financial domain: a "+275%" single-seed run collapses
-  to a confidence interval straddling zero across 5 seeds. *(See [RESULTS §5](RESULTS.md).)*
+  reproduces exactly this in a financial domain: an earlier published +275%
+  single-seed run did not survive reseeding — across 5 seeds the individual
+  returns span more than an order of magnitude, and the agent is not
+  distinguishable from buy-and-hold.
+  *(See [RESULTS §5](RESULTS.md).)*
 - **Generalization & overfitting in RL.** Training and testing on the same instance
   overstates performance (Cobbe et al., *Quantifying Generalization in RL*, ICML 2019).
   **Domain randomization** — the sim-to-real technique of Tobin et al. (IROS 2017) —
@@ -475,21 +491,32 @@ by its value at reset — and measure how far the deterministic target position
 moves. Because a feature occupies a *column* of the flattened window, occluding
 it removes all 20 bars of that indicator, not one cell.
 
-Measured on 600-bar momentum paths (seed 1, 80 sampled bars), the answer is
-consistent and was not what I expected:
+Measured on 600-bar momentum paths, the answer was not what I expected — and it
+is less stable than a ranked bar chart makes it look:
 
+<!-- BEGIN GENERATED: attribution-table -->
 | | Strongest inputs | Largest account-state effect |
 |---|---|---:|
-| **Stock** | `high_120_dist` 0.31 · `high_low_range` 0.23 · `atr_norm` 0.23 | 0.030 |
-| **Crypto** | `vol_regime` 0.22 · `vol_ratio` 0.22 · `bollinger_pct_b` 0.22 | 0.071 |
+| **Stock** | `high_low_range` 0.22 · `vol_ratio` 0.21 · `rsi_14` 0.21 | 0.027 |
+| **Crypto** | `high_120_dist` 0.21 · `return_120` 0.18 · `atr_norm` 0.17 | 0.025 |
 
-Both policies are dominated by **long-horizon position-in-range and volatility**
-features — where price sits relative to its 120-day high, how wide the recent
-range is — rather than the short-horizon momentum features an intuitive reading
-would expect. And the three account scalars move the action by roughly an order
-of magnitude less than the top market features: these agents barely track their
-own book. Units are the action's own, so `high_120_dist` at 0.31 means removing
-it moves the requested exposure by 31% of equity.
+*600-bar momentum paths, seed 1, 80 sampled bars. Fraction of equity: 0.22 means occluding the input moves the requested position by 22 percentage points of exposure.*
+<!-- END GENERATED: attribution-table -->
+
+Both policies lean on **range, volatility and long-horizon position** features
+rather than the short-horizon momentum an intuitive reading would expect. And the
+three account scalars move the action by roughly an order of magnitude less than
+the top market features: these agents barely track their own book.
+
+The instability is worth stating plainly. These figures were first measured
+against the previous policy archives; re-measuring against the rebuilt ones left
+the magnitudes almost unchanged but **changed which feature came first in both
+markets** — stock moved from `high_120_dist` to `high_low_range`, crypto from
+`vol_regime` to `high_120_dist`. The top few features are separated by less than
+the run-to-run noise, so the ranking's *order* should not be read as a finding.
+What survives re-measurement is the shape of the answer: range and volatility
+inputs dominate, momentum does not, and account state barely registers. This is
+why the panel calls the measurement local sensitivity rather than importance.
 
 The panel ships its own limits alongside the chart, because a ranked bar chart is
 exactly the kind of output a reader takes for causation:
