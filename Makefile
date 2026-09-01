@@ -4,7 +4,7 @@
 PY ?= python
 TIMESTEPS ?= 200000
 
-.PHONY: help install test lint fetch verify-data build build-synth ablation ablation1 baselines portfolio figures all sweep attribution sync rebuild
+.PHONY: help install test lint fetch verify-data build build-synth ablation ablation1 baselines portfolio figures all sweep attribution sync rebuild supervised costs
 
 help:
 	@echo "install     install runtime + dev dependencies"
@@ -21,6 +21,8 @@ help:
 	@echo "figures     render docs/assets/*.png from results"
 	@echo "sweep       hyper-parameter sensitivity sweep -> docs/assets/hyperparameter_sweep.json"
 	@echo "attribution occlusion ranking of the deployed policies -> docs/assets/attribution.json"
+	@echo "supervised  ridge/logistic baselines on the same features -> docs/assets/supervised.json"
+	@echo "costs       held-out return vs transaction costs -> docs/assets/cost_sensitivity.json"
 	@echo "sync        regenerate the result tables in README/RESULTS/paper from the artifacts"
 	@echo "rebuild     every experiment, then sync (hours; see tools/rebuild_all.sh)"
 	@echo "all         lint + test"
@@ -72,6 +74,13 @@ sweep:
 
 attribution:
 	$(PY) tools/attribution_report.py
+
+# Do the learned baselines find what PPO could not, and is the loss friction?
+supervised:
+	$(PY) tools/supervised_report.py
+
+costs:
+	$(PY) tools/cost_sensitivity.py
 
 # Every result table in README.md, RESULTS.md and paper/rl_trader.tex is
 # generated from docs/ artifacts. `--check` is what the test suite runs, so a

@@ -139,7 +139,7 @@
     <!-- ───────────────────── STATS STRIP ───────────────────── -->
     <section class="stats">
       <div class="stat-cell"><div class="num" data-count="16">16</div><div class="lbl">Real tickers backtested</div></div>
-      <div class="stat-cell"><div class="num" data-count="5">5</div><div class="lbl">Seeds in the significance study</div></div>
+      <div class="stat-cell"><div class="num" data-count="10" id="stat-seeds">10</div><div class="lbl">Seeds in the significance study</div></div>
       <div class="stat-cell"><div class="num" data-count="28">28</div><div class="lbl">Engineered features</div></div>
       <div class="stat-cell"><div class="num" data-count="367">367</div><div class="lbl">Tests passing</div></div>
     </section>
@@ -290,13 +290,17 @@
 
         <article class="learned-card">
           <div class="learned-n">03</div>
-          <h3>One run is not evidence, and five is not many.</h3>
-          <p>Five seeds of the same recipe spanned
+          <h3>Sample size can invalidate a test before any data is collected.</h3>
+          <p>Repeated runs of the same recipe spanned
              <b class="lr-fig" id="lr-3">&hellip;</b>. Worse, a two-sided sign-flip
-             test over five pairs draws from 2⁵ sign assignments, so its smallest
-             attainable p-value is 0.0625 — <b>it cannot reach significance at all</b>,
-             whatever the effect size. Sample size can invalidate a test before any
-             data is collected.</p>
+             test over <em>five</em> pairs draws from 2⁵ sign assignments, so its
+             smallest attainable p-value is 0.0625 — at five seeds it
+             <b>could not reach significance at all</b>, whatever the effect size.
+             The study was rerun at
+             <b class="lr-fig" id="lr-3b">&hellip;</b> seeds for that reason, which
+             drops the floor to 0.002. Building the calculator that says this is
+             easy; acting on what it says about your own design is the part that
+             counts.</p>
         </article>
 
         <article class="learned-card">

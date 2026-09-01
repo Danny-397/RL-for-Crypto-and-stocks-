@@ -95,8 +95,14 @@ def test_statistics_reproduces_the_published_interval(client):
     pub = body["published"]
     assert body["multi_seed"]["ci_low"] == pytest.approx(pub["ci_low"], abs=5e-4)
     assert body["multi_seed"]["ci_high"] == pytest.approx(pub["ci_high"], abs=5e-4)
-    # The seed-axis test must disclose that it cannot reach 0.05 at n=5.
-    assert body["benchmark"]["resolution"]["can_reach_05"] is False
+    # The seed-axis test must disclose its own resolution. Whether it can reach
+    # 0.05 depends on how many seeds the study currently runs, so the rule is
+    # asserted rather than the answer: the floor is 2/2**n, and the flag agrees
+    # with whether that floor clears alpha.
+    resolution = body["benchmark"]["resolution"]
+    floor = 2.0 / (2 ** body["n_seeds"])
+    assert resolution["min_attainable_p"] == pytest.approx(floor, abs=1e-6)
+    assert resolution["can_reach_05"] is bool(floor <= 0.05)
 
 
 def test_statistics_on_the_paper_axis(client):
@@ -487,12 +493,16 @@ def test_datasets_expose_the_single_seed_headline(client):
     # And the 5-seed study cannot corroborate it. Where the seeds happen to land
     # is a property of the build -- the previous version of this test pinned a
     # mean near zero and went red the first time the study was legitimately
-    # re-run. What is permanent is the design: 5 pairs draw from 2**5 sign
-    # assignments, so the test cannot reach p <= 0.05 at all, and no reseeding at
-    # this sample size can promote one run into a result.
+    # re-run. What is permanent is the design: n pairs draw from 2**n sign
+    # assignments, so the smallest attainable p is 2/2**n and the endpoint has to
+    # say so. The study has already grown from 5 seeds to 10 once, which turned
+    # an earlier `can_reach_05 is False` here from a fact into a stale one.
     stats = client.post("/api/statistics", json={"dataset": "real:crypto"}).get_json()
-    assert stats["n_seeds"] == 5
-    assert stats["benchmark"]["resolution"]["can_reach_05"] is False
+    assert stats["n_seeds"] >= 5
+    resolution = stats["benchmark"]["resolution"]
+    floor = 2.0 / (2 ** stats["n_seeds"])
+    assert resolution["min_attainable_p"] == pytest.approx(floor, abs=1e-6)
+    assert resolution["can_reach_05"] is bool(floor <= 0.05)
     assert stats["benchmark"]["p_value"] > 0.05
     assert {"mean", "ci_low", "ci_high", "std"} <= set(stats["multi_seed"])
 

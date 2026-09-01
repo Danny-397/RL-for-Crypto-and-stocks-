@@ -40,6 +40,8 @@ import json
 import os
 from typing import List, Optional
 
+import numpy as np
+
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ASSETS = os.path.join(_REPO_ROOT, "docs", "assets")
 
@@ -131,6 +133,43 @@ def _interpret(arm: str, market: str, row: dict) -> str:
     )
 
 
+
+def _robust_p(values_a, values_b) -> Optional[dict]:
+    """Paired sign-flip test on the MEDIAN difference rather than the mean.
+
+    The null is unchanged -- under it, structured and surrogate are exchangeable
+    within a pair, so every combination of sign flips is equally likely. Only
+    the statistic changes, and the median is what makes the test insensitive to
+    a single blown-up surrogate path.
+
+    Enumerated exactly: the sample sizes here (6 to 12 pairs) are far below the
+    point where sampling would be needed, so there is no simulation error to
+    report.
+    """
+    if not values_a or not values_b or len(values_a) != len(values_b):
+        return None
+    diffs = np.asarray(values_a, dtype=float) - np.asarray(values_b, dtype=float)
+    n = len(diffs)
+    if n < 2 or n > 20:
+        return None
+
+    observed = abs(float(np.median(diffs)))
+    # every combination of +1/-1 over the n pairs
+    bits = ((np.arange(2 ** n)[:, None] >> np.arange(n)) & 1).astype(np.int8)
+    signs = (1 - 2 * bits).astype(float)
+    medians = np.abs(np.median(signs * diffs[None, :], axis=1))
+    p = float((medians >= observed - 1e-12).mean())
+    return {
+        "statistic": "median paired difference",
+        "median_diff": round(float(np.median(diffs)), 6),
+        "mean_diff": round(float(np.mean(diffs)), 6),
+        "p": round(p, 6),
+        "significant_at_05": bool(p < 0.05),
+        "exact": True,
+        "floor": round(2.0 / (2 ** n), 6),
+    }
+
+
 def _row(arm: str, market: str, raw: dict) -> dict:
     """One market's result, with everything needed to read it honestly."""
     values_a = raw.get("values_structured")
@@ -154,6 +193,10 @@ def _row(arm: str, market: str, raw: dict) -> dict:
         "values_structured": values_a,
         "values_surrogate": values_b,
         "reanalysable": bool(values_a and values_b),
+        # Computed here, not read from the artifact: this is the live
+        # re-analysis the per-pair values make possible. The published
+        # mean-based p-value above is left exactly as generated.
+        "robust": _robust_p(values_a, values_b),
         "interpretation": _interpret(arm, market, raw),
     }
 

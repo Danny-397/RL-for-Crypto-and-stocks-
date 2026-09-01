@@ -1149,6 +1149,11 @@
     if (SIG && SIG.crypto && (SIG.crypto.seed_returns || []).length) {
       const r = SIG.crypto.seed_returns;
       put("lr-3", `${p1(Math.min(...r))} to ${p1(Math.max(...r))}`);
+      // Read from the artifact so raising the seed count updates the page.
+      const n = SIG.crypto.seeds || r.length;
+      put("lr-3b", String(n));
+      const strip = document.getElementById("stat-seeds");
+      if (strip) { strip.textContent = String(n); strip.dataset.count = String(n); }
     }
     if (DATA && DATA.markets && DATA.markets.crypto) {
       put("lr-4", p1(DATA.markets.crypto.metrics.total_return));

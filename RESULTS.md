@@ -26,7 +26,7 @@ respectively.
    **+275% against buy-&-hold's +19%**, winning 4 of 6 coins. Taken alone, that is a
    tempting headline. It was not one: it survived neither reseeding (§5) nor moving
    the evaluation window forward by two months (§4).
-3. **Multi-seed evaluation dissolves the illusion (RQ3).** Across **5 seeds** the
+3. **Multi-seed evaluation dissolves the illusion (RQ3).** Across **10 seeds** the
    crypto agent's individual returns span more than an order of magnitude — one seed
    more than triples capital, another loses money — and the paired permutation test
    cannot distinguish the agent from buy-&-hold. On equities it is significantly
@@ -200,6 +200,109 @@ A representative held-out equity curve for each market (the median-return ticker
 
 ![Representative held-out equity curves](docs/assets/fig_equity.png)
 
+### 3b. Would a simpler model have done better?
+
+The baselines above are all rule-based, so beating them shows only that the agent
+is not useless. They cannot answer the objection a skeptical reader actually has:
+**perhaps there is structure here and PPO is the wrong tool for finding it.**
+
+So two ordinary supervised models were fit on the *same* 28 features over the
+*same* training split — ridge regression on the next bar's return, logistic
+regression on its direction — and traded through the *same* environment at the
+*same* costs. Both are implemented from scratch in NumPy
+(`rl_trader/evaluation/supervised.py`); neither sees a single bar of the test
+period during fitting.
+
+`python tools/supervised_report.py`
+
+<!-- BEGIN GENERATED: supervised-table -->
+**Stocks** — mean over 10 held-out tickers, ranked:
+
+| Strategy | Return |
+|---|---:|
+| Buy & hold | +239.3% |
+| MA crossover | +74.5% |
+| Logistic direction *(learned)* | +3.1% |
+| Flat (cash) | +0.0% |
+| **PPO agent** | −4.7% |
+| Ridge regression *(learned)* | −6.0% |
+| Random | −37.8% |
+
+*Logistic in-sample directional accuracy: 55.6%.*
+
+**Crypto** — mean over 6 held-out tickers, ranked:
+
+| Strategy | Return |
+|---|---:|
+| **PPO agent** | +38.7% |
+| Buy & hold | +33.2% |
+| MA crossover | +8.3% |
+| Ridge regression *(learned)* | +0.7% |
+| Flat (cash) | +0.0% |
+| Logistic direction *(learned)* | −7.4% |
+| Random | −77.7% |
+
+*Logistic in-sample directional accuracy: 55.6%.*
+<!-- END GENERATED: supervised-table -->
+
+**Reading it:** neither supervised model beat buy-and-hold in either market, so
+two unrelated method classes reach the same place. That is what one expects if
+the features carry no exploitable structure, and not what one expects if the
+problem were simply that PPO is bad at this. Two details are worth not glossing:
+the logistic model *did* beat the trained agent on equities — the agent is not
+even the best use of its own inputs there — and in-sample directional accuracy
+was **above** chance, so the models did fit their training data and none of it
+survived into the held-out period. That is the domain-randomization result of §1
+reached by a completely different route.
+
+### 3c. How much of the loss is friction?
+
+A strategy that is flat gross and negative net is a different animal from one
+with no edge at all, and nothing above separates them. Because the policy is
+frozen, it can simply be replayed at different cost levels.
+
+`python tools/cost_sensitivity.py`
+
+<!-- BEGIN GENERATED: cost-table -->
+**Stocks**:
+
+| Costs | Fee | Slippage | Mean held-out return | Turnover |
+|---|---:|---:|---:|---:|
+| 0× | 0.000% | 0.000% | +37.5% | 0.49 |
+| 0.5× | 0.025% | 0.015% | +14.5% | 0.49 |
+| 1× *(published)* | 0.050% | 0.030% | −4.7% | 0.49 |
+| 2× | 0.100% | 0.060% | −34.2% | 0.49 |
+| 5× | 0.250% | 0.150% | −76.8% | 0.49 |
+
+**Crypto**:
+
+| Costs | Fee | Slippage | Mean held-out return | Turnover |
+|---|---:|---:|---:|---:|
+| 0× | 0.000% | 0.000% | +545.7% | 0.51 |
+| 0.5× | 0.050% | 0.050% | +197.7% | 0.51 |
+| 1× *(published)* | 0.100% | 0.100% | +38.7% | 0.51 |
+| 2× | 0.200% | 0.200% | −67.6% | 0.52 |
+| 5× | 0.500% | 0.500% | −80.2% | 0.50 |
+
+*Turnover is the mean absolute change in target position per bar: 0 would be buy-and-hold, 2.0 would be flipping fully long to fully short every bar. The policy is frozen and replayed — it is not retrained per cost level, which would measure churn rather than friction.*
+<!-- END GENERATED: cost-table -->
+
+**Reading it, carefully.** The agent is positive *before* friction in both
+markets and negative after it on equities, and its turnover is about **half its
+equity per bar** — that is the mechanism, and it is a real measurement.
+
+It is *not* evidence of a tradable edge, and the temptation to read it that way
+is exactly why it is written up here rather than left in a notebook. A
+frictionless backtest is unattainable by construction: with cost and slippage at
+zero, an agent can flip its position every bar for free and compound noise doing
+it. These are single-seed runs. And it sits in tension with §6, which finds the
+agent does no better on real price history than on the same returns shuffled — a
+genuine directional edge should not survive that shuffle, whereas a mechanical
+one would. What survives is narrower: **turnover, not signal, is the binding
+constraint on this policy**, and a lower-turnover variant is the obvious next
+experiment.
+
+
 ## 4. Discussion — why the single-seed table is misleading
 
 - **A favorable draw is not a representative one.** The superseded build at commit
@@ -234,10 +337,10 @@ vs. buy-&-hold *across the held-out tickers*.
 <!-- BEGIN GENERATED: significance-full -->
 | Market | Agent return (95% CI across seeds) | Buy & hold | Agent − B&H | p-value | Verdict |
 |---|---:|---:|---:|---:|---|
-| Stock | **−21.5%** `[−29.0%, −14.9%]` | +239.5% | −261.1% | **0.0021** | significantly **worse** than B&H |
-| Crypto | **+79.7%** `[+1.1%, +163.3%]` | +33.5% | +46.2% | 0.82 | **indistinguishable** from B&H |
+| Stock | **−19.1%** `[−26.7%, −11.2%]` | +239.5% | −258.6% | **0.0021** | significantly **worse** than B&H |
+| Crypto | **+56.8%** `[+16.3%, +106.3%]` | +33.5% | +23.3% | 0.79 | **indistinguishable** from B&H |
 
-*5 independent training seeds per market. The p-value is a paired permutation test of agent vs. buy-and-hold across the held-out tickers (10 equities, 6 crypto pairs), not across seeds — the two axes answer different questions and their p-values are not comparable.*
+*10 independent training seeds per market. The p-value is a paired permutation test of agent vs. buy-and-hold across the held-out tickers (10 equities, 6 crypto pairs), not across seeds — the two axes answer different questions and their p-values are not comparable.*
 <!-- END GENERATED: significance-full -->
 
 **Reading it (28-feature model, incl. cross-asset features).** The two markets fail
@@ -248,13 +351,17 @@ average across seeds; what it did *not* do is beat buy-and-hold, which the paire
 permutation test cannot distinguish it from. Per-seed returns were:
 
 <!-- BEGIN GENERATED: seed-spread -->
-- **Stock** — −20.9%, −23.6%, −12.2%, −14.5%, −36.5%
-- **Crypto** — +225.5%, +135.0%, −3.4%, −28.8%, +70.1%
+- **Stock** — −20.9%, −23.6%, −12.2%, −14.5%, −36.5%, −36.9%, +4.1%, −4.4%, −15.8%, −29.9%
+- **Crypto** — +225.5%, +135.0%, −3.4%, −28.8%, +70.1%, +81.7%, −14.4%, +30.1%, +26.8%, +45.0%
 <!-- END GENERATED: seed-spread -->
 
-A study whose seeds range this widely cannot support a claim about any one of them,
-and with 5 seeds the sign-flip test on that axis could not reach p ≤ 0.05 even in
-principle (its floor is 2/2⁵ = 0.0625) — see the power calculator in the lab.
+A study whose seeds range this widely cannot support a claim about any one of them.
+This study originally ran **5** seeds, at which the sign-flip test on the seed axis
+could not reach p ≤ 0.05 even in principle — its floor is 2/2⁵ = 0.0625, which the
+lab's power calculator reports for any design that small. It was rerun at **10**
+seeds for exactly that reason, dropping the floor to 2/2¹⁰ = 0.002 and roughly
+halving the width of the crypto interval. The conclusion did not change; the
+ability of the test to have detected a change is what improved.
 **There is no reliable, seed-robust edge on real markets**, even after adding
 relative-strength and market-regime features. A naive project would have shipped the
 §3 table as a win; the multi-seed test is what catches it.
@@ -373,14 +480,36 @@ either market (both p > 0.05). For **stocks** this is the clean predicted null �
 agent does no better on real prices than on structure-free surrogates, and the
 difference is nowhere near significant: there is no exploitable temporal structure
 for it to capture, exactly what §5's "no seed-robust edge" implies. For **crypto**
-the point estimate favours real data, but the gap is *not* significant and the
-surrogate mean is inflated by
-pathological blow-ups — reshuffling crypto's fat-tailed returns occasionally creates
-paths on which a leveraged agent loses catastrophically, dominating the mean — so the
-crypto arm is **inconclusive** (a median-based or exposure-capped variant is the
-natural fix). Net: the surrogate test corroborates §5 from a fresh angle — real
-markets show the agent no *demonstrable* exploitable structure beyond noise — while
-honestly flagging that heavy tails confound the crypto surrogate.
+the point estimate favours real data, but the gap is *not* significant, and the
+surrogate mean is inflated by pathological blow-ups — reshuffling crypto's
+fat-tailed returns occasionally creates paths on which a leveraged agent loses
+catastrophically, dominating the mean.
+
+That was previously written up as leaving the crypto arm **inconclusive**, with a
+median-based variant named as the natural fix. It has now been done, and it costs
+no retraining: the artifacts record every pair, so the same test runs with the
+median paired difference as its statistic.
+
+<!-- BEGIN GENERATED: surrogate-robust -->
+| Arm | Market | Mean diff | p (mean) | Median diff | p (median) | Floor |
+|---|---|---:|---:|---:|---:|---:|
+| Control | crypto | +1.243 | **0.0075** | +1.124 | **0.0234** | 0.0005 |
+| Control | stock | +0.495 | **0.0027** | +0.568 | **0.0156** | 0.0005 |
+| Real | crypto | +9.564 | 0.1225 | +5.889 | 0.1250 | 0.0312 |
+| Real | stock | -1.171 | 0.4150 | -0.383 | 0.3242 | 0.0020 |
+
+*Same paired sign-flip null, enumerated exactly; only the statistic differs. `Floor` is the smallest p-value the design can produce at that many pairs.*
+<!-- END GENERATED: surrogate-robust -->
+
+The two statistics agree in all four cells — the control fires under both, the real
+arm is null under both. So the null never rested on one blown-up path, and the
+crypto arm is not inconclusive so much as **underpowered**: at 6 pairs the smallest
+attainable p-value is 0.031, and the observed 0.125 is nowhere near it. More
+held-out pairs, not a different estimator, is what that arm needs.
+
+Net: the surrogate test corroborates §5 from a fresh angle — real markets show the
+agent no *demonstrable* exploitable structure beyond noise — and that reading now
+survives a statistic chosen to be immune to the heavy tails.
 
 ## 7. Cross-sectional portfolio allocation
 

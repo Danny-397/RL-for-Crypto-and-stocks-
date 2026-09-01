@@ -506,8 +506,18 @@ def run(api: str, port: int, shot: str | None) -> None:
         )
         time.sleep(0.8)
 
+        # "Every run listed" is the claim; how many runs there are is a property
+        # of the study. This was pinned to 5 and went red the moment the seed
+        # count was raised to 10 -- the panel was right and the check was stale.
         n_seeds = page.eval_on_selector_all("#sd-seeds .seed-row", "els => els.length")
-        check("every training run listed", n_seeds == 5, f"{n_seeds} runs")
+        expected = page.evaluate(
+            "async () => { const r = await fetch(window.RL_API + '/api/statistics',"
+            " {method: 'POST', headers: {'Content-Type': 'application/json'},"
+            "  body: JSON.stringify({dataset: 'real:crypto'})});"
+            " const b = await r.json(); return b.n_seeds; }"
+        )
+        check("every training run listed", n_seeds == expected,
+              f"{n_seeds} rows for a {expected}-seed study")
         check("one run is shown beside many",
               page.eval_on_selector_all(".vp-card", "els => els.length") == 2)
 

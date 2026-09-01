@@ -85,15 +85,15 @@ significance test on it:
 <!-- BEGIN GENERATED: significance-brief -->
 | Market | Agent return (95% CI, seeds) | Buy & hold | Verdict |
 |---|---:|---:|---|
-| Crypto | **+79.7%** `[+1%, +163%]` | +33% | indistinguishable (p = 0.82) |
-| Stock | **−21.5%** `[−29%, −15%]` | +240% | significantly **worse** (p = 0.0021) |
+| Crypto | **+56.8%** `[+16%, +106%]` | +33% | indistinguishable (p = 0.79) |
+| Stock | **−19.1%** `[−27%, −11%]` | +240% | significantly **worse** (p = 0.0021) |
 <!-- END GENERATED: significance-brief -->
 
 Read the spread, not the mean. The individual seeds returned:
 
 <!-- BEGIN GENERATED: seed-spread -->
-- **Stock** — −20.9%, −23.6%, −12.2%, −14.5%, −36.5%
-- **Crypto** — +225.5%, +135.0%, −3.4%, −28.8%, +70.1%
+- **Stock** — −20.9%, −23.6%, −12.2%, −14.5%, −36.5%, −36.9%, +4.1%, −4.4%, −15.8%, −29.9%
+- **Crypto** — +225.5%, +135.0%, −3.4%, −28.8%, +70.1%, +81.7%, −14.4%, +30.1%, +26.8%, +45.0%
 <!-- END GENERATED: seed-spread -->
 
 One crypto seed more than tripled capital while another lost money, on identical
@@ -102,6 +102,25 @@ buy-&-hold across the held-out pairs cannot tell the two apart, and on equities 
 agent is significantly *worse* than simply holding. **There is no reliable,
 seed-robust edge on real markets**, as weak-form market efficiency predicts. A naive
 project ships the lucky backtest; `tools/real_significance.py` is what catches it.
+
+**"Maybe PPO is just the wrong tool."** That is the obvious objection to a negative
+result, and the rule-based baselines cannot answer it. So two ordinary supervised
+models — ridge regression on the next bar's return, logistic regression on its
+direction, both written from scratch in NumPy — were fit on the *same* features and
+*same* training split and traded through the *same* environment at the *same* costs:
+
+<!-- BEGIN GENERATED: supervised-brief -->
+| Market | Ridge | Logistic | PPO agent | Buy & hold |
+|---|---:|---:|---:|---:|
+| Stocks | −6.0% | +3.1% | −4.7% | **+239.3%** |
+| Crypto | +0.7% | −7.4% | +38.7% | **+33.2%** |
+<!-- END GENERATED: supervised-brief -->
+
+Neither beat buy-and-hold in either market, so two unrelated method classes land in
+the same place. Their in-sample directional accuracy was *above* chance, so they did
+fit their training data — and none of it survived out of sample. That is the
+overfitting result again, reached by a completely different route.
+(`tools/supervised_report.py`)
 
 ![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
 
@@ -159,7 +178,7 @@ itself a research skill. The experiments are designed as concrete instances of:
   *Deep Reinforcement Learning that Matters* (AAAI 2018), showed that deep-RL results
   swing wildly across random seeds and that single-run numbers are unreliable. RQ3
   reproduces exactly this in a financial domain: an earlier published +275%
-  single-seed run did not survive reseeding — across 5 seeds the individual
+  single-seed run did not survive reseeding — across 10 seeds the individual
   returns span more than an order of magnitude, and the agent is not
   distinguishable from buy-and-hold.
   *(See [RESULTS §5](RESULTS.md).)*
@@ -706,7 +725,8 @@ the wrong one silently changes the claim:
   → paired permutation test, which is where the published p-value comes from
 
 A two-sided sign-flip test over `n` pairs draws from only `2**n` sign
-assignments, so **p can never fall below `2 / 2**n`** — 0.0625 at n = 5. That
+assignments, so **p can never fall below `2 / 2**n`** — 0.0625 at n = 5, and
+0.002 at the n = 10 this study now runs. That
 design cannot reach significance at 0.05 whatever the effect size. The lab
 reports this resolution floor beside every test, because *"underpowered by
 construction"* and *"no effect"* are different statements. It shows up concretely
