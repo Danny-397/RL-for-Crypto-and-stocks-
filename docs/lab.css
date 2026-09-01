@@ -718,6 +718,23 @@
 }
 .api-pill.is-stale .dot-led { background: #ffcc66; box-shadow: 0 0 8px #ffcc66; }
 
+/* the backend is asleep and being woken -- in progress, not a failure */
+.api-pill.is-waking {
+  color: var(--cyan);
+  border-color: rgba(54, 224, 255, 0.4);
+}
+.api-pill.is-waking .dot-led {
+  background: var(--cyan);
+  animation: pill-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pill-pulse {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 8px var(--cyan); }
+  50%      { opacity: 0.35; box-shadow: 0 0 2px var(--cyan); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .api-pill.is-waking .dot-led { animation: none; }
+}
+
 /* ── Signal or Noise? ─────────────────────────────────────────────────────── */
 /* The charts deliberately carry no axis, no scale and no ticker: the whole
    design rests on nothing but the shape being visible, so the styling must not
