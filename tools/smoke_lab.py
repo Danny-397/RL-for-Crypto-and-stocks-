@@ -331,12 +331,23 @@ def run(api: str, port: int, shot: str | None) -> None:
         )
         check("feature-window heatmap painted", painted > 5000, f"{painted} px")
 
-        # The critic genuinely is not in the deployed archives: it must be
-        # declared absent, never filled in with a plausible number.
+        # The critic's presence depends on which generation of archive is
+        # deployed, so this asserts the *honesty rule* rather than one outcome:
+        # an archive with a critic must show a real number, and one without must
+        # say so rather than filling in a plausible-looking estimate.
+        has_critic = page.evaluate(
+            "async () => { const r = await fetch(window.RL_API + '/api/meta');"
+            "const m = await r.json();"
+            "return Object.values(m.policies).every(p => p.has_value_head); }"
+        )
         absent = page.eval_on_selector("#xr-value-node", "el => el.classList.contains('is-absent')")
         value_text = page.inner_text("#xr-value").strip().lower()
-        check("missing critic is declared, not faked",
-              absent and "not exported" in value_text, value_text)
+        if has_critic:
+            ok = (not absent) and any(c.isdigit() for c in value_text)
+            check("an exported critic shows a real value", ok, value_text)
+        else:
+            ok = absent and "not exported" in value_text
+            check("a missing critic is declared, not faked", ok, value_text)
 
         # Synthetic paths have no reference index, so 4 features are inert.
         inert = page.eval_on_selector_all(".xr-feat.is-inert", "els => els.length")
