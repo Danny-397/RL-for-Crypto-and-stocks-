@@ -139,8 +139,8 @@ and a paired permutation test of the agent vs. buy-&-hold across paths.
 <!-- BEGIN GENERATED: significance-synth -->
 | Market | Agent OOS return (95% CI) | Agent OOS Sharpe (95% CI) | Buy & hold | Agent − B&H | p-value |
 |---|---:|---:|---:|---:|---:|
-| Stock | +18.3% `[+9.2%, +29.9%]` | +0.32 `[0.18, 0.47]` | +30.3% | −12.0% | 0.53 |
-| Crypto | +63.0% `[+37.5%, +88.5%]` | +0.50 `[0.34, 0.64]` | +65.2% | −2.2% | 0.96 |
+| Stock | +18.1% `[+10.0%, +27.0%]` | +0.35 `[+0.20, +0.50]` | +28.5% | −10.4% | 0.60 |
+| Crypto | +96.6% `[+77.3%, +116.0%]` | +0.72 `[+0.60, +0.85]` | +66.7% | +29.9% | 0.57 |
 <!-- END GENERATED: significance-synth -->
 
 **Reading it:** the confidence intervals are *tight and positive* — the agent

@@ -84,8 +84,10 @@ single price trajectory and whether domain randomization repairs it; (RQ3)
 whether an apparent out-of-sample edge survives multi-seed significance testing;
 and (RQ4) whether the same holds for cross-sectional allocation. Our headline
 result is negative, and that is the point: on real markets the agent has no
-seed-robust edge over buy-and-hold, and our own significance tooling catches a
-single-seed "+275%" run as a false positive. We further introduce a
+seed-robust edge over buy-and-hold, and our own significance tooling is what
+caught it: an earlier build of this study published a "+275%" single-seed crypto
+run that survived neither reseeding nor a two-month extension of the evaluation
+window. We further introduce a
 surrogate-data falsification test that separates "the agent is weak" from "there
 is no signal to find," and validate it with a positive control on synthetic data
 with known structure. In doing so the project reproduces, in a new domain, the

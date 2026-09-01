@@ -8,6 +8,9 @@ abstract: >-
   suite (domain-randomization ablation, multi-seed significance testing, and a
   surrogate-data falsification test) that finds no seed-robust market edge, in line
   with weak-form efficiency, and reproduces Henderson et al. (2018) in a new domain.
+  Version 2 regenerates every figure against a pinned data snapshot; moving the
+  evaluation window alone erased v1's headline single-seed result, which is
+  reported as a finding rather than corrected away.
 type: software
 authors:
   - family-names: Lichtenberger
@@ -21,7 +24,8 @@ keywords:
   - reproducibility
   - quantitative-finance
 license: MIT
-date-released: "2026-07-03"
+version: "2.0.0"
+date-released: "2026-08-31"
 references:
   - type: conference-paper
     title: "Deep Reinforcement Learning that Matters"

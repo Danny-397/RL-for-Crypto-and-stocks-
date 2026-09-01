@@ -52,6 +52,11 @@ try:
 except Exception:  # pragma: no cover - older interpreters / redirected streams
     pass
 
+# Run as a script, "tools" is not on the import path -- only pytest put it
+# there, which is why the sweep passed its tests while never once having been
+# executed the documented way.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from rl_trader.config.training_config import crypto_config, stock_config
 from rl_trader.evaluation.evaluate_agent import ANNUALISATION
 from rl_trader.evaluation.statistics import bootstrap_ci

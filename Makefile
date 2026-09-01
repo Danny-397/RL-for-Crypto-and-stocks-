@@ -4,7 +4,7 @@
 PY ?= python
 TIMESTEPS ?= 200000
 
-.PHONY: help install test lint fetch verify-data build build-synth ablation ablation1 baselines portfolio figures all
+.PHONY: help install test lint fetch verify-data build build-synth ablation ablation1 baselines portfolio figures all sweep attribution sync rebuild
 
 help:
 	@echo "install     install runtime + dev dependencies"
@@ -19,6 +19,10 @@ help:
 	@echo "baselines   print agent vs baselines on the real test data"
 	@echo "portfolio   train the cross-sectional portfolio agent vs quant baselines"
 	@echo "figures     render docs/assets/*.png from results"
+	@echo "sweep       hyper-parameter sensitivity sweep -> docs/assets/hyperparameter_sweep.json"
+	@echo "attribution occlusion ranking of the deployed policies -> docs/assets/attribution.json"
+	@echo "sync        regenerate the result tables in README/RESULTS/paper from the artifacts"
+	@echo "rebuild     every experiment, then sync (hours; see tools/rebuild_all.sh)"
 	@echo "all         lint + test"
 
 install:
@@ -62,5 +66,20 @@ portfolio:
 
 figures:
 	$(PY) tools/make_figures.py
+
+sweep:
+	$(PY) tools/hyperparameter_sweep.py --seeds 3 --timesteps 60000
+
+attribution:
+	$(PY) tools/attribution_report.py
+
+# Every result table in README.md, RESULTS.md and paper/rl_trader.tex is
+# generated from docs/ artifacts. `--check` is what the test suite runs, so a
+# rebuild that moves a number fails the suite instead of leaving the docs wrong.
+sync:
+	$(PY) tools/sync_docs.py
+
+rebuild:
+	bash tools/rebuild_all.sh
 
 all: lint test
