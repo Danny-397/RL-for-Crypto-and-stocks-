@@ -158,6 +158,22 @@ def _row(arm: str, market: str, raw: dict) -> dict:
     }
 
 
+
+def _reanalysis_note(reanalysable: bool, partial: List[str]) -> str:
+    """Say exactly which arms can be recomputed, including when only some can."""
+    if reanalysable:
+        return ("These artifacts carry per-arm values, so the comparison can be "
+                "recomputed live at your own settings.")
+    stale = ("These artifacts were generated before per-arm values were recorded, "
+             "so they carry summary statistics only. The p-values shown are the "
+             "ones computed at generation time; they are not re-derivable here, "
+             "and no attempt is made to reconstruct them from the means.")
+    if partial:
+        return (f"Mixed: the {', '.join(partial)} arm carries per-arm values and "
+                f"could be recomputed, but the rest cannot. " + stale)
+    return stale
+
+
 def results() -> Optional[dict]:
     """Both arms, or ``None`` when the committed artifacts are unavailable."""
     arms: List[dict] = []
@@ -179,7 +195,13 @@ def results() -> Optional[dict]:
     if not arms:
         return None
 
-    reanalysable = any(r["reanalysable"] for a in arms for r in a["markets"])
+    # Per arm first, then the payload. ``any`` was wrong: while one arm had been
+    # regenerated with per-arm values and the other had not, it told the caller
+    # the whole comparison was re-analysable and handed them a note saying so.
+    # A mixed state has to be reported as mixed.
+    by_arm = {a["arm"]: all(r["reanalysable"] for r in a["markets"]) for a in arms}
+    reanalysable = bool(by_arm) and all(by_arm.values())
+    partial = sorted(k for k, v in by_arm.items() if v) if not reanalysable else []
     return {
         "arms": arms,
         "method": METHOD,
@@ -187,15 +209,8 @@ def results() -> Optional[dict]:
         "reference": "Theiler et al. (1992), Testing for nonlinearity in time series",
         "live_computation": False,
         "reanalysable": reanalysable,
-        "reanalysis_note": (
-            "These artifacts carry per-arm values, so the comparison can be "
-            "recomputed live at your own settings."
-            if reanalysable else
-            "These artifacts were generated before per-arm values were recorded, so "
-            "they carry summary statistics only. The p-values shown are the ones "
-            "computed at generation time; they are not re-derivable here, and no "
-            "attempt is made to reconstruct them from the means."
-        ),
+        "reanalysable_by_arm": by_arm,
+        "reanalysis_note": _reanalysis_note(reanalysable, partial),
         "verdict": _verdict(arms),
     }
 

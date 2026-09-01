@@ -484,11 +484,17 @@ def test_datasets_expose_the_single_seed_headline(client):
     assert head["crypto"]["seed"] == 42
     assert head["crypto"]["source"] == "docs/results.js"
 
-    # And the 5-seed study of the same market does not support it.
+    # And the 5-seed study cannot corroborate it. Where the seeds happen to land
+    # is a property of the build -- the previous version of this test pinned a
+    # mean near zero and went red the first time the study was legitimately
+    # re-run. What is permanent is the design: 5 pairs draw from 2**5 sign
+    # assignments, so the test cannot reach p <= 0.05 at all, and no reseeding at
+    # this sample size can promote one run into a result.
     stats = client.post("/api/statistics", json={"dataset": "real:crypto"}).get_json()
-    assert stats["multi_seed"]["mean"] < 0.1
-    assert stats["multi_seed"]["ci_low"] < 0 < stats["multi_seed"]["ci_high"]
-    assert stats["multi_seed"]["ci_excludes_zero"] is False
+    assert stats["n_seeds"] == 5
+    assert stats["benchmark"]["resolution"]["can_reach_05"] is False
+    assert stats["benchmark"]["p_value"] > 0.05
+    assert {"mean", "ci_low", "ci_high", "std"} <= set(stats["multi_seed"])
 
 
 def test_experiment_records_the_callers_question(client):

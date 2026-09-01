@@ -77,8 +77,8 @@
           write-up of the results, the results being produced.
         </p>
         <div class="hero-cta">
-          <a class="btn btn-primary navtab" data-view="lab" href="#lab">Run an experiment →</a>
-          <a class="btn btn-ghost navtab" data-view="how" href="#how">Read the research</a>
+          <a class="btn btn-primary" href="#result">See the result &darr;</a>
+          <a class="btn btn-ghost navtab" data-view="lab" href="#lab">Run an experiment &rarr;</a>
         </div>
         <div class="hero-tags">
           <span>PPO from scratch</span><span>Domain randomization</span><span>Multi-seed significance</span><span>Reproduces Henderson et&nbsp;al. 2018</span><span>Honest negative result</span>
@@ -106,6 +106,34 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <!-- ═══════════════════════ THE RESULT ═══════════════════════ -->
+    <section class="section result-section" id="result">
+      <div class="section-head">
+        <div class="kicker">THE RESULT</div>
+        <h2>The most impressive number was the&nbsp;least trustworthy.</h2>
+        <p>
+          Train the agent on a <b>single</b> asset and it posts returns that look
+          like a bug. Show it data it has never seen and it loses money. Train the
+          same agent across a <b>basket</b> of tickers and the headline collapses to
+          something modest — which then survives contact with held-out data. Both
+          arms below were trained identically and scored on the same held-out paths;
+          the only difference is how many assets they saw.
+        </p>
+      </div>
+
+      <div class="rs-toolbar">
+        <div class="seg" id="rs-market" role="group" aria-label="Choose a market">
+          <button type="button" data-val="stock" class="on" aria-pressed="true">Stocks</button>
+          <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+        </div>
+        <span class="rs-meta" id="rs-meta"></span>
+      </div>
+
+      <div class="rs-arms" id="rs-arms" aria-live="polite"></div>
+
+      <p class="lab-caption" id="rs-caption"></p>
     </section>
 
     <!-- ───────────────────── STATS STRIP ───────────────────── -->
@@ -225,7 +253,7 @@
         <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
           <span class="lab-card-n">07</span>
           <h3>Real or Luck?</h3>
-          <p>A <b>+275%</b> single-seed headline beside what five seeds actually say.
+          <p>A single-seed headline beside what five seeds actually say.
              Re-run the bootstrap and the permutation test yourself.</p>
           <span class="lab-card-tag tag-mixed">Real data · live stats</span>
         </a>
@@ -253,6 +281,250 @@
         experiments, labelled with the command that regenerates them — never
         simulated. The statistics computed over them do run live.
       </p>
+    </section>
+
+    <!-- ═══════════════════ WHAT I GOT WRONG ═══════════════════ -->
+    <section class="section wrong-section" id="wrong">
+      <div class="section-head">
+        <div class="kicker">WHAT I GOT WRONG</div>
+        <h2>Every result here held up &mdash; until the next&nbsp;test.</h2>
+        <p>
+          Each step below is a result I believed until the next test broke it. The
+          numbers are read live from this repository's committed experiments — the
+          same files the charts above use — except where a step quotes a
+          <em>superseded</em> run, which is cited by commit so you can check it
+          against history rather than against my description of it.
+        </p>
+      </div>
+
+      <ol class="tl" id="tl">
+        <li class="tl-step">
+          <div class="tl-n">01</div>
+          <div class="tl-body">
+            <h3>The number was enormous.</h3>
+            <p>A crypto agent trained on one asset finished its training period up
+               <b class="tl-fig" id="tl-1">&hellip;</b>, depending on the
+               seed. My first instinct was that something had gone right.</p>
+          </div>
+        </li>
+
+        <li class="tl-step">
+          <div class="tl-n">02</div>
+          <div class="tl-body">
+            <h3>It was a receipt for memorisation.</h3>
+            <p>Scored on held-out tickers it had never traded, the same recipe
+               averaged <b class="tl-fig neg" id="tl-2">&hellip;</b> across 5 seeds.
+               It had not learned to trade; it had learned one price path.</p>
+            <p class="tl-src"><a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/ablation.py">tools/ablation.py</a></p>
+          </div>
+        </li>
+
+        <li class="tl-step">
+          <div class="tl-n">03</div>
+          <div class="tl-body">
+            <h3>The fix was the data, not the algorithm.</h3>
+            <p>I changed nothing about PPO. Training across the whole basket —
+               domain randomization — left nothing single to memorise, and held-out
+               return moved to <b class="tl-fig pos" id="tl-3">&hellip;</b>. That is
+               the contrast at the top of this page.</p>
+            <p class="tl-src"><a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/envs/base_env.py">rl_trader/envs/</a> &middot; <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/ablation_multiseed.py">tools/ablation_multiseed.py</a></p>
+          </div>
+        </li>
+
+        <li class="tl-step">
+          <div class="tl-n">04</div>
+          <div class="tl-body">
+            <h3>Then one run looked spectacular again.</h3>
+            <p>The published crypto agent returned <b class="tl-fig">+275.45%</b>
+               against <b class="tl-fig">+19.57%</b> buy-and-hold — a 14&times;
+               outperformance. This was the version of the result I nearly wrote up
+               as the finding.</p>
+            <p class="tl-src">Superseded &middot; <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/d4c0ef9/docs/results.js">results.js at&nbsp;d4c0ef9</a>, test window ending 2026&#8209;06&#8209;17</p>
+          </div>
+        </li>
+
+        <li class="tl-step">
+          <div class="tl-n">05</div>
+          <div class="tl-body">
+            <h3>Reseeding dissolved it.</h3>
+            <p>Retraining the identical recipe under 5 independent seeds gave
+               returns spanning <b class="tl-fig" id="tl-5a">&hellip;</b> — one seed
+               more than tripling capital, another losing money. Against
+               buy-and-hold across the held-out pairs the paired test gives
+               <b class="tl-fig" id="tl-5b">&hellip;</b>: not distinguishable. The
+               spectacular run was one draw from a wide distribution.</p>
+            <p class="tl-src"><a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/evaluation/statistics.py">evaluation/statistics.py</a> &middot; <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/real_significance.py">tools/real_significance.py</a></p>
+          </div>
+        </li>
+
+        <li class="tl-step">
+          <div class="tl-n">06</div>
+          <div class="tl-body">
+            <h3>And the window mattered as much as the seed.</h3>
+            <p>Rebuilding on a data snapshot pinned two months later — same code,
+               same seed 42, same 200k steps, only more days of price history — the
+               same run returned <b class="tl-fig" id="tl-6">&hellip;</b> against
+               <b class="tl-fig" id="tl-6b">&hellip;</b> buy-and-hold. Moving the
+               evaluation window alone erased the headline. It was not only
+               seed-lucky; it was window-lucky.</p>
+            <p class="tl-src">Current run &middot; <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/data/SNAPSHOT.json">data/SNAPSHOT.json</a> pins the window</p>
+          </div>
+        </li>
+
+        <li class="tl-step tl-last">
+          <div class="tl-n">07</div>
+          <div class="tl-body">
+            <h3>The honest answer is a negative result.</h3>
+            <p>On stocks the agent is not merely tied with buy-and-hold — across 5
+               seeds it averaged <b class="tl-fig neg" id="tl-7">&hellip;</b>, and
+               the paired test against buy-and-hold over the 10 held-out tickers
+               gives <b class="tl-fig" id="tl-7b">&hellip;</b>. It is significantly
+               <em>worse</em>. That is the result, and it is the one I am
+               publishing.</p>
+          </div>
+        </li>
+      </ol>
+
+      <p class="lab-caption">
+        What survives all of this is narrow, and worth stating plainly: <b>domain
+        randomization measurably improves held-out performance</b> — that gap is
+        large, reproduced across seeds, and its intervals do not overlap. Nothing
+        here demonstrates a profitable trading strategy, and none of it is
+        investment advice.
+      </p>
+    </section>
+
+    <!-- ═══════════════════ WHAT I LEARNED ═══════════════════ -->
+    <section class="section learned-section" id="learned">
+      <div class="section-head">
+        <div class="kicker">WHAT I LEARNED</div>
+        <h2>Four things that transfer past&nbsp;trading.</h2>
+        <p>
+          The timeline above is what happened in this project. These are the parts
+          I would carry into any reinforcement-learning result, in any domain —
+          markets were only the testbed that made each one cheap to demonstrate.
+        </p>
+      </div>
+
+      <div class="learned-grid">
+        <article class="learned-card">
+          <div class="learned-n">01</div>
+          <h3>A huge training number is a symptom, not a result.</h3>
+          <p>The single-asset agent's in-sample return moved between
+             <b class="lr-fig" id="lr-1a">&hellip;</b> and
+             <b class="lr-fig" id="lr-1b">&hellip;</b> depending only on the random
+             seed. A quantity that unstable is not measuring skill; it is measuring
+             how thoroughly one price path was memorised.</p>
+        </article>
+
+        <article class="learned-card">
+          <div class="learned-n">02</div>
+          <h3>The fix was the training distribution, not the algorithm.</h3>
+          <p>PPO was not touched — no new loss, no tuning. Only the number of
+             assets the agent saw changed, and held-out return moved from
+             <b class="lr-fig neg" id="lr-2a">&hellip;</b> to
+             <b class="lr-fig pos" id="lr-2b">&hellip;</b> on crypto. Where the data
+             comes from is a modelling decision.</p>
+        </article>
+
+        <article class="learned-card">
+          <div class="learned-n">03</div>
+          <h3>One run is not evidence, and five is not many.</h3>
+          <p>Five seeds of the same recipe spanned
+             <b class="lr-fig" id="lr-3">&hellip;</b>. Worse, a two-sided sign-flip
+             test over five pairs draws from 2⁵ sign assignments, so its smallest
+             attainable p-value is 0.0625 — <b>it cannot reach significance at all</b>,
+             whatever the effect size. Sample size can invalidate a test before any
+             data is collected.</p>
+        </article>
+
+        <article class="learned-card">
+          <div class="learned-n">04</div>
+          <h3>Evaluation choices move results as much as modelling ones.</h3>
+          <p>Identical code, identical seed, a data window extended by two months:
+             the headline fell to <b class="lr-fig" id="lr-4">&hellip;</b> against a
+             benchmark that had itself risen. Nothing about the model changed. The
+             window is part of the claim, which is why this one is pinned.</p>
+        </article>
+      </div>
+
+      <p class="lab-caption">
+        None of this makes the agent a trading strategy — on stocks it is
+        significantly worse than holding the index, and that is the published
+        finding. What it does support is narrower and, I think, more useful: the
+        evaluation is where the science is.
+      </p>
+    </section>
+
+    <!-- ═══════════════════════ REPRODUCE ═══════════════════════ -->
+    <section class="section repro-section" id="reproduce">
+      <div class="section-head">
+        <div class="kicker">REPRODUCE</div>
+        <h2>Don't take my word for any of&nbsp;it.</h2>
+        <p>
+          Every figure on this site traces to a command in this list and an artifact
+          in the repository. If you think a number here is wrong, this is how you
+          show it.
+        </p>
+      </div>
+
+      <div class="repro-grid">
+        <ol class="repro-steps">
+          <li>
+            <code>pip install -e .</code>
+            <span>PPO, both environments and the feature pipeline — no
+              <code>stable-baselines</code>, no wrappers.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/models/ppo_agent.py">ppo_agent.py&nbsp;→</a></span>
+          </li>
+          <li>
+            <code>python tools/ablation_multiseed.py --seeds 42 43 44 45 46</code>
+            <span>Regenerates the single-asset vs cross-asset contrast at the top of
+              this page — and rewrites the page's own copy of it.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/ablation_multiseed.py">source&nbsp;→</a></span>
+          </li>
+          <li>
+            <code>python tools/real_significance.py --seeds 5</code>
+            <span>Retrains under 5 seeds and runs the paired permutation test behind
+              steps 05 and 07 above.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/evaluation/statistics.py">statistics.py&nbsp;→</a></span>
+          </li>
+          <li>
+            <code>python tools/surrogate_test.py --mode real</code>
+            <span>Destroys the temporal structure and checks the edge disappears
+              with it, with a positive control that proves the test has power.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/surrogate_test.py">source&nbsp;→</a></span>
+          </li>
+          <li>
+            <code>python tools/build_site_data.py --real</code>
+            <span>Rebuilds every chart on this site from a fresh seeded training run.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/build_site_data.py">source&nbsp;→</a></span>
+          </li>
+          <li>
+            <code>pytest</code>
+            <span>The suite, including the tests that pin these honesty rules in
+              place. <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/tree/main/tests">tests/&nbsp;→</a></span>
+          </li>
+        </ol>
+
+        <aside class="repro-side">
+          <h3>What is actually pinned</h3>
+          <ul class="repro-check">
+            <li><b>Data</b><span>A dated snapshot manifest rather than a live feed,
+              so re-fetching cannot silently move the evaluation window.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/data/SNAPSHOT.json">SNAPSHOT.json&nbsp;→</a></span></li>
+            <li><b>Seeds</b><span>Every published run states its seed, and every
+              multi-seed study lists all of them.</span></li>
+            <li><b>Splits</b><span>Chronological, with scalers fit on the training
+              slice only.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/data/data_loader.py">preprocessor.py&nbsp;→</a></span></li>
+            <li><b>Statistics</b><span>Bootstrap CIs and paired permutation tests,
+              with the resolution floor reported next to every p&#8209;value.</span></li>
+            <li><b>Artifacts</b><span>Committed JSON, regenerated by a named command
+              that is printed beside the result it produced.</span></li>
+          </ul>
+          <p class="repro-warn" id="repro-warn"></p>
+        </aside>
+      </div>
     </section>
 
     </div><!-- /view-home -->
@@ -391,15 +663,10 @@
                 <th scope="col">Held-out return (mean, 95% CI)</th>
               </tr>
             </thead>
-            <tbody>
-              <tr><td class="num-l">Stocks &middot; single asset</td><td class="muted-cell">+17k% to +30k%</td><td class="lose">&minus;26% <small>[&minus;37%, &minus;9%]</small></td></tr>
-              <tr><td class="num-l">Stocks &middot; across tickers</td><td class="muted-cell">&minus;6% to +139%</td><td class="win">+36% <small>[+27%, +46%]</small></td></tr>
-              <tr><td class="num-l">Crypto &middot; single asset</td><td class="muted-cell">+322k% to +4.0M%</td><td class="lose">&minus;51% <small>[&minus;62%, &minus;39%]</small></td></tr>
-              <tr><td class="num-l">Crypto &middot; across tickers</td><td class="muted-cell">&minus;19% to +292%</td><td class="win">+132% <small>[+69%, +219%]</small></td></tr>
-            </tbody>
+            <tbody id="abl-body"></tbody>
           </table>
         </div>
-        <p class="lab-caption">Those astronomical in-sample figures aren't a win — they're the <b>overfitting tell</b>: a single-asset agent memorises the exact training path, so it "earns" impossible returns there and then collapses out of sample. The honest column is <b>held-out</b>, and only domain randomization keeps it positive — across 5 seeds all four intervals exclude zero. In-sample is shown as a <b>range</b> rather than a number because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that isn't there. (5 seeds &times; 60k steps, bootstrap 95% CI, 30 held-out paths held identical across arms; reproduced by <code>tools/ablation_multiseed.py</code>.)</p>
+        <p class="lab-caption">Those astronomical in-sample figures aren't a win — they're the <b>overfitting tell</b>: a single-asset agent memorises the exact training path, so it "earns" impossible returns there and then collapses out of sample. The honest column is <b>held-out</b>, and only domain randomization keeps it positive — across 5 seeds all four intervals exclude zero. In-sample is shown as a <b>range</b> rather than a number because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that isn't there. (<span id="abl-prov"></span>bootstrap 95% CI, 30 held-out paths held identical across arms; reproduced by <code>tools/ablation_multiseed.py</code>.)</p>
       </div>
     </section>
 
@@ -1437,6 +1704,7 @@ python -m rl_trader.scripts.compare_markets --plot</code></pre>
   <script src="results.js"></script>
   <script src="significance.js"></script>
   <script src="learning.js"></script>
+  <script src="ablation.js"></script>
   <script src="app.js"></script>
   <script src="lab.js"></script>
 </body>

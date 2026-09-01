@@ -152,8 +152,36 @@ def test_the_committed_real_arm_is_a_null():
 def test_the_served_payload_never_claims_to_be_live():
     out = surrogate.results()
     assert out["live_computation"] is False
-    assert out["reanalysable"] is False       # today's artifacts are summary-only
-    assert "summary statistics only" in out["reanalysis_note"]
+    assert any("committed results, not live" in c for c in out["caveats"])
+
+
+def test_the_reanalysis_claim_matches_what_the_artifacts_actually_carry():
+    """Asserted as a rule, not as today's answer.
+
+    This used to pin ``reanalysable is False`` because no artifact recorded
+    per-arm values. Regenerating one arm made that false, and the payload then
+    over-claimed for the arm that had not been regenerated. What must hold in
+    every state is that the flag and the note agree with the artifacts.
+    """
+    out = surrogate.results()
+    by_arm = out["reanalysable_by_arm"]
+    for arm in out["arms"]:
+        assert by_arm[arm["arm"]] == all(r["reanalysable"] for r in arm["markets"])
+
+    assert out["reanalysable"] is all(by_arm.values())
+    note = out["reanalysis_note"]
+    if out["reanalysable"]:
+        assert "can be recomputed live" in note
+    elif any(by_arm.values()):
+        # a mixed state must name the arms rather than generalise either way
+        assert note.startswith("Mixed:")
+        for arm, ok in by_arm.items():
+            if ok:
+                assert arm in note
+        assert "summary statistics only" in note
+    else:
+        assert "summary statistics only" in note
+        assert "not re-derivable here" in note
     assert any("committed results, not live" in c for c in out["caveats"])
     assert any("not proof of no structure" in c for c in out["caveats"])
 
