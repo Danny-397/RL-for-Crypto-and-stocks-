@@ -174,3 +174,47 @@ def test_the_claims_beside_the_links_match_the_code_they_point_at():
     with open(os.path.join(REPO, match.group(1)), encoding="utf-8") as fh:
         source = fh.read()
     assert "scaler" in source and "train_end" in source
+
+
+# --------------------------------------------------------------------------- #
+# Other countable claims on the page                                           #
+# --------------------------------------------------------------------------- #
+def test_the_test_count_in_the_stats_strip_is_plausible(index: str):
+    """The strip claimed 290 while the suite stood at 346 -- stale in the same
+    way the ablation table was.
+
+    Bounded rather than pinned. Collecting the real total from inside a test run
+    is unreliable when only part of the suite is selected, so this compares the
+    claim against the number of ``def test_`` definitions: the collected total is
+    always at least that (parametrize only expands it), and a claim far above it
+    is an overstatement. Either bound failing means the number needs a look.
+    """
+    match = re.search(
+        r'data-count="(\d+)">\d+</div><div class="lbl">Tests passing', index)
+    assert match, "the tests-passing stat has gone missing"
+    claimed = int(match.group(1))
+
+    defined = 0
+    tests_dir = os.path.join(REPO, "tests")
+    for name in os.listdir(tests_dir):
+        if not name.endswith(".py"):
+            continue
+        with open(os.path.join(tests_dir, name), encoding="utf-8") as fh:
+            defined += len(re.findall(r"^\s*def test_", fh.read(), re.M))
+
+    assert claimed >= defined, (
+        f"the page claims {claimed} tests but {defined} are defined -- the strip "
+        "is stale, update it")
+    assert claimed <= defined * 2, (
+        f"the page claims {claimed} tests against {defined} definitions, which "
+        "parametrize is unlikely to explain")
+
+
+def test_the_live_widget_is_framed_as_research_not_as_a_trading_tool(index: str):
+    """It runs a frozen policy on unseen tickers; the copy has to say so."""
+    i = index.index('id="live"')
+    block = index[i: i + 3000]
+    assert "Out-of-distribution test" in block
+    assert "never trained on" in block
+    assert "not financial advice" in block
+    assert "no retraining" in block

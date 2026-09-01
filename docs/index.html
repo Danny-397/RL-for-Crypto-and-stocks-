@@ -141,7 +141,7 @@
       <div class="stat-cell"><div class="num" data-count="16">16</div><div class="lbl">Real tickers backtested</div></div>
       <div class="stat-cell"><div class="num" data-count="5">5</div><div class="lbl">Seeds in the significance study</div></div>
       <div class="stat-cell"><div class="num" data-count="28">28</div><div class="lbl">Engineered features</div></div>
-      <div class="stat-cell"><div class="num" data-count="290">290</div><div class="lbl">Tests passing</div></div>
+      <div class="stat-cell"><div class="num" data-count="346">346</div><div class="lbl">Tests passing</div></div>
     </section>
 
     <!-- ─────────────────────── FEATURES ─────────────────────── -->
@@ -801,8 +801,8 @@
       <!-- run it live (needs the optional Render backend; revealed when RL_API is set) -->
       <div id="live" class="panel live-card" hidden>
         <div class="panel-head">
-          <h3>Run it live on any ticker <span class="badge-live">REAL-TIME</span></h3>
-          <span class="muted-sub">type any stock or crypto symbol &middot; live prices &middot; no retraining</span>
+          <h3>Out-of-distribution test <span class="badge-live">LIVE DATA</span></h3>
+          <span class="muted-sub">the frozen policy on an asset it was never trained on &middot; no retraining, no fine-tuning</span>
         </div>
         <div class="live-controls">
           <select id="live-market" class="live-select">
@@ -812,10 +812,20 @@
           <input id="live-ticker" class="live-select live-input" list="ticker-suggestions"
                  placeholder="Type any ticker — e.g. TSLA or DOGE-USD" autocomplete="off" spellcheck="false" />
           <datalist id="ticker-suggestions"></datalist>
-          <button id="live-run" class="btn btn-primary">Run live →</button>
+          <button id="live-run" class="btn btn-primary">Run the policy &rarr;</button>
           <span id="live-spin" class="spinner" hidden aria-hidden="true"></span>
           <span id="live-status" class="muted-sub" aria-live="polite"></span>
         </div>
+        <p class="ood-note">
+          <b>What this is.</b> The policy below was trained on a fixed basket and
+          then frozen. Typing a ticker that was not in that basket asks a research
+          question &mdash; how does a policy behave on a distribution it never saw?
+          &mdash; not a trading question. Watch whether it takes a sensible position
+          or saturates at fully long or fully short, which is what these agents tend
+          to do once the inputs leave the range they were scaled on.
+          <b>This is a model demonstration, not financial advice, and not a
+          prediction.</b>
+        </p>
         <div class="live-signal" id="live-signal" aria-live="polite"></div>
         <div class="panel-head" style="margin-top:6px">
           <h3>Equity (held-out 2y)</h3>
