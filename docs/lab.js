@@ -2878,12 +2878,37 @@
       return;
     }
     pill.innerHTML = '<i class="dot-led"></i> connecting…';
-    let health;
-    try {
-      health = await api.get("/health");
-    } catch (err) {
+
+    // The backend sleeps on Render's free plan and takes ~50s to wake, so a
+    // single failed request means very little. Retrying while saying WHY keeps
+    // the pill honest: a visitor is told the backend is waking, not that the
+    // lab is broken. Attempts are spaced to cover a cold start without
+    // hammering a service that is genuinely gone.
+    const health = await (async () => {
+      const started = Date.now();
+      for (let attempt = 0; attempt < 8; attempt++) {
+        try {
+          return await api.get("/health");
+        } catch (err) {
+          if (attempt === 0) pill.className = "api-pill is-waking";
+          const secs = Math.round((Date.now() - started) / 1000);
+          pill.innerHTML =
+            '<i class="dot-led"></i> waking the backend… ' + secs + "s";
+          pill.title =
+            "The API is hosted on a free plan that sleeps when idle. First " +
+            "request after a quiet spell takes about a minute.";
+          await new Promise((r) => setTimeout(r, 8000));
+        }
+      }
+      return null;
+    })();
+
+    if (!health) {
       pill.className = "api-pill is-down";
       pill.innerHTML = '<i class="dot-led"></i> API unreachable';
+      pill.title =
+        "No response after ~a minute. Everything on this page that is marked " +
+        "precomputed still works; the live experiments do not.";
       return;
     }
 

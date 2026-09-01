@@ -3,7 +3,10 @@
 # this file and provisions the service automatically.
 services:
   - type: web
-    name: rl-trader-api
+    # The hostname follows this name: <name>.onrender.com. It must match
+    # docs/config.js, or the site will call a service that does not exist --
+    # which is exactly what happened while this was called rl-trader-api.
+    name: rl-for-crypto-and-stocks
     runtime: python
     plan: free
     rootDir: server

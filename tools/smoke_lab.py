@@ -709,7 +709,24 @@ def run(api: str, port: int, shot: str | None) -> None:
         off.goto(url, wait_until="load")
         time.sleep(3.0)
 
-        check("status shows unreachable",
+        # First the pill must say the backend is waking rather than broken --
+        # a free-tier service takes about a minute to come up and one failed
+        # request proves nothing.
+        waking = off.inner_text("#lab-api-status")
+        check("a failed first request reads as waking, not broken",
+              "WAKING" in waking.upper(), waking.strip())
+        check("the waking state is styled apart from the dead one",
+              "is-waking" in off.eval_on_selector("#lab-api-status", "el => el.className"))
+
+        # And then, once the retries are exhausted, it must say so plainly.
+        # This is the honesty rule the whole offline phase exists to protect, so
+        # it is waited out rather than skipped.
+        off.wait_for_function(
+            "() => /unreachable/i.test("
+            "document.getElementById('lab-api-status').textContent)",
+            timeout=120000,
+        )
+        check("status eventually shows unreachable",
               "UNREACHABLE" in off.inner_text("#lab-api-status").upper(),
               off.inner_text("#lab-api-status").strip())
         check("run button disabled", off.eval_on_selector("#pg-run", "el => el.disabled"))

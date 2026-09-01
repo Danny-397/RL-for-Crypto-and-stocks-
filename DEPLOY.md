@@ -25,9 +25,15 @@ The repo includes a [`render.yaml`](render.yaml) Blueprint that sets everything
 
 1. Push the repo to GitHub (already done).
 2. Go to **[dashboard.render.com](https://dashboard.render.com)** → **New +** → **Blueprint**.
-3. Connect the repo `RL-for-Crypto-and-stocks-`. Render reads `render.yaml` and shows a service **`rl-trader-api`** (Free plan).
+3. Connect the repo `RL-for-Crypto-and-stocks-`. Render reads `render.yaml` and shows a service **`rl-for-crypto-and-stocks`** (Free plan).
 4. Click **Apply**. Wait ~2–3 min (the build is small — no torch).
 5. Test: `https://<your-service>.onrender.com/health` → `{"status":"ok","policies":["crypto","stock"]}`
+
+> **Free plan sleeps.** After a quiet spell the first request takes roughly a
+> minute while the service wakes, and a short `curl` timeout will fail or return
+> a Render error page. That is not a broken deployment — retry with
+> `curl -m 120` before concluding anything. The lab's status pill retries on its
+> own and says "waking the backend" while it does.
 
 ### Option B — manual web service (if you created it by hand)
 
@@ -82,7 +88,7 @@ the API powers.
 
 1. Edit [`docs/config.js`](docs/config.js):
    ```js
-   window.RL_API = "https://rl-trader-api.onrender.com";   // your Render URL
+   window.RL_API = "https://rl-for-crypto-and-stocks.onrender.com";   // your Render URL
    ```
 2. Commit & push. Vercel auto-redeploys in ~30 s.
 
@@ -99,8 +105,8 @@ Deploy the backend first, or at least don't be surprised by the gap:
 
 ```bash
 # after merging to main, confirm the deployed API actually has the lab
-curl -s https://rl-trader-api.onrender.com/health   | grep -q capabilities && echo "lab-capable"
-curl -s -o /dev/null -w '%{http_code}\n' https://rl-trader-api.onrender.com/api/meta   # expect 200
+curl -s https://rl-for-crypto-and-stocks.onrender.com/health   | grep -q capabilities && echo "lab-capable"
+curl -s -o /dev/null -w '%{http_code}\n' https://rl-for-crypto-and-stocks.onrender.com/api/meta   # expect 200
 ```
 
 The page handles this state honestly rather than failing confusingly: if `/health`
