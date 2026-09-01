@@ -214,3 +214,77 @@ def test_the_tool_now_records_per_arm_values():
     assert out["n_pairs"] == 3
     assert out["values_structured"] == [0.1, 0.2, 0.3]
     assert out["values_surrogate"] == [0.0, 0.1, 0.0]
+
+
+# --------------------------------------------------------------------------- #
+# The robust re-analysis                                                       #
+# --------------------------------------------------------------------------- #
+def test_the_median_test_is_computed_live_for_every_reanalysable_row():
+    """This is what the per-pair values were recorded for."""
+    out = surrogate.results()
+    for arm in out["arms"]:
+        for row in arm["markets"]:
+            if row["reanalysable"]:
+                assert row["robust"] is not None, row["market"]
+                assert row["robust"]["statistic"] == "median paired difference"
+            else:
+                assert row["robust"] is None
+
+
+def test_the_robust_test_reports_its_own_resolution_floor():
+    """A p-value without its floor is unreadable at these sample sizes."""
+    out = surrogate.results()
+    for arm in out["arms"]:
+        for row in arm["markets"]:
+            rb = row["robust"]
+            if not rb:
+                continue
+            assert rb["floor"] == pytest.approx(
+                2.0 / (2 ** row["n_pairs"]), abs=1e-6)
+            assert rb["p"] >= rb["floor"] - 1e-9
+            assert rb["exact"] is True
+
+
+def test_the_published_p_value_is_never_replaced_by_the_robust_one():
+    """The mean-based result stays exactly as generated; the median is added
+    beside it. Silently swapping the statistic would be the dishonest fix."""
+    import json
+    import os
+
+    out = surrogate.results()
+    for arm in out["arms"]:
+        path = os.path.join(surrogate.ASSETS, f"surrogate_{arm['arm']}.json")
+        with open(path, encoding="utf-8") as fh:
+            raw = json.load(fh)
+        for row in arm["markets"]:
+            assert row["p"] == pytest.approx(round(raw[row["market"]]["p"], 6))
+
+
+def test_the_median_statistic_ignores_a_single_blown_up_pair():
+    """The whole reason for the robust variant: one catastrophic surrogate path
+    must not be able to carry the result."""
+    clean = [0.4] * 9 + [0.5]
+    zeros = [0.0] * 10
+    baseline = surrogate._robust_p(clean, zeros)
+
+    wrecked = list(zeros)
+    wrecked[0] = -400.0          # one path where the agent blew up
+    shifted = surrogate._robust_p(clean, wrecked)
+
+    # the mean moves by orders of magnitude, the median barely at all
+    assert abs(shifted["mean_diff"]) > 10 * abs(baseline["mean_diff"])
+    assert shifted["median_diff"] == pytest.approx(baseline["median_diff"], abs=0.06)
+
+
+def test_a_symmetric_set_of_differences_is_unsurprising():
+    a = [1.0, -1.0, 1.0, -1.0, 1.0, -1.0]
+    b = [0.0] * 6
+    assert surrogate._robust_p(a, b)["p"] > 0.5
+
+
+def test_mismatched_or_tiny_inputs_decline_rather_than_guess():
+    assert surrogate._robust_p([1.0, 2.0], [1.0]) is None
+    assert surrogate._robust_p([], []) is None
+    assert surrogate._robust_p(None, None) is None
+    # enumerating 2**21 sign vectors is not worth doing inline
+    assert surrogate._robust_p([1.0] * 21, [0.0] * 21) is None

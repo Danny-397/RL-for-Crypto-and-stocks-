@@ -79,6 +79,8 @@ run portfolio_c  $PY tools/portfolio_experiment.py --market crypto --timesteps $
 run hpsweep      $PY tools/hyperparameter_sweep.py --seeds 3 --timesteps 60000
 run figures      $PY tools/make_figures.py
 run attribution  $PY tools/attribution_report.py
+run supervised   $PY tools/supervised_report.py
+run costs        $PY tools/cost_sensitivity.py
 
 # --- and the documents that quote them -------------------------------------
 # Last, and not optional. Every table in the README, RESULTS.md and the paper is

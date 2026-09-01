@@ -40,6 +40,8 @@ import sys
 from typing import Callable, Dict, List, Optional
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO not in sys.path:
+    sys.path.insert(0, REPO)
 DOCS = os.path.join(REPO, "docs")
 
 # Markdown hides its markers in an HTML comment; LaTeX in a % comment. Both are
@@ -420,6 +422,111 @@ def sweep_table() -> Optional[str]:
     return "\n".join(out)
 
 
+def supervised_table() -> Optional[str]:
+    """The agent against learned baselines on the same inputs and costs."""
+    art = _asset("supervised.json")
+    if not art:
+        return None
+    pretty = {
+        "PPO agent": "**PPO agent**",
+        "ridge_forecast": "Ridge regression *(learned)*",
+        "logistic_direction": "Logistic direction *(learned)*",
+        "buy_and_hold": "Buy & hold",
+        "ma_crossover": "MA crossover",
+        "flat": "Flat (cash)",
+        "random": "Random",
+    }
+    out: List[str] = []
+    for market, label in (("stock", "Stocks"), ("crypto", "Crypto")):
+        block = art.get("markets", {}).get(market)
+        if not block:
+            continue
+        out.append(f"**{label}** \u2014 mean over {block['n_tickers']} held-out "
+                   "tickers, ranked:")
+        out.append("")
+        out.append("| Strategy | Return |")
+        out.append("|---|---:|")
+        rows = sorted(block["strategies"].items(),
+                      key=lambda kv: -kv[1]["total_return"])
+        for name, m in rows:
+            out.append(f"| {pretty.get(name, name)} | {pct(m['total_return'])} |")
+        out.append("")
+        out.append(f"*Logistic in-sample directional accuracy: "
+                   f"{block['logistic_train_accuracy'] * 100:.1f}%.*")
+        out.append("")
+    return "\n".join(out).rstrip() if out else None
+
+
+def cost_table() -> Optional[str]:
+    """Held-out return against the friction it pays."""
+    art = _asset("cost_sensitivity.json")
+    if not art:
+        return None
+    out: List[str] = []
+    for market, label in (("stock", "Stocks"), ("crypto", "Crypto")):
+        block = art.get("markets", {}).get(market)
+        if not block:
+            continue
+        out.append(f"**{label}**:")
+        out.append("")
+        out.append("| Costs | Fee | Slippage | Mean held-out return | Turnover |")
+        out.append("|---|---:|---:|---:|---:|")
+        for r in block["rows"]:
+            marker = " *(published)*" if r["multiple"] == 1.0 else ""
+            out.append(
+                f"| {r['multiple']:g}\u00d7{marker} | {r['transaction_cost'] * 100:.3f}% "
+                f"| {r['slippage'] * 100:.3f}% | {pct(r['mean_return'])} "
+                f"| {r['mean_turnover']:.2f} |")
+        out.append("")
+    if not out:
+        return None
+    out.append("*Turnover is the mean absolute change in target position per bar: "
+               "0 would be buy-and-hold, 2.0 would be flipping fully long to fully "
+               "short every bar. The policy is frozen and replayed \u2014 it is not "
+               "retrained per cost level, which would measure churn rather than "
+               "friction.*")
+    return "\n".join(out)
+
+
+def surrogate_robust() -> Optional[str]:
+    """Mean-based against median-based, so a fat tail cannot hide in either.
+
+    Computed live by server/surrogate.py from the per-pair values, not read from
+    a stored field -- so this table cannot drift from the artifacts even if
+    someone regenerates them.
+    """
+    try:
+        from server import surrogate as _surrogate
+    except ImportError:            # pragma: no cover - server extras absent
+        return None
+    served = _surrogate.results()
+    if not served:
+        return None
+
+    rows = ["| Arm | Market | Mean diff | p (mean) | Median diff | p (median) | Floor |",
+            "|---|---|---:|---:|---:|---:|---:|"]
+    labels = {"synthetic": "Control", "real": "Real"}
+    any_row = False
+    for arm in served["arms"]:
+        for m in arm["markets"]:
+            rb = m.get("robust")
+            if not rb:
+                continue
+            any_row = True
+            mark = lambda v: f"**{v:.4f}**" if v < 0.05 else f"{v:.4f}"  # noqa: E731
+            rows.append(
+                f"| {labels.get(arm['arm'], arm['arm'])} | {m['market']} | "
+                f"{m['diff']:+.3f} | {mark(m['p'])} | {rb['median_diff']:+.3f} | "
+                f"{mark(rb['p'])} | {rb['floor']:.4f} |")
+    if not any_row:
+        return None
+    rows.append("")
+    rows.append("*Same paired sign-flip null, enumerated exactly; only the "
+                "statistic differs. `Floor` is the smallest p-value the design "
+                "can produce at that many pairs.*")
+    return "\n".join(rows)
+
+
 # --------------------------------------------------------------------------- #
 # The same results, as LaTeX                                                   #
 # --------------------------------------------------------------------------- #
@@ -525,6 +632,9 @@ BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "significance-synth": significance_synth,
     "attribution-table": attribution_table,
     "sweep-table": sweep_table,
+    "supervised-table": supervised_table,
+    "cost-table": cost_table,
+    "surrogate-robust": surrogate_robust,
     "tex-ablation": tex_ablation,
     "tex-significance": tex_significance,
     "tex-surrogate-control": tex_surrogate_control,

@@ -1,0 +1,127 @@
+{
+  "generated": "2026-09-01",
+  "question": "Is the agent losing to friction, or to having no edge?",
+  "method": "The frozen policy replayed through the same held-out data at scaled transaction cost and slippage. No retraining: the agent was trained at the published costs, and re-optimising it per level would measure churn rather than friction.",
+  "multiples": [
+    0.0,
+    0.5,
+    1.0,
+    2.0,
+    5.0
+  ],
+  "markets": {
+    "stock": {
+      "rows": [
+        {
+          "multiple": 0.0,
+          "transaction_cost": 0.0,
+          "slippage": 0.0,
+          "mean_return": 0.3750364014907191,
+          "median_return": 0.3193888128223562,
+          "mean_turnover": 0.48852842904690935,
+          "n_tickers": 10
+        },
+        {
+          "multiple": 0.5,
+          "transaction_cost": 0.00025,
+          "slippage": 0.00015,
+          "mean_return": 0.14499692228381816,
+          "median_return": 0.09396218440497706,
+          "mean_turnover": 0.489287925840972,
+          "n_tickers": 10
+        },
+        {
+          "multiple": 1.0,
+          "transaction_cost": 0.0005,
+          "slippage": 0.0003,
+          "mean_return": -0.04727553644749233,
+          "median_return": -0.09322255358138709,
+          "mean_turnover": 0.4899469806029913,
+          "n_tickers": 10
+        },
+        {
+          "multiple": 2.0,
+          "transaction_cost": 0.001,
+          "slippage": 0.0006,
+          "mean_return": -0.34151615277425285,
+          "median_return": -0.3714495954934537,
+          "mean_turnover": 0.49102181256446825,
+          "n_tickers": 10
+        },
+        {
+          "multiple": 5.0,
+          "transaction_cost": 0.0025,
+          "slippage": 0.0014999999999999998,
+          "mean_return": -0.7675120554987384,
+          "median_return": -0.7914982438400254,
+          "mean_turnover": 0.4913951849423272,
+          "n_tickers": 10
+        }
+      ],
+      "published_cost": 0.0005,
+      "published_slippage": 0.0003,
+      "frictionless_return": 0.3750364014907191,
+      "published_return": -0.04727553644749233,
+      "cost_drag": -0.4223119379382114,
+      "profitable_without_costs": true,
+      "mean_turnover": 0.4899469806029913
+    },
+    "crypto": {
+      "rows": [
+        {
+          "multiple": 0.0,
+          "transaction_cost": 0.0,
+          "slippage": 0.0,
+          "mean_return": 5.456906194347039,
+          "median_return": 2.706352405735714,
+          "mean_turnover": 0.5119469262930044,
+          "n_tickers": 6
+        },
+        {
+          "multiple": 0.5,
+          "transaction_cost": 0.0005,
+          "slippage": 0.0005,
+          "mean_return": 1.9767295552528406,
+          "median_return": 0.9201730303481767,
+          "mean_turnover": 0.5118552644758871,
+          "n_tickers": 6
+        },
+        {
+          "multiple": 1.0,
+          "transaction_cost": 0.001,
+          "slippage": 0.001,
+          "mean_return": 0.3872751615666703,
+          "median_return": -0.0057471432485297624,
+          "mean_turnover": 0.511802386853638,
+          "n_tickers": 6
+        },
+        {
+          "multiple": 2.0,
+          "transaction_cost": 0.002,
+          "slippage": 0.002,
+          "mean_return": -0.6755655371043666,
+          "median_return": -0.737786965000383,
+          "mean_turnover": 0.5199175739774756,
+          "n_tickers": 6
+        },
+        {
+          "multiple": 5.0,
+          "transaction_cost": 0.005,
+          "slippage": 0.005,
+          "mean_return": -0.8024371913817095,
+          "median_return": -0.802325884604584,
+          "mean_turnover": 0.5039339296857509,
+          "n_tickers": 6
+        }
+      ],
+      "published_cost": 0.001,
+      "published_slippage": 0.001,
+      "frictionless_return": 5.456906194347039,
+      "published_return": 0.3872751615666703,
+      "cost_drag": -5.069631032780369,
+      "profitable_without_costs": true,
+      "mean_turnover": 0.511802386853638
+    }
+  },
+  "verdict": "On crypto the agent is positive before friction (+545.7%) and +38.7% after it, at a mean turnover of 0.51 \u2014 that is, it moves its position by 51% of equity per bar on average. On stock the agent is positive before friction (+37.5%) and -4.7% after it, at a mean turnover of 0.49 \u2014 that is, it moves its position by 49% of equity per bar on average. **This is not evidence of a tradable edge, and should not be read as one.** A frictionless backtest is unattainable by construction: with cost and slippage set to zero an agent can flip its position every bar for free, and compound noise while doing it. These are single-seed runs, and the multi-seed study cannot distinguish this agent from buy-and-hold at real costs. Most importantly it sits in tension with the surrogate test, which found the agent does no better on real price history than on the same returns in random order \u2014 a genuine directional edge should not survive that shuffle, while a mechanical one would. What the experiment does establish is narrower and still useful: turnover, not signal, is the binding constraint on this policy, and a lower-turnover variant is the obvious next experiment."
+}

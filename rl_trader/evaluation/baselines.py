@@ -14,11 +14,22 @@ Strategies
 * ``ma_crossover``   — go long when a fast moving average is above a slow one,
                        else flat: a classic momentum rule the agent must beat
                        to justify its complexity.
+
+Two further baselines are *learned*, and appear only when a training split is
+supplied (see :mod:`rl_trader.evaluation.supervised`):
+
+* ``ridge_forecast``      — ridge regression of the next bar's return on the
+                            same features the agent sees.
+* ``logistic_direction``  — logistic regression on the *direction* of that move.
+
+They exist to answer the objection the rule-based baselines cannot: whether an
+apparent absence of signal is a property of the market or merely of PPO. Both
+are fit on the training split alone and traded through this same environment.
 """
 
 from __future__ import annotations
 
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 import numpy as np
 
@@ -26,6 +37,7 @@ from ..config.training_config import EnvConfig, RewardConfig
 from ..data.data_loader import MarketData
 from ..envs import make_env
 from .evaluate_agent import ANNUALISATION, compute_metrics
+from .supervised import supervised_policies
 
 # An action function maps the live environment to a target position in [-1, 1].
 ActionFn = Callable[[object], float]
@@ -62,8 +74,15 @@ def evaluate_baselines(
     reward_config: RewardConfig,
     market: str = "stock",
     seed: int = 0,
+    train_data: Optional[MarketData] = None,
 ) -> Dict[str, Dict[str, float]]:
-    """Run every baseline on ``data`` and return ``{name: metrics}``."""
+    """Run every baseline on ``data`` and return ``{name: metrics}``.
+
+    ``train_data`` is optional. Supplying it adds the supervised baselines, fit
+    on that split alone; omitting it leaves them out entirely rather than
+    fitting them on the evaluation data, which would be the leakage this
+    project spends most of its effort avoiding.
+    """
     periods = ANNUALISATION.get(market, 252)
     rng = np.random.default_rng(seed)
 
@@ -73,6 +92,9 @@ def evaluate_baselines(
         "random": lambda env: float(rng.uniform(-1.0, 1.0)),
         "ma_crossover": _ma_crossover_action(),
     }
+    if train_data is not None:
+        policies.update(
+            supervised_policies(train_data.features, train_data.prices))
 
     results: Dict[str, Dict[str, float]] = {}
     for name, fn in policies.items():

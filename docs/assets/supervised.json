@@ -1,0 +1,102 @@
+{
+  "generated": "2026-09-01",
+  "question": "Would an ordinary supervised model have found structure the RL agent missed?",
+  "method": "Ridge regression on the next bar's log return and logistic regression on its direction, both fit on the training split only, using the same 28 features the agent observes, traded through the same environment with the same costs.",
+  "markets": {
+    "stock": {
+      "n_tickers": 10,
+      "buy_and_hold": 2.39258978941905,
+      "strategies": {
+        "buy_and_hold": {
+          "total_return": 2.39258978941905,
+          "sharpe": 1.1150363310345839,
+          "max_drawdown": 0.2689155112296609
+        },
+        "flat": {
+          "total_return": 0.0,
+          "sharpe": 0.0,
+          "max_drawdown": 0.0
+        },
+        "random": {
+          "total_return": -0.3781956788701171,
+          "sharpe": -0.9826153498129532,
+          "max_drawdown": 0.5191432125555415
+        },
+        "ma_crossover": {
+          "total_return": 0.7454784431376443,
+          "sharpe": 0.7842877057001665,
+          "max_drawdown": 0.234290043090786
+        },
+        "ridge_forecast": {
+          "total_return": -0.05984298754668649,
+          "sharpe": -0.24609611240946191,
+          "max_drawdown": 0.1391728369712296
+        },
+        "logistic_direction": {
+          "total_return": 0.03133592971871156,
+          "sharpe": 0.1007052133041461,
+          "max_drawdown": 0.06896844230584297
+        },
+        "PPO agent": {
+          "total_return": -0.04727553644749233,
+          "sharpe": NaN,
+          "max_drawdown": NaN
+        }
+      },
+      "supervised_beats_agent": [
+        "logistic_direction"
+      ],
+      "any_beats_buy_and_hold": [],
+      "logistic_train_accuracy": 0.5563763066202091,
+      "periods_per_year": 252
+    },
+    "crypto": {
+      "n_tickers": 6,
+      "buy_and_hold": 0.33221498538359767,
+      "strategies": {
+        "buy_and_hold": {
+          "total_return": 0.33221498538359767,
+          "sharpe": 0.38492665093047607,
+          "max_drawdown": 0.7365156704725521
+        },
+        "flat": {
+          "total_return": 0.0,
+          "sharpe": 0.0,
+          "max_drawdown": 0.0
+        },
+        "random": {
+          "total_return": -0.7770887951453785,
+          "sharpe": -1.8172163866960338,
+          "max_drawdown": 0.7864376365886449
+        },
+        "ma_crossover": {
+          "total_return": 0.08279693080786367,
+          "sharpe": 0.23897906730777252,
+          "max_drawdown": 0.5988622944867832
+        },
+        "ridge_forecast": {
+          "total_return": 0.006978791037527114,
+          "sharpe": 0.060902749430436415,
+          "max_drawdown": 0.19708522766546596
+        },
+        "logistic_direction": {
+          "total_return": -0.07376799735115579,
+          "sharpe": -0.17548362376267657,
+          "max_drawdown": 0.20066924833260105
+        },
+        "PPO agent": {
+          "total_return": 0.3872751615666703,
+          "sharpe": NaN,
+          "max_drawdown": NaN
+        }
+      },
+      "supervised_beats_agent": [],
+      "any_beats_buy_and_hold": [
+        "PPO agent"
+      ],
+      "logistic_train_accuracy": 0.5561927860191966,
+      "periods_per_year": 365
+    }
+  },
+  "verdict": "Neither supervised model beat buy-and-hold in either market. Two unrelated method classes \u2014 a policy-gradient RL agent and ordinary linear regression on the same inputs \u2014 reach the same place, which is what one would expect if the features carry no exploitable structure rather than if PPO were simply the wrong tool. On stock it also out-performed the trained agent, so the agent is not even the best use of its own inputs there. In-sample directional accuracy averaged 55.6%. So the models did find in-sample structure \u2014 better than a coin flip on the direction \u2014 and none of it survived into the held-out period. That is the same pattern as the domain-randomization ablation, reached by a completely different method: what is learnable here is the training sample, not the market."
+}

@@ -39,25 +39,50 @@ def test_there_are_tools_to_check():
     assert len(TOOL_FILES) > 10, "the tools directory looks wrong"
 
 
+# Directories at the repository root that are NOT installed packages.
+#
+# `pyproject.toml` installs `rl_trader*` and nothing else, so `import rl_trader`
+# resolves from anywhere once the project is installed. `tools` and `server` are
+# plain directories: importing them from a script inside tools/ works only if
+# the repository root is on sys.path, because the interpreter puts tools/ there
+# instead.
+#
+# `tools` was the only name checked at first. sync_docs.py then began importing
+# `server` to compute the surrogate re-analysis and broke in exactly the same
+# way, silently — the generator returned None and the table was skipped rather
+# than erroring.
+FIRST_PARTY = ("tools", "server")
+
+
+def _first_sibling_import(source: str, name: str):
+    """Line number of the earliest first-party import, or None."""
+    tree = ast.parse(source, filename=name)
+    earliest = None
+
+    def note(lineno):
+        nonlocal earliest
+        if earliest is None or lineno < earliest:
+            earliest = lineno
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if (node.module or "").split(".")[0] in FIRST_PARTY:
+                note(node.lineno)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.split(".")[0] in FIRST_PARTY:
+                    note(node.lineno)
+    return earliest
+
+
 @pytest.mark.parametrize("name", TOOL_FILES)
 def test_a_tool_importing_a_sibling_puts_the_repo_root_on_the_path(name: str):
     """The import must be reachable when the file is run as a script."""
     source = _source(name)
-    tree = ast.parse(source, filename=name)
-
-    first_tools_import = None
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("tools"):
-            if first_tools_import is None or node.lineno < first_tools_import:
-                first_tools_import = node.lineno
-        elif isinstance(node, ast.Import):
-            for alias in node.names:
-                if alias.name.startswith("tools"):
-                    if first_tools_import is None or node.lineno < first_tools_import:
-                        first_tools_import = node.lineno
+    first_tools_import = _first_sibling_import(source, name)
 
     if first_tools_import is None:
-        pytest.skip(f"{name} imports no sibling tool")
+        pytest.skip(f"{name} imports no first-party package")
 
     # Any of the shapes used in this repo count, as long as one runs first.
     lines = source.replace("\r\n", "\n").split("\n")[:first_tools_import - 1]
