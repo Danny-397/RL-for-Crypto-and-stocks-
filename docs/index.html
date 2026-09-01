@@ -1262,6 +1262,40 @@
               <dl class="receipt" id="hp-receipt"></dl>
             </div>
           </div>
+
+          <!-- how many runs would it have taken? -->
+          <div class="panel-card" id="pw-card">
+            <h3>So how many runs would it take? <span class="tag-real">Live</span></h3>
+            <p class="xr-hint">Every panel here reports the floor <code>2/2&#8319;</code> &mdash;
+               when a design <b>cannot</b> reach significance. This answers the question that
+               follows. Put in an effect size and its spread, and it simulates the real
+               sign-flip test to find the sample size that would detect it.</p>
+
+            <div class="shift-controls">
+              <div class="ctl">
+                <label for="pw-effect">Effect size <span class="ctl-val" id="pw-effect-val">+10%</span></label>
+                <input type="range" id="pw-effect" min="1" max="100" step="1" value="10" />
+              </div>
+              <div class="ctl">
+                <label for="pw-sd">Spread across runs <span class="ctl-val" id="pw-sd-val">25%</span></label>
+                <input type="range" id="pw-sd" min="1" max="150" step="1" value="25" />
+              </div>
+              <div class="ctl">
+                <label for="pw-have">Runs you have <span class="ctl-val" id="pw-have-val">5</span></label>
+                <input type="range" id="pw-have" min="2" max="30" step="1" value="5" />
+              </div>
+              <button class="run-btn" id="pw-run" type="button">Compute</button>
+            </div>
+
+            <div class="lab-status" id="pw-status"></div>
+            <div id="pw-error" hidden></div>
+            <div id="pw-out" hidden>
+              <div class="pc-score" id="pw-scores"></div>
+              <p class="pc-verdict" id="pw-verdict"></p>
+              <div class="wf-table-wrap"><table class="wf-table" id="pw-curve"></table></div>
+              <div class="attr-caveats" id="pw-method"></div>
+            </div>
+          </div>
         </section>
 
         <!-- IS THERE ANYTHING THERE? -->

@@ -2301,6 +2301,86 @@
   })();
 
 
+  /* -- How many runs would it take? ------------------------ */
+  /* The natural sequel to every resolution floor on this site. Simulated
+   * server-side against the real sign-flip test — there is no closed form here
+   * and a t-test formula would give a smooth, confident, wrong answer. */
+  const PowerCalc = (function () {
+    function pct(id) { return Number($(id).value) / 100; }
+
+    function render(out) {
+      const cur = out.current;
+      const need = out.required_n;
+      $("pw-scores").innerHTML =
+        metric("Power at " + (cur ? cur.n : "—") + " runs",
+               cur ? Math.round(cur.power * 100) + "%" : "—",
+               cur && cur.power >= out.target ? "pos" : "neg",
+               cur && !cur.attainable ? "below the floor" : "chance of detecting it") +
+        metric("Runs needed for " + Math.round(out.target * 100) + "%",
+               need == null ? "more than " + out.max_n : String(need),
+               need == null ? "neg" : "neutral") +
+        metric("Floor at " + (cur ? cur.n : "—"),
+               cur ? cur.floor.toFixed(4) : "—", "neutral",
+               "smallest attainable p");
+      $("pw-verdict").innerHTML = out.verdict.replace(
+        /\*\*(.+?)\*\*/g, "<b>$1</b>"
+      );
+
+      const rows = out.curve
+        .map(function (r) {
+          return (
+            `<tr><td>${r.n}</td>` +
+            `<td class="${r.power >= out.target ? "pos" : "neutral"}">${Math.round(r.power * 100)}%</td>` +
+            `<td>${r.floor.toFixed(4)}</td>` +
+            `<td>${r.attainable ? (r.exact ? "exact" : "sampled") : "below floor"}</td></tr>`
+          );
+        })
+        .join("");
+      $("pw-curve").innerHTML =
+        "<thead><tr><th>Paired runs</th><th>Power</th><th>Floor</th>" +
+        "<th>Permutations</th></tr></thead><tbody>" + rows + "</tbody>";
+
+      $("pw-method").innerHTML = `<p class="attr-method">${out.method}</p>`;
+      $("pw-out").hidden = false;
+    }
+
+    async function run() {
+      const btn = $("pw-run");
+      btn.disabled = true;
+      showError($("pw-error"), null);
+      setStatus($("pw-status"), "simulating the test…", true);
+      try {
+        render(await api.post("/api/power", {
+          effect: pct("pw-effect"),
+          sd: pct("pw-sd"),
+          have_n: Number($("pw-have").value),
+          n_sims: 1500,
+        }));
+        setStatus($("pw-status"), "", false);
+      } catch (err) {
+        setStatus($("pw-status"), "", false);
+        showError($("pw-error"), String(err.message || err));
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function init() {
+      if (!$("pw-run")) return;
+      [["pw-effect", "pw-effect-val", "+", "%"],
+       ["pw-sd", "pw-sd-val", "", "%"],
+       ["pw-have", "pw-have-val", "", ""]].forEach(function (spec) {
+        $(spec[0]).addEventListener("input", function (e) {
+          $(spec[1]).textContent = spec[2] + e.target.value + spec[3];
+        });
+      });
+      $("pw-run").addEventListener("click", run);
+    }
+
+    return { init };
+  })();
+
+
   /* -- Hyper-parameter sensitivity ------------------------- */
   /* The sibling of the seed study: does the conclusion survive a change of
    * recipe? Rows are rendered in their published order and never sorted by
@@ -2902,6 +2982,7 @@
     Seeds.init();
     Surrogate.init();
     HyperParams.init();
+    PowerCalc.init();
     WhatIf.init();
     Notebook.init();
   }
@@ -2913,5 +2994,5 @@
   window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel,
                    Perception, Human, Playground, XRay, Attribution,
                    Generalization, WalkForward, Seeds, Surrogate, HyperParams,
-                   WhatIf, Notebook };
+                   PowerCalc, WhatIf, Notebook };
 })();

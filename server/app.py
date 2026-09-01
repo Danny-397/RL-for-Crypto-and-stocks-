@@ -23,6 +23,7 @@ Lab
     GET  /api/perception/quiz             a controlled signal-vs-noise chart test
     POST /api/perception/score            exact binomial scoring of that test
     POST /api/statistics                  live bootstrap / permutation inference
+    POST /api/power                       how many runs an effect would need
     POST /api/experiments                 create an experiment (async)
     GET  /api/experiments                 list recent experiments
     GET  /api/experiments/<id>            status, progress, result, receipt
@@ -75,6 +76,7 @@ from server import (  # noqa: E402
     human,
     lab,
     perception,
+    power,
     precomputed,
     prereg,
     regimes,
@@ -297,6 +299,7 @@ def api_meta():
             "counterfactual": True,
             "distribution_shift": True,
             "statistics": True,
+            "power_analysis": True,
             "perception_test": True,
             "attribution": True,
             "walk_forward": True,
@@ -579,6 +582,37 @@ def api_statistics():
         out.update(meta)
         out["live_computation"] = True
         return jsonify(out)
+    except (ValueError, TypeError) as exc:
+        return jsonify(error=str(exc)), 400
+
+
+@app.post("/api/power")
+def api_power():
+    """How many paired runs it would take to detect an effect this size.
+
+    Simulated against the real sign-flip test rather than a t-test formula, so
+    the answer carries the discreteness that makes small studies unreliable.
+    """
+    payload = request.get_json(silent=True) or {}
+    try:
+        effect = float(payload.get("effect", 0.0))
+        sd = float(payload.get("sd", 0.0))
+    except (TypeError, ValueError):
+        return jsonify(error="'effect' and 'sd' must be numbers"), 400
+
+    have_n = payload.get("have_n")
+    n_sims = max(100, min(4000, int(payload.get("n_sims", 1500) or 1500)))
+    try:
+        return jsonify(
+            power.analyse(
+                effect=effect, sd=sd,
+                have_n=int(have_n) if have_n else None,
+                alpha=float(payload.get("alpha", 0.05)),
+                target=float(payload.get("target", 0.8)),
+                n_sims=n_sims,
+                seed=int(payload.get("seed", 0)),
+            )
+        )
     except (ValueError, TypeError) as exc:
         return jsonify(error=str(exc)), 400
 
