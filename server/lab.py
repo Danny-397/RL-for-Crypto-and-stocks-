@@ -35,7 +35,7 @@ from rl_trader.data.data_loader import (
 )
 from rl_trader.envs import make_env
 
-from . import attribution, regimes, walkforward
+from . import attribution, baselines_api, regimes, walkforward
 from .experiments import Experiment, progress_reporter
 from .regimes import REGIMES
 from .rollout import counterfactual, observation_detail, run_trace
@@ -288,7 +288,15 @@ def make_rollout_runner(policy, config, fetch_ohlcv, market_index):
         )
         report(meta["bars"])
 
+        exp.stage = "scoring the naive baselines"
+        # Same series, same environment, same costs — and the random arm as a
+        # distribution rather than one draw. See server/baselines_api.py.
         out = trace.to_dict()
+        out["baselines"] = baselines_api.compare(
+            env.data, cfg_obj.env, cfg_obj.reward, config["market"],
+            agent_metrics=trace.metrics,
+            cost_free_benchmark=trace.bench_metrics,
+        )
         out["meta"] = meta
         out["feature_names"] = list(env.data.feature_names)
         out["feature_groups"] = _feature_groups()

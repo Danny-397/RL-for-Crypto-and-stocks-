@@ -922,3 +922,58 @@ def test_meta_advertises_the_human_baseline(client):
     meta = client.get("/api/meta").get_json()
     assert meta["live"]["human_baseline"] is True
     assert "ephemeral" in meta["human_sessions"]["storage"]
+
+
+# --------------------------------------------------------------------------- #
+# Surrogate-data test                                                          #
+# --------------------------------------------------------------------------- #
+def test_surrogate_endpoint_serves_both_arms(client):
+    body = client.get("/api/surrogate").get_json()
+    arms = {a["arm"]: a for a in body["arms"]}
+    assert set(arms) == {"synthetic", "real"}
+    # The positive control is served first: it is what licenses reading the rest.
+    assert body["arms"][0]["arm"] == "synthetic"
+    assert "Theiler" in body["reference"]
+
+
+def test_surrogate_endpoint_does_not_claim_to_be_live(client):
+    body = client.get("/api/surrogate").get_json()
+    assert body["live_computation"] is False
+    for arm in body["arms"]:
+        assert arm["generated_by"].startswith("python tools/surrogate_test.py")
+
+
+def test_meta_marks_the_surrogate_test_as_not_live(client):
+    """Both arms are training runs, so this must not sit under the live flags."""
+    assert client.get("/api/meta").get_json()["live"]["surrogate_test"] is False
+
+
+# --------------------------------------------------------------------------- #
+# Baselines on the rollout                                                     #
+# --------------------------------------------------------------------------- #
+def test_every_rollout_carries_the_baseline_comparison(client):
+    exp_id = _rollout(client)
+    bl = client.get(f"/api/experiments/{exp_id}").get_json()["result"]["baselines"]
+    keys = {r["key"] for r in bl["rows"]}
+    assert keys == {"agent", "buy_and_hold", "ma_crossover", "flat", "random"}
+    assert bl["live_computation"] is True
+    assert bl["agent_rank"] >= 1
+
+
+def test_the_random_arm_is_many_draws_not_one(client):
+    exp_id = _rollout(client)
+    bl = client.get(f"/api/experiments/{exp_id}").get_json()["result"]["baselines"]
+    random_row = next(r for r in bl["rows"] if r["key"] == "random")
+    assert random_row["n_seeds"] > 1
+    assert random_row["worst"] < random_row["best"]
+
+
+def test_both_buy_and_holds_are_reported(client):
+    """The charted benchmark is cost-free; the strategy pays costs. Neither hides."""
+    exp_id = _rollout(client)
+    result = client.get(f"/api/experiments/{exp_id}").get_json()["result"]
+    bl = result["baselines"]
+    costed = next(r for r in bl["rows"] if r["key"] == "buy_and_hold")["total_return"]
+    free = bl["cost_free_benchmark"]["total_return"]
+    assert free == pytest.approx(result["bench_metrics"]["total_return"], abs=1e-6)
+    assert costed <= free + 1e-9

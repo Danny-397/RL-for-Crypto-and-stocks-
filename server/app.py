@@ -18,6 +18,7 @@ Lab
     GET  /api/regimes                     synthetic distribution-shift regimes
     GET  /api/datasets                    real committed per-seed datasets
     GET  /api/generalization              real single-path vs domain-random results
+    GET  /api/surrogate                   the surrogate-data falsification test
     GET  /api/perception/quiz             a controlled signal-vs-noise chart test
     POST /api/perception/score            exact binomial scoring of that test
     POST /api/statistics                  live bootstrap / permutation inference
@@ -76,6 +77,7 @@ from server import (  # noqa: E402
     prereg,
     regimes,
     stats_api,
+    surrogate,
     walkforward,
 )
 from server.experiments import ExperimentManager, code_version  # noqa: E402
@@ -297,6 +299,7 @@ def api_meta():
             "attribution": True,
             "walk_forward": True,
             "human_baseline": True,
+            "surrogate_test": False,  # committed results; both arms are training runs
             "training": False,
         },
         training_note=(
@@ -348,6 +351,15 @@ def api_generalization():
     out = precomputed.generalization_results()
     if out is None:
         return jsonify(error="ablation results unavailable"), 503
+    return jsonify(out)
+
+
+@app.get("/api/surrogate")
+def api_surrogate():
+    """The surrogate-data falsification test: is there structure to find at all?"""
+    out = surrogate.results()
+    if out is None:
+        return jsonify(error="surrogate results unavailable"), 503
     return jsonify(out)
 
 

@@ -288,6 +288,20 @@ def run(api: str, port: int, shot: str | None) -> None:
         time.sleep(0.4)
         check("scrubbing updates the readout", page.inner_text("#read-equity") != before)
         check("step label tracks the cursor", "/" in page.inner_text("#pg-step"))
+        # Agent vs the naive strategies, computed on the same series.
+        check("baselines are scored on the episode",
+              page.eval_on_selector_all("#pg-bl-table tbody tr", "els => els.length") == 5,
+              f'{page.eval_on_selector_all("#pg-bl-table tbody tr", "els => els.length")} rows')
+        check("the agent's row is marked but not reordered",
+              page.eval_on_selector_all("#pg-bl-table tr.is-agent", "els => els.length") == 1)
+        check("the random arm shows a range, not one draw",
+              "draws" in page.inner_text("#pg-bl-table"))
+        check("both buy-and-holds are distinguished",
+              "cost-free reference" in page.inner_text("#pg-bl-notes"))
+        check("a baseline verdict is stated",
+              len(page.inner_text("#pg-bl-verdict")) > 40,
+              page.inner_text("#pg-bl-verdict")[:70])
+
         check("no page errors", not errors, "; ".join(errors[:2]))
 
         # ── Agent X-Ray ────────────────────────────────────────────────────
@@ -403,8 +417,10 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("verdict names the failure",
               "lies" in page.inner_text("#gen-verdict").lower(),
               page.inner_text("#gen-verdict")[:70].strip())
+        # Scoped to the panel: the home-page cards carry the same tag class, and an
+        # unscoped selector silently matches one of those (hidden) instead.
         check("ablation is labelled precomputed",
-              page.is_visible(".tag-precomputed"))
+              page.is_visible("#panel-generalization .tag-precomputed"))
         check("regeneration command shown",
               "ablation_multiseed" in page.inner_text("#gen-receipt"))
 
@@ -506,6 +522,34 @@ def run(api: str, port: int, shot: str | None) -> None:
 
         paper = page.inner_text("#sd-paper")
         check("published ticker-axis test shown", "p-value" in paper.lower())
+
+        # ── Is there anything there? (surrogate test) ──────────────────────
+        print("\nIs there anything there?")
+        page.click('.lab-tab[data-panel="surrogate"]')
+        page.wait_for_selector("#sg-body:not([hidden])", timeout=30000)
+        time.sleep(0.5)
+
+        arms = page.eval_on_selector_all("#sg-arms .panel-card", "els => els.length")
+        check("both arms are rendered", arms == 2, f"{arms} arms")
+        # The positive control must come first: it is what licenses the null.
+        first = page.eval_on_selector("#sg-arms .panel-card h3", "el => el.textContent")
+        check("the positive control is presented first",
+              "control" in first.lower(), first.strip()[:60])
+        rows = page.eval_on_selector_all("#sg-arms tbody tr", "els => els.length")
+        check("every market is shown in both arms", rows == 4, f"{rows} rows")
+        check("results are labelled precomputed",
+              page.eval_on_selector_all("#sg-arms .tag-precomputed", "els => els.length") == 2)
+        check("the regeneration command is published",
+              "tools/surrogate_test.py" in page.inner_text("#sg-arms"))
+
+        verdict = page.inner_text("#sg-verdict")
+        check("the verdict reads both arms together",
+              "has power" in verdict and "real price history" in verdict, verdict[:70])
+        caveats = page.inner_text("#sg-caveats")
+        check("a null is not sold as proof",
+              "not proof of no structure" in caveats)
+        check("the artifacts' limits are on the receipt",
+              "summary statistics only" in page.inner_text("#sg-receipt"))
 
         # ── Research notebook ──────────────────────────────────────────────
         print("\nResearch notebook")
@@ -651,9 +695,9 @@ def run(api: str, port: int, shot: str | None) -> None:
               home.eval_on_selector(".hero-cta .btn-primary", "el => el.getAttribute('href')")
               == "#lab")
         n_cards = home.eval_on_selector_all(".lab-card", "els => els.length")
-        check("every panel is advertised", n_cards == 8, f"{n_cards} cards")
+        check("every panel is advertised", n_cards == 9, f"{n_cards} cards")
         check("each card declares whether it is live",
-              home.eval_on_selector_all(".lab-card-tag", "els => els.length") == 8)
+              home.eval_on_selector_all(".lab-card-tag", "els => els.length") == 9)
         check("the training caveat is on the home page",
               "training" in home.inner_text(".lab-strip-note").lower())
 
@@ -670,12 +714,21 @@ def run(api: str, port: int, shot: str | None) -> None:
               home.eval_on_selector("#tab-seeds", "el => el.getAttribute('aria-selected')")
               == "true")
 
-        # ARIA tabs keyboard pattern.
+        # ARIA tabs keyboard pattern. Asserted against the tab strip's own order
+        # rather than a hard-coded panel name, so inserting a panel between two
+        # others cannot turn a working keyboard into a red test.
+        next_panel = home.evaluate(
+            "() => { const t = [...document.querySelectorAll('.lab-tab')];"
+            "const i = t.findIndex(e => e.dataset.panel === 'seeds');"
+            "return t[(i + 1) % t.length].dataset.panel; }"
+        )
         home.eval_on_selector("#tab-seeds", "el => el.focus()")
         home.keyboard.press("ArrowRight")
         time.sleep(0.4)
         check("arrow keys move between tabs",
-              home.eval_on_selector("#panel-notebook", "el => el.classList.contains('active')"))
+              home.eval_on_selector(
+                  f"#panel-{next_panel}", "el => el.classList.contains('active')"),
+              f"seeds -> {next_panel}")
         home.keyboard.press("Home")
         time.sleep(0.4)
         check("Home key jumps to the first tab",

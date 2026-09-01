@@ -932,3 +932,24 @@
 .hm-legend { justify-content: flex-start; gap: 16px; margin: 6px 0 14px; }
 .lg-you::before { background: var(--pos); }
 #hm-again { margin-top: 16px; }
+
+/* ── Surrogate-data test ──────────────────────────────────────────────────── */
+.sg-verdict-card .pc-verdict { margin-top: 0; }
+.sg-table td { vertical-align: top; }
+.sg-ci {
+  display: block; margin-top: 2px;
+  font: 500 10.5px/1 var(--font-mono); color: var(--faint);
+}
+.sg-reads { margin: 14px 0 16px; padding-left: 18px; }
+.sg-reads li {
+  font-size: 13.5px; line-height: 1.65; color: var(--muted); margin-bottom: 7px;
+}
+.sg-reads li:last-child { margin-bottom: 0; }
+
+/* ── Agent vs the naive strategies ────────────────────────────────────────── */
+/* The agent's row is highlighted, never reordered: it sits where its return
+   puts it, which is frequently last. */
+.pg-baselines { margin-top: 22px; }
+.pg-baselines .wf-table td:first-child { max-width: 260px; white-space: normal; }
+.wf-table tr.is-agent td { color: var(--text); }
+.wf-table tr.is-agent td:first-child { border-left: 2px solid var(--volt); padding-left: 9px; }

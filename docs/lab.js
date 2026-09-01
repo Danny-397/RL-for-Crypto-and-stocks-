@@ -926,6 +926,49 @@
           `<b>${(meta_.realised.annualised_vol * 100).toFixed(0)}%</b>. Measured, not assumed.</div>`;
       }
       el.notes.innerHTML = notes;
+      renderBaselines(trace.baselines);
+    }
+
+    /* The agent beside the naive strategies on its own series.
+     *
+     * The agent's row is highlighted but never sorted to the top: it is placed
+     * where its return puts it, which on many paths is last. Hiding that would
+     * defeat the point of running the comparison at all. */
+    function renderBaselines(bl) {
+      const box = $("pg-baselines");
+      if (!bl || !bl.rows) { box.hidden = true; return; }
+      box.hidden = false;
+
+      const ordered = bl.rows.slice().sort((a, b) => b.total_return - a.total_return);
+      const head =
+        "<thead><tr><th>Strategy</th><th>Return</th><th>Sharpe</th>" +
+        "<th>Max drawdown</th></tr></thead>";
+      const body = ordered
+        .map(function (r) {
+          const range = r.worst != null
+            ? `<span class="sg-ci">${fmt.pct(r.worst, 1)} to ${fmt.pct(r.best, 1)} over ${r.n_seeds} draws</span>`
+            : "";
+          const desc = r.description ? `<span class="sg-ci">${r.description}</span>` : "";
+          return (
+            `<tr class="${r.key === "agent" ? "is-agent" : ""}">` +
+            `<td>${r.label}${desc}${range}</td>` +
+            `<td class="${fmt.cls(r.total_return)}"><b>${fmt.pct(r.total_return, 1)}</b></td>` +
+            `<td>${fmt.num(r.sharpe)}</td>` +
+            `<td class="neg">${fmt.pct(-Math.abs(r.max_drawdown), 1)}</td></tr>`
+          );
+        })
+        .join("");
+      $("pg-bl-table").innerHTML = head + "<tbody>" + body + "</tbody>";
+      $("pg-bl-verdict").textContent = bl.verdict;
+
+      let extra = `<div class="caveat">${bl.random_note}</div>`;
+      if (bl.cost_free_benchmark) {
+        extra +=
+          `<div class="caveat">${bl.cost_free_benchmark.label}: ` +
+          `<b>${fmt.pct(bl.cost_free_benchmark.total_return, 1)}</b>. ` +
+          `${bl.cost_free_benchmark.note}</div>`;
+      }
+      $("pg-bl-notes").innerHTML = extra;
     }
 
     function setCursor(i) {
@@ -2258,6 +2301,90 @@
   })();
 
 
+  /* -- Is there anything there? (surrogate-data test) ------- */
+  /* The project's sharpest result, and the only one that can distinguish "the
+   * agent is weak" from "the market is empty".
+   *
+   * Both arms are full training runs, so these are committed results and the
+   * panel says so on every card rather than borrowing the credibility of the
+   * live panels. The positive control is rendered FIRST and given equal weight,
+   * because a null from a test with unproven power means nothing. */
+  const Surrogate = (function () {
+    function ci(bounds) {
+      return `[${fmt.pct(bounds[1], 1)}, ${fmt.pct(bounds[2], 1)}]`;
+    }
+
+    function marketRow(row, structuredLabel) {
+      const cls = row.significant_at_05 ? "pos" : "neutral";
+      return (
+        `<tr><td>${row.market}</td>` +
+        `<td>${fmt.pct(row.edge_structured, 1)}<span class="sg-ci">${ci(row.structured_ci)}</span></td>` +
+        `<td>${fmt.pct(row.edge_surrogate, 1)}<span class="sg-ci">${ci(row.surrogate_ci)}</span></td>` +
+        `<td class="${fmt.cls(row.diff)}"><b>${fmt.pct(row.diff, 1)}</b></td>` +
+        `<td class="${cls}">${row.p.toFixed(4)}</td></tr>`
+      );
+    }
+
+    function armCard(arm, index) {
+      const head =
+        `<thead><tr><th>Market</th><th>${arm.structured_label}</th>` +
+        `<th>Surrogate (shuffled)</th><th>Difference</th><th>p</th></tr></thead>`;
+      const rows = arm.markets.map((r) => marketRow(r, arm.structured_label)).join("");
+      const reads = arm.markets
+        .map((r) => `<li>${r.interpretation}</li>`)
+        .join("");
+      return (
+        `<div class="panel-card">` +
+        `<div class="gen-head"><h3>${index} &middot; ${arm.label} ` +
+        `<span class="tag-precomputed">Real &middot; precomputed</span></h3></div>` +
+        `<p class="xr-hint">${arm.expectation}</p>` +
+        `<div class="wf-table-wrap"><table class="wf-table sg-table">${head}` +
+        `<tbody>${rows}</tbody></table></div>` +
+        `<ul class="sg-reads">${reads}</ul>` +
+        `<dl class="receipt"><dt>Paired on</dt><dd>${arm.axis}</dd>` +
+        `<dt>Source</dt><dd>${arm.source}</dd>` +
+        `<dt>Regenerate with</dt><dd><code>${arm.generated_by}</code></dd></dl>` +
+        `</div>`
+      );
+    }
+
+    function render(body) {
+      $("sg-verdict").textContent = body.verdict || "";
+      // The control is rendered first because it is what licenses reading the
+      // second arm at all.
+      $("sg-arms").innerHTML = body.arms
+        .map((arm, i) => armCard(arm, i + 1))
+        .join("");
+      $("sg-method").textContent = body.method;
+      $("sg-caveats").innerHTML =
+        "<ul>" + body.caveats.map((c) => `<li>${c}</li>`).join("") + "</ul>";
+      $("sg-receipt").innerHTML = [
+        ["Technique", "surrogate-data testing"],
+        ["Reference", body.reference],
+        ["Computed", "offline — both arms are full PPO training runs"],
+        ["Re-analysable here", body.reanalysis_note],
+      ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+      $("sg-body").hidden = false;
+    }
+
+    async function load() {
+      if (!api.ok) return;
+      setStatus($("sg-status"), "loading committed results…", true);
+      try {
+        render(await api.get("/api/surrogate"));
+        setStatus($("sg-status"), "", false);
+      } catch (err) {
+        setStatus($("sg-status"), "", false);
+        showError($("sg-error"), `Could not load the surrogate results: ${err.message}`);
+      }
+    }
+
+    function init() { load(); }
+
+    return { init };
+  })();
+
+
   /* -- Research notebook ----------------------------------- */
   /* Every experiment this session has run, with the config that produced it.
    *
@@ -2633,7 +2760,7 @@
    * between tabs, Home/End jump to the ends, and a roving tabindex keeps a
    * single stop in the page's tab order. */
   const PANELS = ["perception", "human", "playground", "xray", "generalization",
-                  "walkforward", "seeds", "notebook"];
+                  "walkforward", "seeds", "surrogate", "notebook"];
 
   function showPanel(name, updateHash) {
     if (PANELS.indexOf(name) === -1) name = PANELS[0];
@@ -2698,6 +2825,7 @@
     Generalization.init();
     WalkForward.init();
     Seeds.init();
+    Surrogate.init();
     WhatIf.init();
     Notebook.init();
   }
@@ -2708,5 +2836,6 @@
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
   window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel,
                    Perception, Human, Playground, XRay, Attribution,
-                   Generalization, WalkForward, Seeds, WhatIf, Notebook };
+                   Generalization, WalkForward, Seeds, Surrogate, WhatIf,
+                   Notebook };
 })();

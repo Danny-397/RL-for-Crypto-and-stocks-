@@ -113,7 +113,7 @@
       <div class="stat-cell"><div class="num" data-count="16">16</div><div class="lbl">Real tickers backtested</div></div>
       <div class="stat-cell"><div class="num" data-count="5">5</div><div class="lbl">Seeds in the significance study</div></div>
       <div class="stat-cell"><div class="num" data-count="28">28</div><div class="lbl">Engineered features</div></div>
-      <div class="stat-cell"><div class="num" data-count="257">257</div><div class="lbl">Tests passing</div></div>
+      <div class="stat-cell"><div class="num" data-count="290">290</div><div class="lbl">Tests passing</div></div>
     </section>
 
     <!-- ─────────────────────── FEATURES ─────────────────────── -->
@@ -169,7 +169,7 @@
       <div class="section-head">
         <div class="kicker">THE LAB</div>
         <h2>Don't just read the result. Test it.</h2>
-        <p>Eight experiments, each one runnable against the deployed agent or the
+        <p>Nine experiments, each one runnable against the deployed agent or the
            project's real committed results. Nothing on these pages is a mock-up.</p>
       </div>
 
@@ -230,8 +230,16 @@
           <span class="lab-card-tag tag-mixed">Real data · live stats</span>
         </a>
 
-        <a class="lab-card" href="#lab/notebook" data-view="lab" data-panel="notebook">
+        <a class="lab-card" href="#lab/surrogate" data-view="lab" data-panel="surrogate">
           <span class="lab-card-n">08</span>
+          <h3>Anything There?</h3>
+          <p>Shuffle the returns and buy-&amp;-hold is unchanged, but every pattern is gone.
+             The sharpest question in the project: is the agent weak, or is the market empty?</p>
+          <span class="lab-card-tag tag-precomputed">Real &middot; precomputed</span>
+        </a>
+
+        <a class="lab-card" href="#lab/notebook" data-view="lab" data-panel="notebook">
+          <span class="lab-card-n">09</span>
           <h3>Research Notebook</h3>
           <p>Every experiment you run, with the exact config that produced it —
              and a button that replays it to the same numbers.</p>
@@ -574,6 +582,7 @@
           <button class="lab-tab" role="tab" id="tab-generalization" data-panel="generalization" aria-controls="panel-generalization" aria-selected="false" tabindex="-1">Can You Break It?</button>
           <button class="lab-tab" role="tab" id="tab-walkforward" data-panel="walkforward" aria-controls="panel-walkforward" aria-selected="false" tabindex="-1">Walk-Forward</button>
           <button class="lab-tab" role="tab" id="tab-seeds" data-panel="seeds" aria-controls="panel-seeds" aria-selected="false" tabindex="-1">Real or Luck?</button>
+          <button class="lab-tab" role="tab" id="tab-surrogate" data-panel="surrogate" aria-controls="panel-surrogate" aria-selected="false" tabindex="-1">Anything There?</button>
           <button class="lab-tab" role="tab" id="tab-notebook" data-panel="notebook" aria-controls="panel-notebook" aria-selected="false" tabindex="-1">Notebook</button>
         </div>
 
@@ -844,6 +853,17 @@
                   <h3>Reproducibility receipt</h3>
                   <dl class="receipt" id="pg-receipt"></dl>
                   <div id="pg-notes"></div>
+
+                  <div class="pg-baselines" id="pg-baselines" hidden>
+                    <h4 class="attr-h">Against the naive strategies</h4>
+                    <p class="xr-hint">Every strategy below runs through the same
+                       environment on the same bars, paying the same costs. The random
+                       arm is many independent draws, not one &mdash; a single random
+                       run is a single sample of a very wide distribution.</p>
+                    <div class="wf-table-wrap"><table class="wf-table" id="pg-bl-table"></table></div>
+                    <p class="pc-verdict" id="pg-bl-verdict"></p>
+                    <div id="pg-bl-notes"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1223,6 +1243,38 @@
                actually resolve a p-value.</p>
             <div class="lab-status" id="sd-paper-status"></div>
             <div id="sd-paper"></div>
+          </div>
+        </section>
+
+        <!-- IS THERE ANYTHING THERE? -->
+        <section class="lab-panel" id="panel-surrogate" role="tabpanel" aria-labelledby="tab-surrogate" tabindex="0">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Is there anything there to find?</h2>
+            <p>Every other panel shows the agent failing to beat buy-&amp;-hold. None of them
+               can tell you <b>why</b>. This one can: shuffle a series' daily returns and
+               re-integrate them. The sum is unchanged, so the price ends in exactly the same
+               place and buy-&amp;-hold is <b>identical</b> &mdash; but every pattern a timing
+               agent could exploit is gone. Train the same recipe on both and compare.</p>
+          </div>
+
+          <div id="sg-error" hidden></div>
+          <div class="lab-status" id="sg-status"></div>
+
+          <div id="sg-body" hidden>
+            <div class="panel-card sg-verdict-card">
+              <h3>Reading both arms together</h3>
+              <p class="pc-verdict" id="sg-verdict"></p>
+            </div>
+
+            <div id="sg-arms"></div>
+
+            <div class="panel-card">
+              <h3>Method</h3>
+              <p class="xr-hint" id="sg-method"></p>
+              <div class="attr-caveats" id="sg-caveats"></div>
+              <dl class="receipt" id="sg-receipt"></dl>
+            </div>
           </div>
         </section>
 

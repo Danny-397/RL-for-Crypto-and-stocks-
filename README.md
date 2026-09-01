@@ -436,6 +436,7 @@ and its panels are the research questions made runnable.
 | **Agent X-Ray** | At any bar, read the actual observation → policy → action → reward → position chain, all 28 features grouped as the pipeline defines them, plus the 20-bar window as a heatmap — and an occlusion pass ranking which of those inputs actually move the action. | ✅ live |
 | **Can You Break It?** | The real domain-randomization ablation (Agent A vs Agent B) with per-seed points and CIs, plus a live shift test that drops the deployed policy onto controlled synthetic regimes. | mixed — see below |
 | **Walk-Forward** | Disjoint chronological folds from the research code's own splitter, each scaled on its training rows alone, with the deployed policy scored on every out-of-sample block — plus a second pass with the scaler fit on everything, measuring what that shortcut costs. | mixed — see below |
+| **Anything There?** | The surrogate-data falsification test: shuffle a series' returns and buy-&-hold is unchanged while every pattern is destroyed. Run with a positive control first, so the real arm's null actually means something. | precomputed — both arms are training runs |
 | **Real or Luck?** | The published single-seed headline beside the five-seed distribution, with the bootstrap and permutation machinery re-runnable at your own confidence level and resample count. | mixed — see below |
 | **Notebook** | Every experiment this session, with its config, receipt, pre-registered prediction, and a Reproduce button that replays it exactly. | ✅ live |
 
@@ -502,6 +503,64 @@ exactly the kind of output a reader takes for causation:
 It does earn one clean structural check: on synthetic paths the four cross-asset
 features have no reference index and come back at exactly zero, which the panel
 names rather than leaving as four unexplained flat bars.
+
+### Is there anything there to find?
+
+Every other experiment shows the agent failing to beat buy-and-hold. None of them
+can say **why** — a weak agent and an empty market look identical from the
+outside. `tools/surrogate_test.py` separates them, using surrogate-data testing
+(Theiler et al. 1992): randomly permute a series' daily log returns and
+re-integrate. A sum is permutation-invariant, so the price ends in *exactly* the
+same place and buy-and-hold is identical — but autocorrelation, momentum and
+volatility clustering are gone. Train the same recipe on both.
+
+**The positive control is the half that matters**, and it is presented first,
+because a null from a test with unproven power says nothing:
+
+| Arm | Market | Structured | Surrogate | Difference | p |
+|---|---|---:|---:|---:|---:|
+| Synthetic (control) | stock | +3.4% | −42.7% | **+46.1%** | 0.0006 |
+| Synthetic (control) | crypto | +99.0% | −65.3% | **+164.3%** | 0.0032 |
+| Real | stock | −297.4% | −196.9% | −100.5% | 0.498 |
+| Real | crypto | −5.8% | −1309.2% | +1303.5% | 0.156 |
+
+On synthetic data with a planted AR(1) signal the agent shows a clear edge and
+loses it under shuffling, in both markets. That licenses reading the real arm:
+**the agent does no better on real price history than on the same returns in a
+random order.** On this evidence the flat performance is the market's, not the
+agent's — which is what weak-form efficiency predicts, arrived at from the
+inside.
+
+The crypto real row is instructive on its own: a +1303-point difference that is
+*not* significant, because the surrogate arm's interval runs from −2660% to
+−146%. A large point estimate with no power is not a result, and the panel says
+so rather than quoting the headline number.
+
+These artifacts predate per-arm value recording, so they carry summary
+statistics only. Rather than re-deriving a p-value from a mean, the API declares
+them non-re-analysable and `tools/surrogate_test.py` now records the per-arm
+values and `n_pairs` so future regenerations can be re-analysed live.
+
+### Does it beat a coin flip?
+
+"Beats buy-and-hold" is the bar this project discusses; it is not the first bar a
+skeptical reader has in mind. Every rollout in the Playground now scores the
+agent against the naive strategies from `rl_trader.evaluation.baselines` on the
+same series, through the same environment, paying the same costs.
+
+Two choices decide whether that table means anything. **The random arm is 24
+independent draws**, reported as a mean with its full observed range — quoting
+one random run would be exactly the single-sample mistake this project exists to
+criticise — and the agent is only described as beating it when it clears the
+whole range, not the mean. **And there are two buy-and-holds**: the cost-free
+benchmark drawn on the charts, and the strategy that goes through the
+environment and pays the entry cost. Both are shown and labelled, because
+quietly swapping one for the other flatters or penalises the agent for no stated
+reason.
+
+The agent's row is highlighted but never sorted to the top. On many paths it
+finishes last — behind a moving-average crossover, behind holding cash, and
+behind random positions — and that is the point of running the comparison.
 
 ### Walk-forward, and the price of a leaky scaler
 
@@ -635,6 +694,7 @@ paper.
 | `GET /api/regimes` | Synthetic distribution-shift regimes |
 | `GET /api/datasets` | Real committed per-seed and per-ticker datasets, with provenance |
 | `GET /api/generalization` | The real single-path vs domain-randomized ablation |
+| `GET /api/surrogate` | The surrogate-data falsification test, both arms, with provenance |
 | `GET /api/perception/quiz` | A balanced signal-vs-noise chart test, served without its answer key |
 | `POST /api/perception/score` | Exact binomial scoring of a submission, plus power and a statistical reference |
 | `POST /api/statistics` | Live bootstrap / permutation inference over that real data |
