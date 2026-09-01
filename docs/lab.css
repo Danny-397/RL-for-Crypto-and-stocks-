@@ -717,3 +717,239 @@
   background: rgba(255, 204, 102, 0.08);
 }
 .api-pill.is-stale .dot-led { background: #ffcc66; box-shadow: 0 0 8px #ffcc66; }
+
+/* ── Signal or Noise? ─────────────────────────────────────────────────────── */
+/* The charts deliberately carry no axis, no scale and no ticker: the whole
+   design rests on nothing but the shape being visible, so the styling must not
+   put back a cue the backend worked to remove. */
+.pc-grid {
+  display: grid; gap: 12px; margin-top: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.pc-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 10px 12px;
+}
+.pc-card.is-right { border-color: rgba(93, 242, 160, 0.55); }
+.pc-card.is-wrong { border-color: rgba(255, 107, 107, 0.55); }
+.pc-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 20px; margin-bottom: 4px;
+}
+.pc-n {
+  font: 600 11px/1 var(--font-mono); color: var(--faint);
+  letter-spacing: 0.04em;
+}
+.pc-truth { font: 500 11px/1 var(--font-mono); color: var(--muted); }
+.pc-truth b { color: var(--text); }
+.pc-ac { color: var(--faint); }
+.pc-canvas { width: 100%; display: block; }
+.pc-seg { margin-top: 8px; width: 100%; }
+.pc-seg button { flex: 1; font-size: 11.5px; padding: 6px 4px; }
+.pc-seg button:disabled { opacity: 0.75; cursor: default; }
+
+.pc-actions {
+  display: flex; align-items: center; gap: 14px;
+  margin-top: 16px; flex-wrap: wrap;
+}
+.pc-progress { font: 500 12.5px/1 var(--font-mono); color: var(--muted); }
+
+.pc-score {
+  display: flex; align-items: stretch; gap: 12px;
+  margin-top: 20px; flex-wrap: wrap;
+}
+.pc-score-main {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 12px 20px; border-radius: 12px;
+  background: var(--bg-soft); border: 1px solid var(--border-2);
+}
+.pc-score-n { font: 700 34px/1 var(--font-display); color: var(--volt); }
+.pc-score-d { font-size: 20px; color: var(--muted); }
+.pc-score-lbl {
+  margin-top: 4px; font: 500 11.5px/1 var(--font-mono); color: var(--faint);
+}
+.pc-verdict {
+  margin-top: 14px; padding: 12px 14px; border-radius: 11px;
+  background: var(--bg-soft); border-left: 2px solid var(--cyan);
+  color: var(--text); font-size: 14px; line-height: 1.62;
+}
+.pc-two {
+  display: grid; gap: 12px; margin-top: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.pc-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px;
+}
+.pc-box h4 {
+  margin: 0 0 6px; font: 600 13px/1.3 var(--font-display); color: var(--text);
+}
+.pc-ref-score { margin: 8px 0; font: 700 20px/1 var(--font-display); color: var(--cyan); }
+.pc-ref-sub { font: 500 12px/1 var(--font-mono); color: var(--muted); }
+.pc-power { width: 100%; border-collapse: collapse; margin: 8px 0 6px; }
+.pc-power th {
+  text-align: left; font: 600 10.5px/1 var(--font-mono); color: var(--faint);
+  text-transform: uppercase; letter-spacing: 0.06em; padding-bottom: 6px;
+}
+.pc-power td {
+  padding: 4px 0; font: 500 13px/1.4 var(--font-mono);
+  border-top: 1px solid var(--border);
+}
+.pc-power td:last-child { text-align: right; }
+.pc-tie {
+  margin-top: 14px; font-size: 13.5px; line-height: 1.65; color: var(--muted);
+}
+.pc-tie b { color: var(--volt); font-family: var(--font-mono); }
+
+/* ── Occlusion attribution ────────────────────────────────────────────────── */
+/* Bars are scaled to the largest effect measured, not to a total: correlated
+   features double-count, so this ranks — it does not decompose. */
+.attr-groups { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 16px; }
+.attr-chip {
+  display: flex; align-items: baseline; gap: 7px;
+  padding: 6px 11px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--border);
+}
+.attr-chip-k { font: 500 11.5px/1 var(--font-body); color: var(--muted); }
+.attr-chip-v { font: 700 12.5px/1 var(--font-mono); color: var(--volt); }
+
+.attr-cols {
+  display: grid; gap: 18px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+}
+@media (max-width: 780px) { .attr-cols { grid-template-columns: 1fr; } }
+.attr-h {
+  margin: 0 0 8px; font: 600 10.5px/1 var(--font-mono); color: var(--faint);
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.attr-row {
+  display: grid; grid-template-columns: 118px 1fr 52px;
+  align-items: center; gap: 9px; padding: 2px 0;
+}
+.attr-name {
+  font: 500 11.5px/1.3 var(--font-mono); color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.attr-track {
+  height: 9px; border-radius: 5px; background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+.attr-track > i {
+  display: block; height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg, var(--cyan), var(--volt));
+}
+.attr-val {
+  font: 500 11.5px/1 var(--font-mono); color: var(--text); text-align: right;
+}
+.attr-dead b { color: var(--text); font-family: var(--font-mono); }
+.attr-caveats {
+  margin-top: 16px; padding: 12px 14px; border-radius: 11px;
+  background: var(--bg-soft); border: 1px solid var(--border);
+}
+.attr-method { margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: var(--text); }
+.attr-caveats ul { margin: 0; padding-left: 18px; }
+.attr-caveats li {
+  font-size: 12.5px; line-height: 1.62; color: var(--muted); margin-bottom: 4px;
+}
+
+/* ── Walk-forward ─────────────────────────────────────────────────────────── */
+/* The timeline is the whole methodological argument in one picture: the dim
+   block is what the scaler saw, the bright block is what it was scored on, and
+   they must never touch. */
+.wf-timeline { margin: 10px 0 22px; }
+.wf-row {
+  display: grid; grid-template-columns: 62px 1fr 168px;
+  align-items: center; gap: 10px; padding: 3px 0;
+}
+.wf-row-k { font: 600 11px/1 var(--font-mono); color: var(--faint); }
+.wf-row-v { font: 500 11px/1 var(--font-mono); color: var(--muted); text-align: right; }
+.wf-track {
+  position: relative; height: 15px; border-radius: 5px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.wf-track > i { position: absolute; top: 0; height: 100%; border-radius: 4px; }
+.wf-train { background: rgba(54, 224, 255, 0.22); }
+.wf-test { background: var(--volt); }
+
+.wf-table-wrap { overflow-x: auto; margin-bottom: 18px; }
+.wf-table { width: 100%; border-collapse: collapse; min-width: 460px; }
+.wf-table th {
+  text-align: right; padding: 0 0 7px; white-space: nowrap;
+  font: 600 10.5px/1 var(--font-mono); color: var(--faint);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.wf-table th:first-child, .wf-table td:first-child { text-align: left; }
+.wf-table td {
+  padding: 6px 0; text-align: right; white-space: nowrap;
+  font: 500 12.5px/1.3 var(--font-mono); border-top: 1px solid var(--border);
+}
+.wf-table td + td { padding-left: 14px; }
+.wf-summary { margin-bottom: 18px; }
+
+/* ── Pre-registration ─────────────────────────────────────────────────────── */
+.nb-pred { flex-wrap: wrap; }
+.nb-pred button { font-size: 12px; }
+.ctl-note {
+  margin: 7px 0 0; font-size: 11.5px; line-height: 1.6; color: var(--faint);
+}
+.nb-pred-out {
+  margin: 14px 0; padding: 12px 14px; border-radius: 11px;
+  background: var(--bg-soft); border-left: 2px solid var(--border-2);
+}
+.nb-pred-out.is-hit { border-left-color: var(--pos); }
+.nb-pred-out.is-miss { border-left-color: var(--neg); }
+.nb-pred-out.is-unscored { border-left-color: var(--muted); }
+.nb-pred-tag {
+  display: inline-block; margin-bottom: 6px;
+  font: 600 10.5px/1 var(--font-mono); letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--muted);
+}
+.is-hit .nb-pred-tag { color: var(--pos); }
+.is-miss .nb-pred-tag { color: var(--neg); }
+.nb-pred-out p { margin: 0 0 6px; font-size: 13.5px; line-height: 1.62; color: var(--text); }
+.nb-pred-out p:last-child { margin-bottom: 0; }
+
+/* ── Your Turn (human baseline) ───────────────────────────────────────────── */
+.hm-account { display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline; }
+.hm-a { font: 500 12.5px/1 var(--font-mono); color: var(--muted); }
+.hm-a b { color: var(--text); font-size: 14px; }
+.hm-controls {
+  display: flex; align-items: center; gap: 14px;
+  margin-top: 14px; flex-wrap: wrap;
+}
+.hm-controls label {
+  font: 600 10.5px/1 var(--font-mono); color: var(--faint);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.hm-controls input[type="range"] { flex: 1 1 200px; min-width: 160px; }
+.hm-quick { display: flex; gap: 6px; }
+.hm-quick button {
+  padding: 6px 12px; border-radius: 7px; cursor: pointer;
+  background: var(--bg-soft); border: 1px solid var(--border);
+  color: var(--muted); font: 500 12px/1 var(--font-body);
+}
+.hm-quick button:hover { color: var(--text); border-color: var(--border-2); }
+.hm-legend { justify-content: flex-start; gap: 16px; margin: 6px 0 14px; }
+.lg-you::before { background: var(--pos); }
+#hm-again { margin-top: 16px; }
+
+/* ── Surrogate-data test ──────────────────────────────────────────────────── */
+.sg-verdict-card .pc-verdict { margin-top: 0; }
+.sg-table td { vertical-align: top; }
+.sg-ci {
+  display: block; margin-top: 2px;
+  font: 500 10.5px/1 var(--font-mono); color: var(--faint);
+}
+.sg-reads { margin: 14px 0 16px; padding-left: 18px; }
+.sg-reads li {
+  font-size: 13.5px; line-height: 1.65; color: var(--muted); margin-bottom: 7px;
+}
+.sg-reads li:last-child { margin-bottom: 0; }
+
+/* ── Agent vs the naive strategies ────────────────────────────────────────── */
+/* The agent's row is highlighted, never reordered: it sits where its return
+   puts it, which is frequently last. */
+.pg-baselines { margin-top: 22px; }
+.pg-baselines .wf-table td:first-child { max-width: 260px; white-space: normal; }
+.wf-table tr.is-agent td { color: var(--text); }
+.wf-table tr.is-agent td:first-child { border-left: 2px solid var(--volt); padding-left: 9px; }

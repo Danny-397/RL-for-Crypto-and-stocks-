@@ -77,8 +77,8 @@
           write-up of the results, the results being produced.
         </p>
         <div class="hero-cta">
-          <a class="btn btn-primary navtab" data-view="lab" href="#lab">Run an experiment →</a>
-          <a class="btn btn-ghost navtab" data-view="how" href="#how">Read the research</a>
+          <a class="btn btn-primary" href="#result">See the result &darr;</a>
+          <a class="btn btn-ghost navtab" data-view="lab" href="#lab">Run an experiment &rarr;</a>
         </div>
         <div class="hero-tags">
           <span>PPO from scratch</span><span>Domain randomization</span><span>Multi-seed significance</span><span>Reproduces Henderson et&nbsp;al. 2018</span><span>Honest negative result</span>
@@ -108,12 +108,304 @@
       </div>
     </section>
 
+    <!-- ═══════════════════════ THE RESULT ═══════════════════════ -->
+    <section class="section result-section" id="result">
+      <div class="section-head">
+        <div class="kicker">THE RESULT</div>
+        <h2>The most impressive number was the&nbsp;least trustworthy.</h2>
+        <p>
+          Train the agent on a <b>single</b> asset and it posts returns that look
+          like a bug. Show it data it has never seen and it loses money. Train the
+          same agent across a <b>basket</b> of tickers and the headline collapses to
+          something modest — which then survives contact with held-out data. Both
+          arms below were trained identically and scored on the same held-out paths;
+          the only difference is how many assets they saw.
+        </p>
+      </div>
+
+      <div class="rs-toolbar">
+        <div class="seg" id="rs-market" role="group" aria-label="Choose a market">
+          <button type="button" data-val="stock" class="on" aria-pressed="true">Stocks</button>
+          <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+        </div>
+        <span class="rs-meta" id="rs-meta"></span>
+      </div>
+
+      <div class="rs-arms" id="rs-arms" aria-live="polite"></div>
+
+      <p class="lab-caption" id="rs-caption"></p>
+    </section>
+
     <!-- ───────────────────── STATS STRIP ───────────────────── -->
     <section class="stats">
       <div class="stat-cell"><div class="num" data-count="16">16</div><div class="lbl">Real tickers backtested</div></div>
       <div class="stat-cell"><div class="num" data-count="5">5</div><div class="lbl">Seeds in the significance study</div></div>
       <div class="stat-cell"><div class="num" data-count="28">28</div><div class="lbl">Engineered features</div></div>
-      <div class="stat-cell"><div class="num" data-count="46">46</div><div class="lbl">Tests passing</div></div>
+      <div class="stat-cell"><div class="num" data-count="346">346</div><div class="lbl">Tests passing</div></div>
+    </section>
+
+    <!-- ═══════════════════ WHAT I GOT WRONG ═══════════════════ -->
+    <section class="section wrong-section" id="wrong">
+      <div class="section-head">
+        <div class="kicker">WHAT I GOT WRONG</div>
+        <h2>Every result here held up &mdash; until the next&nbsp;test.</h2>
+        <p>
+          Each step below is a result I believed until the next test broke it. The
+          numbers are read live from this repository's committed experiments — the
+          same files the charts above use — except where a step quotes a
+          <em>superseded</em> run, which is cited by commit so you can check it
+          against history rather than against my description of it.
+        </p>
+      </div>
+
+      <ol class="tl" id="tl">
+        <li class="tl-step">
+          <div class="tl-n">01</div>
+          <div class="tl-body">
+            <h3>The number was enormous.</h3>
+            <p>A crypto agent trained on one asset finished its training period up
+               <b class="tl-fig" id="tl-1">&hellip;</b>, depending on the
+               seed. My first instinct was that something had gone right.</p>
+          </div>
+        </li>
+
+        <li class="tl-step">
+          <div class="tl-n">02</div>
+          <div class="tl-body">
+            <h3>It was a receipt for memorisation.</h3>
+            <p>Scored on held-out tickers it had never traded, the same recipe
+               averaged <b class="tl-fig neg" id="tl-2">&hellip;</b> across 5 seeds.
+               It had not learned to trade; it had learned one price path.</p>
+            <p class="tl-src"><a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/ablation.py">tools/ablation.py</a></p>
+          </div>
+        </li>
+
+        <li class="tl-step">
+          <div class="tl-n">03</div>
+          <div class="tl-body">
+            <h3>The fix was the data, not the algorithm.</h3>
+            <p>I changed nothing about PPO. Training across the whole basket —
+               domain randomization — left nothing single to memorise, and held-out
+               return moved to <b class="tl-fig pos" id="tl-3">&hellip;</b>. That is
+               the contrast at the top of this page.</p>
+            <p class="tl-src"><a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/envs/base_env.py">rl_trader/envs/</a> &middot; <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/ablation_multiseed.py">tools/ablation_multiseed.py</a></p>
+          </div>
+        </li>
+
+        <li class="tl-step">
+          <div class="tl-n">04</div>
+          <div class="tl-body">
+            <h3>Then one run looked spectacular again.</h3>
+            <p>The published crypto agent returned <b class="tl-fig">+275.45%</b>
+               against <b class="tl-fig">+19.57%</b> buy-and-hold — a 14&times;
+               outperformance. This was the version of the result I nearly wrote up
+               as the finding.</p>
+            <p class="tl-src">Superseded &middot; <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/d4c0ef9/docs/results.js">results.js at&nbsp;d4c0ef9</a>, test window ending 2026&#8209;06&#8209;17</p>
+          </div>
+        </li>
+
+        <li class="tl-step">
+          <div class="tl-n">05</div>
+          <div class="tl-body">
+            <h3>Reseeding dissolved it.</h3>
+            <p>Retraining the identical recipe under 5 independent seeds gave
+               returns spanning <b class="tl-fig" id="tl-5a">&hellip;</b> — one seed
+               more than tripling capital, another losing money. Against
+               buy-and-hold across the held-out pairs the paired test gives
+               <b class="tl-fig" id="tl-5b">&hellip;</b>: not distinguishable. The
+               spectacular run was one draw from a wide distribution.</p>
+            <p class="tl-src"><a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/evaluation/statistics.py">evaluation/statistics.py</a> &middot; <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/real_significance.py">tools/real_significance.py</a></p>
+          </div>
+        </li>
+
+        <li class="tl-step">
+          <div class="tl-n">06</div>
+          <div class="tl-body">
+            <h3>And the window mattered as much as the seed.</h3>
+            <p>Rebuilding on a data snapshot pinned two months later — same code,
+               same seed 42, same 200k steps, only more days of price history — the
+               same run returned <b class="tl-fig" id="tl-6">&hellip;</b> against
+               <b class="tl-fig" id="tl-6b">&hellip;</b> buy-and-hold. Moving the
+               evaluation window alone erased the headline. It was not only
+               seed-lucky; it was window-lucky.</p>
+            <p class="tl-src">Current run &middot; <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/data/SNAPSHOT.json">data/SNAPSHOT.json</a> pins the window</p>
+          </div>
+        </li>
+
+        <li class="tl-step tl-last">
+          <div class="tl-n">07</div>
+          <div class="tl-body">
+            <h3>The honest answer is a negative result.</h3>
+            <p>On stocks the agent is not merely tied with buy-and-hold — across 5
+               seeds it averaged <b class="tl-fig neg" id="tl-7">&hellip;</b>, and
+               the paired test against buy-and-hold over the 10 held-out tickers
+               gives <b class="tl-fig" id="tl-7b">&hellip;</b>. It is significantly
+               <em>worse</em>. That is the result, and it is the one I am
+               publishing.</p>
+          </div>
+        </li>
+      </ol>
+
+      <p class="lab-caption">
+        What survives all of this is narrow, and worth stating plainly: <b>domain
+        randomization measurably improves held-out performance</b> — that gap is
+        large, reproduced across seeds, and its intervals do not overlap. Nothing
+        here demonstrates a profitable trading strategy, and none of it is
+        investment advice.
+      </p>
+    </section>
+
+    <!-- ═══════════════════ WHAT I LEARNED ═══════════════════ -->
+    <section class="section learned-section" id="learned">
+      <div class="section-head">
+        <div class="kicker">WHAT I LEARNED</div>
+        <h2>Four things that transfer past&nbsp;trading.</h2>
+        <p>
+          The timeline above is what happened in this project. These are the parts
+          I would carry into any reinforcement-learning result, in any domain —
+          markets were only the testbed that made each one cheap to demonstrate.
+        </p>
+      </div>
+
+      <div class="learned-grid">
+        <article class="learned-card">
+          <div class="learned-n">01</div>
+          <h3>A huge training number is a symptom, not a result.</h3>
+          <p>The single-asset agent's in-sample return moved between
+             <b class="lr-fig" id="lr-1a">&hellip;</b> and
+             <b class="lr-fig" id="lr-1b">&hellip;</b> depending only on the random
+             seed. A quantity that unstable is not measuring skill; it is measuring
+             how thoroughly one price path was memorised.</p>
+        </article>
+
+        <article class="learned-card">
+          <div class="learned-n">02</div>
+          <h3>The fix was the training distribution, not the algorithm.</h3>
+          <p>PPO was not touched — no new loss, no tuning. Only the number of
+             assets the agent saw changed, and held-out return moved from
+             <b class="lr-fig neg" id="lr-2a">&hellip;</b> to
+             <b class="lr-fig pos" id="lr-2b">&hellip;</b> on crypto. Where the data
+             comes from is a modelling decision.</p>
+        </article>
+
+        <article class="learned-card">
+          <div class="learned-n">03</div>
+          <h3>One run is not evidence, and five is not many.</h3>
+          <p>Five seeds of the same recipe spanned
+             <b class="lr-fig" id="lr-3">&hellip;</b>. Worse, a two-sided sign-flip
+             test over five pairs draws from 2⁵ sign assignments, so its smallest
+             attainable p-value is 0.0625 — <b>it cannot reach significance at all</b>,
+             whatever the effect size. Sample size can invalidate a test before any
+             data is collected.</p>
+        </article>
+
+        <article class="learned-card">
+          <div class="learned-n">04</div>
+          <h3>Evaluation choices move results as much as modelling ones.</h3>
+          <p>Identical code, identical seed, a data window extended by two months:
+             the headline fell to <b class="lr-fig" id="lr-4">&hellip;</b> against a
+             benchmark that had itself risen. Nothing about the model changed. The
+             window is part of the claim, which is why this one is pinned.</p>
+        </article>
+      </div>
+
+      <p class="lab-caption">
+        None of this makes the agent a trading strategy — on stocks it is
+        significantly worse than holding the index, and that is the published
+        finding. What it does support is narrower and, I think, more useful: the
+        evaluation is where the science is.
+      </p>
+    </section>
+
+    <!-- ═══════════ WHAT YOU CAN RUN (deep links into the lab) ═══════════ -->
+    <section class="section lab-strip-section">
+      <div class="section-head">
+        <div class="kicker">THE LAB</div>
+        <h2>Don't just read the result. Test it.</h2>
+        <p>Nine experiments, each one runnable against the deployed agent or the
+           project's real committed results. Nothing on these pages is a mock-up.</p>
+      </div>
+
+      <div class="lab-strip">
+        <a class="lab-card" href="#lab/perception" data-view="lab" data-panel="perception">
+          <span class="lab-card-n">01</span>
+          <h3>Signal or Noise?</h3>
+          <p>Before you test the agent, test yourself. Tell trending charts from random
+             walks, then see the exact binomial verdict on your score.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/human" data-view="lab" data-panel="human">
+          <span class="lab-card-n">02</span>
+          <h3>Your Turn</h3>
+          <p>Trade the same bars the agent trades, one at a time with no lookahead,
+             then get scored against it and against buy-&amp;-hold.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/playground" data-view="lab" data-panel="playground">
+          <span class="lab-card-n">03</span>
+          <h3>Agent Playground</h3>
+          <p>Pick a market, a data source, costs and a reward function. Run a real
+             episode and scrub it bar by bar against buy-&amp;-hold.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/xray" data-view="lab" data-panel="xray">
+          <span class="lab-card-n">04</span>
+          <h3>Agent X-Ray</h3>
+          <p>At any bar, see the actual 563-dimensional observation the agent
+             consumed, and follow it through to the action and the reward.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+
+        <a class="lab-card" href="#lab/generalization" data-view="lab" data-panel="generalization">
+          <span class="lab-card-n">05</span>
+          <h3>Can You Break It?</h3>
+          <p>One agent memorised a single price path; the other saw a new one every
+             episode. Then push the deployed policy onto distributions it never met.</p>
+          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
+        </a>
+
+        <a class="lab-card" href="#lab/walkforward" data-view="lab" data-panel="walkforward">
+          <span class="lab-card-n">06</span>
+          <h3>Walk-Forward</h3>
+          <p>Disjoint chronological folds, each with its own scaler &mdash; plus a direct
+             measurement of what fitting that scaler on the test block costs you.</p>
+          <span class="lab-card-tag tag-mixed">Live evaluation</span>
+        </a>
+
+        <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
+          <span class="lab-card-n">07</span>
+          <h3>Real or Luck?</h3>
+          <p>A single-seed headline beside what five seeds actually say.
+             Re-run the bootstrap and the permutation test yourself.</p>
+          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
+        </a>
+
+        <a class="lab-card" href="#lab/surrogate" data-view="lab" data-panel="surrogate">
+          <span class="lab-card-n">08</span>
+          <h3>Anything There?</h3>
+          <p>Shuffle the returns and buy-&amp;-hold is unchanged, but every pattern is gone.
+             The sharpest question in the project: is the agent weak, or is the market empty?</p>
+          <span class="lab-card-tag tag-precomputed">Real &middot; precomputed</span>
+        </a>
+
+        <a class="lab-card" href="#lab/notebook" data-view="lab" data-panel="notebook">
+          <span class="lab-card-n">09</span>
+          <h3>Research Notebook</h3>
+          <p>Every experiment you run, with the exact config that produced it —
+             and a button that replays it to the same numbers.</p>
+          <span class="lab-card-tag tag-real">Live</span>
+        </a>
+      </div>
+
+      <p class="lab-strip-note">
+        <b>What isn't live:</b> training. Each seed of a multi-seed study is a full PPO
+        run, so those results are served from the repository's real committed
+        experiments, labelled with the command that regenerates them — never
+        simulated. The statistics computed over them do run live.
+      </p>
     </section>
 
     <!-- ─────────────────────── FEATURES ─────────────────────── -->
@@ -164,63 +456,87 @@
       </div>
     </section>
 
-    <!-- ═══════════ WHAT YOU CAN RUN (deep links into the lab) ═══════════ -->
-    <section class="section lab-strip-section">
+    <!-- ═══════════════════════ REPRODUCE ═══════════════════════ -->
+    <section class="section repro-section" id="reproduce">
       <div class="section-head">
-        <div class="kicker">THE LAB</div>
-        <h2>Don't just read the result. Test it.</h2>
-        <p>Five experiments, each one runnable against the deployed agent or the
-           project's real committed results. Nothing on these pages is a mock-up.</p>
+        <div class="kicker">REPRODUCE</div>
+        <h2>Don't take my word for any of&nbsp;it.</h2>
+        <p>
+          Every figure on this site traces to a command in this list and an artifact
+          in the repository. If you think a number here is wrong, this is how you
+          show it.
+        </p>
       </div>
 
-      <div class="lab-strip">
-        <a class="lab-card" href="#lab/playground" data-view="lab" data-panel="playground">
-          <span class="lab-card-n">01</span>
-          <h3>Agent Playground</h3>
-          <p>Pick a market, a data source, costs and a reward function. Run a real
-             episode and scrub it bar by bar against buy-&amp;-hold.</p>
-          <span class="lab-card-tag tag-real">Live</span>
-        </a>
+      <div class="repro-grid">
+        <ol class="repro-steps">
+          <li>
+            <code>pip install -e .</code>
+            <span>PPO, both environments and the feature pipeline — no
+              <code>stable-baselines</code>, no wrappers.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/models/ppo_agent.py">ppo_agent.py&nbsp;→</a></span>
+          </li>
+          <li>
+            <code>python tools/ablation_multiseed.py --seeds 42 43 44 45 46</code>
+            <span>Regenerates the single-asset vs cross-asset contrast at the top of
+              this page — and rewrites the page's own copy of it.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/ablation_multiseed.py">source&nbsp;→</a></span>
+          </li>
+          <li>
+            <code>python tools/real_significance.py --seeds 5</code>
+            <span>Retrains under 5 seeds and runs the paired permutation test behind
+              steps 05 and 07 above.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/evaluation/statistics.py">statistics.py&nbsp;→</a></span>
+          </li>
+          <li>
+            <code>python tools/surrogate_test.py --mode real</code>
+            <span>Destroys the temporal structure and checks the edge disappears
+              with it, with a positive control that proves the test has power.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/surrogate_test.py">source&nbsp;→</a></span>
+          </li>
+          <li>
+            <code>python tools/build_site_data.py --real</code>
+            <span>Rebuilds every chart on this site from a fresh seeded training run.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/build_site_data.py">source&nbsp;→</a></span>
+          </li>
+          <li>
+            <code>bash tools/rebuild_all.sh</code>
+            <span>All of the above in order, then re-syncs every table in this
+              repository's documents from the artifacts it just produced &mdash; so
+              a partial rebuild cannot leave the write-up describing runs that no
+              longer exist.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/rebuild_all.sh">source&nbsp;&rarr;</a></span>
+          </li>
+          <li>
+            <code>pytest</code>
+            <span>The suite, including the tests that pin these honesty rules in
+              place. <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/tree/main/tests">tests/&nbsp;→</a></span>
+          </li>
+        </ol>
 
-        <a class="lab-card" href="#lab/xray" data-view="lab" data-panel="xray">
-          <span class="lab-card-n">02</span>
-          <h3>Agent X-Ray</h3>
-          <p>At any bar, see the actual 563-dimensional observation the agent
-             consumed, and follow it through to the action and the reward.</p>
-          <span class="lab-card-tag tag-real">Live</span>
-        </a>
-
-        <a class="lab-card" href="#lab/generalization" data-view="lab" data-panel="generalization">
-          <span class="lab-card-n">03</span>
-          <h3>Can You Break It?</h3>
-          <p>One agent memorised a single price path; the other saw a new one every
-             episode. Then push the deployed policy onto distributions it never met.</p>
-          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
-        </a>
-
-        <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
-          <span class="lab-card-n">04</span>
-          <h3>Real or Luck?</h3>
-          <p>A <b>+275%</b> single-seed headline beside what five seeds actually say.
-             Re-run the bootstrap and the permutation test yourself.</p>
-          <span class="lab-card-tag tag-mixed">Real data · live stats</span>
-        </a>
-
-        <a class="lab-card" href="#lab/notebook" data-view="lab" data-panel="notebook">
-          <span class="lab-card-n">05</span>
-          <h3>Research Notebook</h3>
-          <p>Every experiment you run, with the exact config that produced it —
-             and a button that replays it to the same numbers.</p>
-          <span class="lab-card-tag tag-real">Live</span>
-        </a>
+        <aside class="repro-side">
+          <h3>What is actually pinned</h3>
+          <ul class="repro-check">
+            <li><b>Data</b><span>A dated snapshot manifest rather than a live feed,
+              so re-fetching cannot silently move the evaluation window.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/data/SNAPSHOT.json">SNAPSHOT.json&nbsp;→</a></span></li>
+            <li><b>Seeds</b><span>Every published run states its seed, and every
+              multi-seed study lists all of them.</span></li>
+            <li><b>Splits</b><span>Chronological, with scalers fit on the training
+              slice only.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/data/data_loader.py">preprocessor.py&nbsp;→</a></span></li>
+            <li><b>Statistics</b><span>Bootstrap CIs and paired permutation tests,
+              with the resolution floor reported next to every p&#8209;value.</span></li>
+            <li><b>Artifacts</b><span>Committed JSON, regenerated by a named command
+              that is printed beside the result it produced.</span></li>
+            <li><b>The write-up</b><span>Every result table in the README, RESULTS.md
+              and the paper is generated from those artifacts, and the test suite
+              fails if any of them drifts.
+              <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/sync_docs.py">sync_docs.py&nbsp;&rarr;</a></span></li>
+          </ul>
+          <p class="repro-warn" id="repro-warn"></p>
+        </aside>
       </div>
-
-      <p class="lab-strip-note">
-        <b>What isn't live:</b> training. Each seed of a multi-seed study is a full PPO
-        run, so those results are served from the repository's real committed
-        experiments, labelled with the command that regenerates them — never
-        simulated. The statistics computed over them do run live.
-      </p>
     </section>
 
     </div><!-- /view-home -->
@@ -359,15 +675,10 @@
                 <th scope="col">Held-out return (mean, 95% CI)</th>
               </tr>
             </thead>
-            <tbody>
-              <tr><td class="num-l">Stocks &middot; single asset</td><td class="muted-cell">+17k% to +30k%</td><td class="lose">&minus;26% <small>[&minus;37%, &minus;9%]</small></td></tr>
-              <tr><td class="num-l">Stocks &middot; across tickers</td><td class="muted-cell">&minus;6% to +139%</td><td class="win">+36% <small>[+27%, +46%]</small></td></tr>
-              <tr><td class="num-l">Crypto &middot; single asset</td><td class="muted-cell">+322k% to +4.0M%</td><td class="lose">&minus;51% <small>[&minus;62%, &minus;39%]</small></td></tr>
-              <tr><td class="num-l">Crypto &middot; across tickers</td><td class="muted-cell">&minus;19% to +292%</td><td class="win">+132% <small>[+69%, +219%]</small></td></tr>
-            </tbody>
+            <tbody id="abl-body"></tbody>
           </table>
         </div>
-        <p class="lab-caption">Those astronomical in-sample figures aren't a win — they're the <b>overfitting tell</b>: a single-asset agent memorises the exact training path, so it "earns" impossible returns there and then collapses out of sample. The honest column is <b>held-out</b>, and only domain randomization keeps it positive — across 5 seeds all four intervals exclude zero. In-sample is shown as a <b>range</b> rather than a number because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that isn't there. (5 seeds &times; 60k steps, bootstrap 95% CI, 30 held-out paths held identical across arms; reproduced by <code>tools/ablation_multiseed.py</code>.)</p>
+        <p class="lab-caption">Those astronomical in-sample figures aren't a win — they're the <b>overfitting tell</b>: a single-asset agent memorises the exact training path, so it "earns" impossible returns there and then collapses out of sample. The honest column is <b>held-out</b>, and only domain randomization keeps it positive — across 5 seeds all four intervals exclude zero. In-sample is shown as a <b>range</b> rather than a number because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that isn't there. (<span id="abl-prov"></span>bootstrap 95% CI, 30 held-out paths held identical across arms; reproduced by <code>tools/ablation_multiseed.py</code>.)</p>
       </div>
     </section>
 
@@ -502,8 +813,8 @@
       <!-- run it live (needs the optional Render backend; revealed when RL_API is set) -->
       <div id="live" class="panel live-card" hidden>
         <div class="panel-head">
-          <h3>Run it live on any ticker <span class="badge-live">REAL-TIME</span></h3>
-          <span class="muted-sub">type any stock or crypto symbol &middot; live prices &middot; no retraining</span>
+          <h3>Out-of-distribution test <span class="badge-live">LIVE DATA</span></h3>
+          <span class="muted-sub">the frozen policy on an asset it was never trained on &middot; no retraining, no fine-tuning</span>
         </div>
         <div class="live-controls">
           <select id="live-market" class="live-select">
@@ -513,10 +824,20 @@
           <input id="live-ticker" class="live-select live-input" list="ticker-suggestions"
                  placeholder="Type any ticker — e.g. TSLA or DOGE-USD" autocomplete="off" spellcheck="false" />
           <datalist id="ticker-suggestions"></datalist>
-          <button id="live-run" class="btn btn-primary">Run live →</button>
+          <button id="live-run" class="btn btn-primary">Run the policy &rarr;</button>
           <span id="live-spin" class="spinner" hidden aria-hidden="true"></span>
           <span id="live-status" class="muted-sub" aria-live="polite"></span>
         </div>
+        <p class="ood-note">
+          <b>What this is.</b> The policy below was trained on a fixed basket and
+          then frozen. Typing a ticker that was not in that basket asks a research
+          question &mdash; how does a policy behave on a distribution it never saw?
+          &mdash; not a trading question. Watch whether it takes a sensible position
+          or saturates at fully long or fully short, which is what these agents tend
+          to do once the inputs leave the range they were scaled on.
+          <b>This is a model demonstration, not financial advice, and not a
+          prediction.</b>
+        </p>
         <div class="live-signal" id="live-signal" aria-live="polite"></div>
         <div class="panel-head" style="margin-top:6px">
           <h3>Equity (held-out 2y)</h3>
@@ -543,15 +864,147 @@
         </header>
 
         <div class="lab-tabs" role="tablist" aria-label="Laboratory sections">
-          <button class="lab-tab" role="tab" id="tab-playground" data-panel="playground" aria-controls="panel-playground" aria-selected="true" tabindex="0">Agent Playground</button>
+          <button class="lab-tab" role="tab" id="tab-perception" data-panel="perception" aria-controls="panel-perception" aria-selected="true" tabindex="0">Signal or Noise?</button>
+          <button class="lab-tab" role="tab" id="tab-human" data-panel="human" aria-controls="panel-human" aria-selected="false" tabindex="-1">Your Turn</button>
+          <button class="lab-tab" role="tab" id="tab-playground" data-panel="playground" aria-controls="panel-playground" aria-selected="false" tabindex="-1">Agent Playground</button>
           <button class="lab-tab" role="tab" id="tab-xray" data-panel="xray" aria-controls="panel-xray" aria-selected="false" tabindex="-1">Agent X-Ray</button>
           <button class="lab-tab" role="tab" id="tab-generalization" data-panel="generalization" aria-controls="panel-generalization" aria-selected="false" tabindex="-1">Can You Break It?</button>
+          <button class="lab-tab" role="tab" id="tab-walkforward" data-panel="walkforward" aria-controls="panel-walkforward" aria-selected="false" tabindex="-1">Walk-Forward</button>
           <button class="lab-tab" role="tab" id="tab-seeds" data-panel="seeds" aria-controls="panel-seeds" aria-selected="false" tabindex="-1">Real or Luck?</button>
+          <button class="lab-tab" role="tab" id="tab-surrogate" data-panel="surrogate" aria-controls="panel-surrogate" aria-selected="false" tabindex="-1">Anything There?</button>
           <button class="lab-tab" role="tab" id="tab-notebook" data-panel="notebook" aria-controls="panel-notebook" aria-selected="false" tabindex="-1">Notebook</button>
         </div>
 
+        <!-- SIGNAL OR NOISE -->
+        <section class="lab-panel active" id="panel-perception" role="tabpanel" aria-labelledby="tab-perception" tabindex="0">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Signal or noise?</h2>
+            <p>Before testing the agent, test yourself. Half of the charts below carry the
+               exact return autocorrelation the agent was <b>trained to find</b>. The other
+               half are random walks with no structure at all. Every chart is standardised to
+               the same volatility and given a drift from one shared distribution, so nothing
+               but the pattern itself can give the answer away.</p>
+          </div>
+
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>Take the test <span class="tag-real">Live</span></h3>
+              <div class="seg" id="pc-difficulty" data-value="synthetic">
+                <button type="button" data-val="synthetic" aria-pressed="true">Trend vs random walk</button>
+                <button type="button" data-val="real" aria-pressed="false">Real vs reshuffled</button>
+              </div>
+            </div>
+
+            <div class="shift-controls">
+              <div class="ctl">
+                <label for="pc-source" id="pc-source-label">Trained-on regime</label>
+                <select id="pc-source"></select>
+              </div>
+              <div class="ctl">
+                <label for="pc-n">Charts <span class="ctl-val" id="pc-n-val">12</span></label>
+                <input type="range" id="pc-n" min="4" max="12" step="2" value="12" />
+              </div>
+              <button class="run-btn" id="pc-new" type="button">New quiz</button>
+            </div>
+
+            <p class="xr-hint" id="pc-prompt"></p>
+            <div class="lab-status" id="pc-status"></div>
+            <div id="pc-error" hidden></div>
+
+            <div class="pc-grid" id="pc-grid"></div>
+
+            <div class="pc-actions" id="pc-actions" hidden>
+              <span class="pc-progress" id="pc-progress"></span>
+              <button class="run-btn" id="pc-submit" type="button" disabled>Score my answers</button>
+            </div>
+
+            <div id="pc-result" hidden></div>
+            <dl class="receipt" id="pc-receipt"></dl>
+          </div>
+        </section>
+
+        <!-- YOUR TURN -->
+        <section class="lab-panel" id="panel-human" role="tabpanel" aria-labelledby="tab-human" tabindex="0">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Now you try</h2>
+            <p>Trade the same bars, through the same environment, paying the same transaction
+               costs. You are shown one new bar per decision and nothing beyond it &mdash; the
+               price series stays on the server, so there is nothing here to read ahead in.
+               At the end your run is scored against the deployed agent and against
+               buy-&amp;-hold over exactly the bars you traded.</p>
+          </div>
+
+          <div class="panel-card" id="hm-setup">
+            <div class="gen-head">
+              <h3>Set up a run <span class="tag-real">Live</span></h3>
+              <div class="seg" id="hm-market" data-value="stock">
+                <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
+                <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+              </div>
+            </div>
+            <div class="shift-controls">
+              <div class="ctl">
+                <label>Data</label>
+                <div class="seg" id="hm-mode" data-value="synthetic">
+                  <button type="button" data-val="synthetic" aria-pressed="true">Synthetic</button>
+                  <button type="button" data-val="historical" aria-pressed="false">Real</button>
+                </div>
+              </div>
+              <div class="ctl">
+                <label for="hm-source" id="hm-source-label">Regime</label>
+                <select id="hm-source"></select>
+              </div>
+              <div class="ctl">
+                <label for="hm-steps">Decisions <span class="ctl-val" id="hm-steps-val">40</span></label>
+                <input type="range" id="hm-steps" min="10" max="120" step="10" value="40" />
+              </div>
+              <button class="run-btn" id="hm-start" type="button">Start</button>
+            </div>
+            <p class="xr-hint" id="hm-info"></p>
+            <div class="lab-status" id="hm-status"></div>
+            <div id="hm-error" hidden></div>
+          </div>
+
+          <div class="panel-card" id="hm-play" hidden>
+            <div class="gen-head">
+              <h3>Decision <span id="hm-progress">1 / 40</span></h3>
+              <div class="hm-account" id="hm-account"></div>
+            </div>
+            <canvas id="hm-chart" class="chart-canvas"></canvas>
+            <div class="hm-controls">
+              <label for="hm-target">Target position
+                <span class="ctl-val" id="hm-target-val">0%</span></label>
+              <input type="range" id="hm-target" min="-100" max="100" step="10" value="0" />
+              <div class="hm-quick">
+                <button type="button" data-val="-100">Short</button>
+                <button type="button" data-val="0">Flat</button>
+                <button type="button" data-val="100">Long</button>
+              </div>
+              <button class="run-btn" id="hm-trade" type="button">Trade &amp; advance</button>
+              <button class="run-btn run-btn-sm" id="hm-finish" type="button">Stop &amp; score</button>
+            </div>
+            <p class="xr-hint" id="hm-play-note"></p>
+          </div>
+
+          <div class="panel-card" id="hm-result" hidden>
+            <h3>How it went</h3>
+            <canvas id="hm-result-chart" class="chart-canvas"></canvas>
+            <div class="chart-legend hm-legend">
+              <span class="lg lg-you">You</span>
+              <span class="lg lg-agent">Agent</span>
+              <span class="lg lg-bench">Buy &amp; hold</span>
+            </div>
+            <div id="hm-scores"></div>
+            <p class="pc-verdict" id="hm-verdict"></p>
+            <div class="attr-caveats" id="hm-caveats"></div>
+            <button class="run-btn" id="hm-again" type="button">Run another</button>
+          </div>
+        </section>
+
         <!-- PLAYGROUND -->
-        <section class="lab-panel active" id="panel-playground" role="tabpanel" aria-labelledby="tab-playground" tabindex="0">
+        <section class="lab-panel" id="panel-playground" role="tabpanel" aria-labelledby="tab-playground" tabindex="0">
           <div class="lab-grid">
 
             <form class="panel-card" id="pg-form" onsubmit="return false">
@@ -689,6 +1142,17 @@
                   <h3>Reproducibility receipt</h3>
                   <dl class="receipt" id="pg-receipt"></dl>
                   <div id="pg-notes"></div>
+
+                  <div class="pg-baselines" id="pg-baselines" hidden>
+                    <h4 class="attr-h">Against the naive strategies</h4>
+                    <p class="xr-hint">Every strategy below runs through the same
+                       environment on the same bars, paying the same costs. The random
+                       arm is many independent draws, not one &mdash; a single random
+                       run is a single sample of a very wide distribution.</p>
+                    <div class="wf-table-wrap"><table class="wf-table" id="pg-bl-table"></table></div>
+                    <p class="pc-verdict" id="pg-bl-verdict"></p>
+                    <div id="pg-bl-notes"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -772,6 +1236,43 @@
                   </div>
                   <div id="xr-notes"></div>
                 </div>
+              </div>
+            </div>
+
+            <div class="panel-card" id="attr-card">
+              <div class="gen-head">
+                <h3>What is it reading? <span class="tag-real">Live occlusion</span></h3>
+                <div class="wi-ctl">
+                  <label for="attr-scope">Show</label>
+                  <select id="attr-scope">
+                    <option value="episode" selected>Averaged over the episode</option>
+                    <option value="local">At this bar only</option>
+                  </select>
+                  <button class="run-btn run-btn-sm" id="attr-run" type="button">Measure</button>
+                </div>
+              </div>
+              <p class="xr-hint">Each input is replaced by an uninformative baseline &mdash; a
+                 feature by its mean across this series, an account scalar by its value at
+                 reset &mdash; and the policy is re-evaluated. The bar is how far the
+                 <b>target position</b> moves when that input is taken away, so 0.30 means
+                 30% of equity.</p>
+              <div class="lab-status" id="attr-status"></div>
+              <div id="attr-error" hidden></div>
+
+              <div id="attr-out" hidden>
+                <div class="attr-groups" id="attr-groups"></div>
+                <div class="attr-cols">
+                  <div>
+                    <h4 class="attr-h">Market features</h4>
+                    <div id="attr-features"></div>
+                  </div>
+                  <div>
+                    <h4 class="attr-h">Account state</h4>
+                    <div id="attr-account"></div>
+                    <div id="attr-dead"></div>
+                  </div>
+                </div>
+                <div class="attr-caveats" id="attr-caveats"></div>
               </div>
             </div>
 
@@ -882,6 +1383,77 @@
           </div>
         </section>
 
+        <!-- WALK-FORWARD -->
+        <section class="lab-panel" id="panel-walkforward" role="tabpanel" aria-labelledby="tab-walkforward" tabindex="0">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Does it hold up over time?</h2>
+            <p>One backtest is one slice of history, and that slice might just have been kind.
+               Rolling walk-forward re-asks the question on several disjoint, chronological
+               blocks &mdash; and refits the feature scaler on each block's training rows
+               <b>only</b>, so no fold ever sees its own test data. Then it runs the same folds
+               the wrong way, with the scaler fit on everything, to measure what that shortcut
+               actually costs.</p>
+          </div>
+
+          <div class="panel-card">
+            <div class="gen-head">
+              <h3>Run the folds <span class="tag-mixed">Live evaluation &middot; fixed policy</span></h3>
+              <div class="seg" id="wf-market" data-value="stock">
+                <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
+                <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+              </div>
+            </div>
+
+            <div class="shift-controls">
+              <div class="ctl">
+                <label>Data</label>
+                <div class="seg" id="wf-mode" data-value="historical">
+                  <button type="button" data-val="historical" aria-pressed="true">Real</button>
+                  <button type="button" data-val="synthetic" aria-pressed="false">Synthetic</button>
+                </div>
+              </div>
+              <div class="ctl">
+                <label for="wf-source" id="wf-source-label">Ticker</label>
+                <select id="wf-source"></select>
+              </div>
+              <div class="ctl">
+                <label for="wf-folds">Folds <span class="ctl-val" id="wf-folds-val">4</span></label>
+                <input type="range" id="wf-folds" min="2" max="8" step="1" value="4" />
+              </div>
+              <div class="ctl">
+                <label for="wf-scheme">Scheme</label>
+                <select id="wf-scheme">
+                  <option value="expanding" selected>Expanding (anchored)</option>
+                  <option value="sliding">Sliding (fixed window)</option>
+                </select>
+              </div>
+              <button class="run-btn" id="wf-run" type="button">Run walk-forward</button>
+            </div>
+
+            <p class="xr-hint" id="wf-scheme-note"></p>
+            <div class="bar" id="wf-bar"><i></i></div>
+            <div class="lab-status" id="wf-status"></div>
+            <div id="wf-error" hidden></div>
+
+            <div id="wf-out" hidden>
+              <h4 class="attr-h">Fold geometry</h4>
+              <p class="xr-hint">Each row is one fold. The dim block is what the scaler was fit
+                 on; the bright block is the out-of-sample test window it was then scored on.
+                 They never overlap.</p>
+              <div class="wf-timeline" id="wf-timeline"></div>
+
+              <h4 class="attr-h">Out-of-sample result, fold by fold</h4>
+              <div class="wf-table-wrap"><table class="wf-table" id="wf-table"></table></div>
+
+              <div class="wf-summary" id="wf-summary"></div>
+              <div id="wf-leakage"></div>
+              <div class="attr-caveats" id="wf-caveat"></div>
+              <dl class="receipt" id="wf-receipt"></dl>
+            </div>
+          </div>
+        </section>
+
         <!-- IS THE RESULT REAL - OR LUCK? -->
         <section class="lab-panel" id="panel-seeds" role="tabpanel" aria-labelledby="tab-seeds" tabindex="0">
 
@@ -961,6 +1533,90 @@
             <div class="lab-status" id="sd-paper-status"></div>
             <div id="sd-paper"></div>
           </div>
+
+          <!-- recipe luck, the sibling of seed luck -->
+          <div class="panel-card" id="hp-card">
+            <h3>Or is it the <em>recipe</em>? <span class="tag-precomputed">Real &middot; precomputed</span></h3>
+            <p class="xr-hint">Seeds are one way to get lucky; hyper-parameters are another.
+               Each configuration below moves <b>one</b> knob either side of its published
+               default, everything else held fixed, and is retrained from scratch. It is
+               deliberately <b>not</b> a grid search &mdash; the question is whether the
+               conclusion is fragile, not which recipe wins.</p>
+            <div class="lab-status" id="hp-status"></div>
+            <div id="hp-error" hidden></div>
+            <div id="hp-body" hidden>
+              <p class="pc-verdict" id="hp-headline"></p>
+              <div id="hp-markets"></div>
+              <div class="attr-caveats" id="hp-caveats"></div>
+              <dl class="receipt" id="hp-receipt"></dl>
+            </div>
+          </div>
+
+          <!-- how many runs would it have taken? -->
+          <div class="panel-card" id="pw-card">
+            <h3>So how many runs would it take? <span class="tag-real">Live</span></h3>
+            <p class="xr-hint">Every panel here reports the floor <code>2/2&#8319;</code> &mdash;
+               when a design <b>cannot</b> reach significance. This answers the question that
+               follows. Put in an effect size and its spread, and it simulates the real
+               sign-flip test to find the sample size that would detect it.</p>
+
+            <div class="shift-controls">
+              <div class="ctl">
+                <label for="pw-effect">Effect size <span class="ctl-val" id="pw-effect-val">+10%</span></label>
+                <input type="range" id="pw-effect" min="1" max="100" step="1" value="10" />
+              </div>
+              <div class="ctl">
+                <label for="pw-sd">Spread across runs <span class="ctl-val" id="pw-sd-val">25%</span></label>
+                <input type="range" id="pw-sd" min="1" max="150" step="1" value="25" />
+              </div>
+              <div class="ctl">
+                <label for="pw-have">Runs you have <span class="ctl-val" id="pw-have-val">5</span></label>
+                <input type="range" id="pw-have" min="2" max="30" step="1" value="5" />
+              </div>
+              <button class="run-btn" id="pw-run" type="button">Compute</button>
+            </div>
+
+            <div class="lab-status" id="pw-status"></div>
+            <div id="pw-error" hidden></div>
+            <div id="pw-out" hidden>
+              <div class="pc-score" id="pw-scores"></div>
+              <p class="pc-verdict" id="pw-verdict"></p>
+              <div class="wf-table-wrap"><table class="wf-table" id="pw-curve"></table></div>
+              <div class="attr-caveats" id="pw-method"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- IS THERE ANYTHING THERE? -->
+        <section class="lab-panel" id="panel-surrogate" role="tabpanel" aria-labelledby="tab-surrogate" tabindex="0">
+
+          <div class="gen-intro">
+            <h2 class="gen-title">Is there anything there to find?</h2>
+            <p>Every other panel shows the agent failing to beat buy-&amp;-hold. None of them
+               can tell you <b>why</b>. This one can: shuffle a series' daily returns and
+               re-integrate them. The sum is unchanged, so the price ends in exactly the same
+               place and buy-&amp;-hold is <b>identical</b> &mdash; but every pattern a timing
+               agent could exploit is gone. Train the same recipe on both and compare.</p>
+          </div>
+
+          <div id="sg-error" hidden></div>
+          <div class="lab-status" id="sg-status"></div>
+
+          <div id="sg-body" hidden>
+            <div class="panel-card sg-verdict-card">
+              <h3>Reading both arms together</h3>
+              <p class="pc-verdict" id="sg-verdict"></p>
+            </div>
+
+            <div id="sg-arms"></div>
+
+            <div class="panel-card">
+              <h3>Method</h3>
+              <p class="xr-hint" id="sg-method"></p>
+              <div class="attr-caveats" id="sg-caveats"></div>
+              <dl class="receipt" id="sg-receipt"></dl>
+            </div>
+          </div>
         </section>
 
         <!-- RESEARCH NOTEBOOK -->
@@ -984,6 +1640,15 @@
                 <label for="nb-question">Research question <span class="ctl-opt">optional</span></label>
                 <input type="text" id="nb-question" maxlength="200"
                        placeholder="e.g. Does the agent still work when returns mean-revert?" />
+              </div>
+              <div class="ctl ctl-wide">
+                <label>Prediction <span class="ctl-opt">optional &mdash; locked before the run</span></label>
+                <div class="seg nb-pred" id="nb-prediction" data-value="">
+                  <button type="button" data-val="beats" aria-pressed="false">Agent beats buy &amp; hold</button>
+                  <button type="button" data-val="matches" aria-pressed="false">About level</button>
+                  <button type="button" data-val="loses" aria-pressed="false">Agent loses</button>
+                </div>
+                <p class="ctl-note" id="nb-prereg-rule"></p>
               </div>
               <div class="ctl">
                 <label for="nb-kind">Experiment</label>
@@ -1061,6 +1726,7 @@ python -m rl_trader.scripts.compare_markets --plot</code></pre>
   <script src="results.js"></script>
   <script src="significance.js"></script>
   <script src="learning.js"></script>
+  <script src="ablation.js"></script>
   <script src="app.js"></script>
   <script src="lab.js"></script>
 </body>

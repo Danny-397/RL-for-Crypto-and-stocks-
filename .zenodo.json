@@ -35,5 +35,7 @@
       "scheme": "url"
     }
   ],
-  "notes": "Source, figures, and the full evaluation suite are in the linked repository. All reported results are reproducible with the seeds and commands documented in the README."
+  "notes": "Version 2.0.0. Every published figure was regenerated against a pinned data snapshot (data/SNAPSHOT.json, window ending 2026-08-28) rather than a rolling window, which is what makes the numbers reproducible. Rebuilding the identical recipe on the later window changed the headline single-seed crypto result from +275% to +38.7%, so v1's figures are superseded rather than corrected; v1 remains available at commit d4c0ef9. Result tables in the README, RESULTS.md and the paper are generated from the committed artifacts by tools/sync_docs.py and checked by the test suite, so the documents cannot drift from the experiments. Source, figures and the full evaluation suite are in the linked repository.",
+  "version": "2.0.0",
+  "publication_date": "2026-08-31"
 }

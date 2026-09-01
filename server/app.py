@@ -18,12 +18,23 @@ Lab
     GET  /api/regimes                     synthetic distribution-shift regimes
     GET  /api/datasets                    real committed per-seed datasets
     GET  /api/generalization              real single-path vs domain-random results
+    GET  /api/surrogate                   the surrogate-data falsification test
+    GET  /api/hyperparameters             hyper-parameter sensitivity sweep
+    GET  /api/perception/quiz             a controlled signal-vs-noise chart test
+    POST /api/perception/score            exact binomial scoring of that test
     POST /api/statistics                  live bootstrap / permutation inference
+    POST /api/power                       how many runs an effect would need
     POST /api/experiments                 create an experiment (async)
     GET  /api/experiments                 list recent experiments
     GET  /api/experiments/<id>            status, progress, result, receipt
     GET  /api/experiments/<id>/config     the exact config needed to reproduce
     GET  /api/experiments/<id>/xray?step= the full observation at one bar
+    GET  /api/experiments/<id>/attribution which of those inputs move the action
+    POST /api/human/start                 open a human-baseline session
+    POST /api/human/<sid>/step            one decision; reveals exactly one bar
+    POST /api/human/<sid>/finish          score it against the agent and buy-&-hold
+
+Experiment kinds: rollout, counterfactual, distribution_shift, walk_forward
 
 What is and is not live
 -----------------------
@@ -60,7 +71,19 @@ from rl_trader.config.training_config import crypto_config, stock_config  # noqa
 from rl_trader.data.data_loader import market_data_from_df  # noqa: E402
 from rl_trader.envs import make_env  # noqa: E402
 from rl_trader.evaluation.evaluate_agent import ANNUALISATION, compute_metrics  # noqa: E402
-from server import lab, precomputed, regimes, stats_api  # noqa: E402
+from server import (  # noqa: E402
+    hpsweep,
+    human,
+    lab,
+    perception,
+    power,
+    precomputed,
+    prereg,
+    regimes,
+    stats_api,
+    surrogate,
+    walkforward,
+)
 from server.experiments import ExperimentManager, code_version  # noqa: E402
 from server.policy import load_policies  # noqa: E402
 
@@ -77,6 +100,7 @@ CORS(app)  # public, read-only API — allow any origin
 
 _POLICIES = load_policies()
 MANAGER = ExperimentManager()
+HUMANS = human.SessionStore()
 
 
 def policy_action(market: str, obs: np.ndarray) -> float:
@@ -265,6 +289,9 @@ def api_meta():
         policies={name: p.describe() for name, p in _POLICIES.items()},
         markets=sorted(_POLICIES),
         reward_kinds=list(lab.REWARD_KINDS),
+        walk_forward=walkforward.describe(),
+        preregistration=prereg.describe(),
+        human_sessions=HUMANS.stats(),
         evaluation_modes=list(lab.EVALUATION_MODES),
         tickers=TICKERS,
         live={
@@ -272,6 +299,13 @@ def api_meta():
             "counterfactual": True,
             "distribution_shift": True,
             "statistics": True,
+            "power_analysis": True,
+            "perception_test": True,
+            "attribution": True,
+            "walk_forward": True,
+            "human_baseline": True,
+            "surrogate_test": False,  # committed results; both arms are training runs
+            "hyperparameter_sweep": False,  # every cell is a training run
             "training": False,
         },
         training_note=(
@@ -324,6 +358,150 @@ def api_generalization():
     if out is None:
         return jsonify(error="ablation results unavailable"), 503
     return jsonify(out)
+
+
+@app.get("/api/hyperparameters")
+def api_hyperparameters():
+    """Does the conclusion survive a change of recipe, not just of seed?"""
+    out = hpsweep.results()
+    if out is None:
+        return jsonify(error="hyper-parameter sweep results unavailable"), 503
+    return jsonify(out)
+
+
+@app.get("/api/surrogate")
+def api_surrogate():
+    """The surrogate-data falsification test: is there structure to find at all?"""
+    out = surrogate.results()
+    if out is None:
+        return jsonify(error="surrogate results unavailable"), 503
+    return jsonify(out)
+
+
+# ── Lab: the human pattern-detection test ───────────────────────────────────
+def _perception_params(src) -> dict:
+    """Pull the four fields that fully determine a quiz.
+
+    A quiz is stateless: the same four values rebuild it byte-for-byte, which is
+    what lets scoring happen without the answer key ever reaching the browser.
+    """
+    return {
+        "difficulty": str(src.get("difficulty", "synthetic")).lower(),
+        "seed": int(src.get("seed", 0) or 0),
+        "n_charts": int(src.get("n_charts", 12) or 12),
+        "market": str(src.get("market", "stock")).lower(),
+        "ticker": (str(src.get("ticker")).upper() if src.get("ticker") else None),
+    }
+
+
+@app.get("/api/perception/quiz")
+def api_perception_quiz():
+    """Serve a balanced signal-vs-noise chart test, without its answer key."""
+    args = request.args
+    params = _perception_params(
+        {k: args.get(k) for k in ("difficulty", "seed", "n_charts", "market", "ticker")
+         if args.get(k) is not None}
+    )
+    try:
+        quiz = perception.build_quiz(fetch_ohlcv=_fetch_ohlcv, **params)
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+    out = perception.public(quiz)
+    out["params"] = params  # exactly what /score needs to rebuild this quiz
+    return jsonify(out)
+
+
+@app.post("/api/perception/score")
+def api_perception_score():
+    """Score a submission by rebuilding the same quiz and testing it exactly."""
+    payload = request.get_json(silent=True) or {}
+    answers = payload.get("answers")
+    if not isinstance(answers, list) or not answers:
+        return jsonify(error="'answers' must be a non-empty list"), 400
+    if len(answers) > perception.MAX_CHARTS:
+        return jsonify(error=f"at most {perception.MAX_CHARTS} answers"), 400
+
+    params = _perception_params(payload.get("params") or payload)
+    try:
+        quiz = perception.build_quiz(fetch_ohlcv=_fetch_ohlcv, **params)
+        return jsonify(perception.score_quiz(quiz, answers))
+    except (ValueError, TypeError) as exc:
+        return jsonify(error=str(exc)), 400
+
+
+# ── Lab: the human baseline ─────────────────────────────────────────────────
+def _human_env(config):
+    """Rebuild the exact environment a session is trading."""
+    return lab.build_environment(config, _fetch_ohlcv, _market_index)
+
+
+@app.post("/api/human/start")
+def api_human_start():
+    """Open a session. The series stays server-side; bars are released one at a time."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        config = lab.parse_config(payload.get("config", payload), sorted(_POLICIES))
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+    if config["market"] not in _POLICIES:
+        return jsonify(error=f"no policy loaded for market {config['market']!r}"), 400
+
+    try:
+        env, cfg_obj, dates, meta = _human_env(config)
+        session = human.start(
+            env, cfg_obj, dates, meta, config,
+            max_steps=int(payload.get("max_steps", human.DEFAULT_STEPS) or human.DEFAULT_STEPS),
+        )
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+    HUMANS.add(session)
+    return jsonify(human.opening(session)), 201
+
+
+def _session_or_404(session_id: str):
+    session = HUMANS.get(session_id.upper())
+    if session is None:
+        return None, (jsonify(
+            error=f"no active session {session_id!r} — sessions are in-memory and "
+                  "expire after 30 minutes of inactivity"
+        ), 404)
+    return session, None
+
+
+@app.post("/api/human/<session_id>/step")
+def api_human_step(session_id: str):
+    """Apply one decision and release exactly one new bar."""
+    session, err = _session_or_404(session_id)
+    if err:
+        return err
+    payload = request.get_json(silent=True) or {}
+    try:
+        action = float(payload.get("action", 0.0))
+    except (TypeError, ValueError):
+        return jsonify(error="'action' must be a number in [-1, 1]"), 400
+    try:
+        return jsonify(human.step(session, action))
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 409
+
+
+@app.post("/api/human/<session_id>/finish")
+def api_human_finish(session_id: str):
+    """Score the run against the deployed agent and buy-and-hold on the same bars."""
+    session, err = _session_or_404(session_id)
+    if err:
+        return err
+    if session.result is not None:
+        return jsonify(session.result)
+    policy = _POLICIES.get(session.market)
+    if policy is None:
+        return jsonify(error=f"no policy loaded for market {session.market!r}"), 400
+    try:
+        return jsonify(
+            human.finish(session, policy, lambda: _human_env(session.config)[0])
+        )
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 409
 
 
 # ── Lab: live statistics ────────────────────────────────────────────────────
@@ -408,6 +586,37 @@ def api_statistics():
         return jsonify(error=str(exc)), 400
 
 
+@app.post("/api/power")
+def api_power():
+    """How many paired runs it would take to detect an effect this size.
+
+    Simulated against the real sign-flip test rather than a t-test formula, so
+    the answer carries the discreteness that makes small studies unreliable.
+    """
+    payload = request.get_json(silent=True) or {}
+    try:
+        effect = float(payload.get("effect", 0.0))
+        sd = float(payload.get("sd", 0.0))
+    except (TypeError, ValueError):
+        return jsonify(error="'effect' and 'sd' must be numbers"), 400
+
+    have_n = payload.get("have_n")
+    n_sims = max(100, min(4000, int(payload.get("n_sims", 1500) or 1500)))
+    try:
+        return jsonify(
+            power.analyse(
+                effect=effect, sd=sd,
+                have_n=int(have_n) if have_n else None,
+                alpha=float(payload.get("alpha", 0.05)),
+                target=float(payload.get("target", 0.8)),
+                n_sims=n_sims,
+                seed=int(payload.get("seed", 0)),
+            )
+        )
+    except (ValueError, TypeError) as exc:
+        return jsonify(error=str(exc)), 400
+
+
 # ── Lab: experiments ────────────────────────────────────────────────────────
 @app.post("/api/experiments")
 def api_create_experiment():
@@ -439,6 +648,19 @@ def api_create_experiment():
         runner = lab.make_counterfactual_runner(
             policy, config, step, actions, horizon, _fetch_ohlcv, _market_index
         )
+    elif kind == "walk_forward":
+        n_folds = max(2, min(8, int(payload.get("n_folds", 4) or 4)))
+        scheme = str(payload.get("scheme", "expanding")).lower()
+        if scheme not in walkforward.SCHEMES:
+            return jsonify(error=f"unknown scheme {scheme!r}",
+                           supported=list(walkforward.SCHEMES)), 400
+        frac = float(payload.get("train_min_frac", 0.4) or 0.4)
+        if not 0.1 <= frac <= 0.8:
+            return jsonify(error="'train_min_frac' must be between 0.1 and 0.8"), 400
+        runner = lab.make_walkforward_runner(
+            policy, config, n_folds, scheme, frac,
+            bool(payload.get("compare_leakage", True)), _fetch_ohlcv, _market_index,
+        )
     elif kind == "distribution_shift":
         keys = payload.get("regimes") or [r["key"] for r in regimes.list_regimes()]
         known = {r["key"] for r in regimes.list_regimes()}
@@ -453,7 +675,8 @@ def api_create_experiment():
     else:
         return jsonify(
             error=f"unknown experiment kind {kind!r}",
-            supported=["rollout", "counterfactual", "distribution_shift"],
+            supported=["rollout", "counterfactual", "distribution_shift",
+                       "walk_forward"],
         ), 400
 
     # The caller's own research question, if they stated one. Recorded verbatim
@@ -462,10 +685,18 @@ def api_create_experiment():
     if question is not None:
         question = str(question).strip()[:400] or None
 
+    # A prediction, if one was made, is stamped before the runner starts — see
+    # server/prereg.py for why that ordering is the entire point.
+    try:
+        prediction = prereg.parse(payload)
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+
     exp = MANAGER.create(
         kind, config, runner,
         provenance={"api_version": API_VERSION},
         question=question,
+        prediction=prediction,
     )
     return jsonify(exp.summary()), 202
 
@@ -511,6 +742,29 @@ def api_experiment_xray(experiment_id: str):
             lab.xray_at(
                 exp.config, step, _fetch_ohlcv, _market_index,
                 policy=_POLICIES.get(exp.config.get("market")),
+            )
+        )
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+
+
+@app.get("/api/experiments/<experiment_id>/attribution")
+def api_experiment_attribution(experiment_id: str):
+    """Which inputs the policy is actually reading, by occlusion.
+
+    Computed live against the deployed policy — one forward pass per occluded
+    input, at the requested bar and averaged across the episode.
+    """
+    exp = MANAGER.get(experiment_id.upper())
+    if exp is None:
+        return jsonify(error=f"no experiment {experiment_id!r}"), 404
+    step = request.args.get("step", default=0, type=int) or 0
+    bars = request.args.get("bars", default=60, type=int) or 60
+    try:
+        return jsonify(
+            lab.attribution_at(
+                exp.config, step, _fetch_ohlcv, _market_index,
+                policy=_POLICIES.get(exp.config.get("market")), bars=bars,
             )
         )
     except ValueError as exc:

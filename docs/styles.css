@@ -567,3 +567,209 @@ h2 {
   * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
   html { scroll-behavior: auto; }
 }
+
+/* ── THE RESULT: the generalization gap, rendered from the ablation artifact ── */
+.result-section { padding-top: 8px; }
+.result-section .section-head h2 { max-width: 20ch; }
+
+.rs-toolbar {
+  display: flex; align-items: center; gap: 16px;
+  flex-wrap: wrap; margin: 4px 0 18px;
+}
+.rs-meta { color: var(--faint); font-family: var(--font-mono); font-size: 12px; }
+
+.rs-arms { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.rs-arm {
+  position: relative; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 20px 18px;
+}
+/* the arm's verdict is carried by a rail, not by the text colour alone */
+.rs-arm::before {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: 3px;
+}
+.rs-bad::before  { background: var(--neg); }
+.rs-good::before { background: var(--pos); }
+
+.rs-arm-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: 14px;
+}
+.rs-arm-head h3 { font-size: 16px; margin: 0; letter-spacing: -0.01em; }
+.rs-badge {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+  border: 1px solid var(--border-2); color: var(--muted); white-space: nowrap;
+}
+.rs-bad  .rs-badge { color: var(--neg); border-color: rgba(255, 107, 107, 0.35); }
+.rs-good .rs-badge { color: var(--pos); border-color: rgba(93, 242, 160, 0.35); }
+
+.rs-row { display: grid; gap: 2px; padding: 12px 0; border-top: 1px solid var(--border); }
+.rs-row-key { background: linear-gradient(90deg, rgba(255,255,255,0.025), transparent); }
+.rs-k {
+  font-size: 12px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.06em; font-weight: 600;
+}
+.rs-k small { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--faint); }
+.rs-k small::before { content: " · "; }
+.rs-v { font-family: var(--font-mono); font-size: clamp(22px, 3.4vw, 30px); font-weight: 700; }
+.rs-train { color: var(--muted); }
+.rs-win  { color: var(--pos); }
+.rs-lose { color: var(--neg); }
+.rs-sub { font-size: 12px; color: var(--faint); font-family: var(--font-mono); }
+
+/* one dot per training seed, on an axis shared by both arms */
+.rs-track {
+  position: relative; height: 26px; margin: 6px 0 2px;
+  border-radius: 6px; background: var(--bg-soft); border: 1px solid var(--border);
+}
+.rs-zero {
+  position: absolute; top: 3px; bottom: 3px; width: 1px;
+  background: var(--border-2); transform: translateX(-0.5px);
+}
+.rs-dot {
+  position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%;
+  transform: translate(-50%, -50%); border: 1px solid var(--bg);
+}
+.rs-dot.pos { background: var(--pos); }
+.rs-dot.neg { background: var(--neg); }
+
+.rs-note { margin: 10px 0 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.rs-missing { color: var(--muted); font-size: 14px; }
+
+@media (max-width: 820px) {
+  .rs-arms { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── anchored sections must clear the sticky header ── */
+.view section[id], .view div[id] { scroll-margin-top: 88px; }
+
+/* ── WHAT I GOT WRONG: the research timeline ── */
+.wrong-section .section-head h2 { max-width: 22ch; }
+
+.tl { list-style: none; margin: 0; padding: 0; position: relative; }
+.tl-step { position: relative; display: grid; grid-template-columns: 56px 1fr; gap: 20px; }
+/* the rail is drawn by each step so it stops cleanly at the last one */
+.tl-step::before {
+  content: ""; position: absolute; left: 27px; top: 34px; bottom: 0;
+  width: 1px; background: var(--border);
+}
+.tl-last::before { display: none; }
+
+.tl-n {
+  width: 56px; height: 34px; display: flex; align-items: center;
+  justify-content: center; font-family: var(--font-mono); font-size: 13px;
+  font-weight: 700; color: var(--faint); letter-spacing: 0.06em;
+  border: 1px solid var(--border-2); border-radius: 999px;
+  background: var(--bg); position: relative; z-index: 1;
+}
+.tl-body { padding-bottom: 30px; min-width: 0; }
+.tl-body h3 { margin: 5px 0 8px; font-size: 18px; letter-spacing: -0.015em; }
+.tl-body p { margin: 0 0 8px; color: var(--muted); line-height: 1.7; max-width: 68ch; }
+
+.tl-fig {
+  font-family: var(--font-mono); font-weight: 700; color: var(--text);
+  white-space: nowrap;
+}
+.tl-fig.pos { color: var(--pos); }
+.tl-fig.neg { color: var(--neg); }
+
+.tl-src { font-size: 12px; color: var(--faint); font-family: var(--font-mono); }
+.tl-src a { color: var(--faint); text-decoration: none; border-bottom: 1px solid var(--border-2); }
+.tl-src a:hover, .tl-src a:focus-visible { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+/* ── REPRODUCE ── */
+.repro-grid {
+  display: grid; gap: 18px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start;
+}
+
+.repro-steps { margin: 0; padding: 0; list-style: none; counter-reset: rp; }
+.repro-steps, .repro-side { min-width: 0; }
+.repro-steps li { min-width: 0; }
+.repro-steps li {
+  counter-increment: rp; position: relative;
+  padding: 14px 0 14px 40px; border-top: 1px solid var(--border);
+}
+.repro-steps li:first-child { border-top: 0; padding-top: 0; }
+.repro-steps li::before {
+  content: counter(rp, decimal-leading-zero);
+  position: absolute; left: 0; top: 15px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--faint);
+}
+.repro-steps li:first-child::before { top: 1px; }
+.repro-steps li > code {
+  display: block; font-family: var(--font-mono); font-size: 13px;
+  color: var(--volt); background: var(--bg-soft); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 11px; margin-bottom: 7px;
+  overflow-x: auto; white-space: pre;
+}
+.repro-steps li > span { display: block; font-size: 13px; color: var(--muted); line-height: 1.6; }
+.repro-steps li > span code {
+  font-family: var(--font-mono); font-size: 12px; color: var(--text);
+  background: none; border: 0; padding: 0;
+}
+.repro-steps a, .repro-check a { color: var(--cyan); text-decoration: none; white-space: nowrap; }
+.repro-steps a:hover, .repro-check a:hover,
+.repro-steps a:focus-visible, .repro-check a:focus-visible { text-decoration: underline; }
+
+.repro-side {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+}
+.repro-side h3 { margin: 0 0 14px; font-size: 15px; }
+.repro-check { list-style: none; margin: 0; padding: 0; }
+.repro-check li { padding: 9px 0 9px 24px; position: relative; border-top: 1px solid var(--border); }
+.repro-check li:first-child { border-top: 0; }
+/* a glyph, not just a colour, so the checklist reads without colour vision */
+.repro-check li::before {
+  content: "\2713"; position: absolute; left: 0; top: 9px;
+  color: var(--pos); font-weight: 700; font-size: 13px;
+}
+.repro-check b { display: block; font-size: 13px; margin-bottom: 2px; }
+.repro-check span { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+
+.repro-warn {
+  margin: 16px 0 0; padding: 12px 14px; border-radius: 10px;
+  background: var(--bg-soft); border: 1px solid var(--border);
+  border-left: 3px solid var(--volt);
+  font-size: 12.5px; color: var(--muted); line-height: 1.65;
+}
+.repro-warn b { color: var(--text); }
+
+@media (max-width: 820px) {
+  .repro-grid { grid-template-columns: minmax(0, 1fr); }
+  .tl-step { grid-template-columns: 40px 1fr; gap: 14px; }
+  .tl-step::before { left: 19px; }
+  .tl-n { width: 40px; height: 28px; font-size: 11px; }
+  .tl-body h3 { font-size: 16px; }
+}
+
+/* ── WHAT I LEARNED ── */
+.learned-grid { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.learned-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+}
+.learned-n {
+  font-family: var(--font-mono); font-size: 11px; color: var(--faint);
+  letter-spacing: 0.1em; margin-bottom: 10px;
+}
+.learned-card h3 {
+  margin: 0 0 10px; font-size: 17px; line-height: 1.35; letter-spacing: -0.015em;
+}
+.learned-card p { margin: 0; font-size: 14px; line-height: 1.7; color: var(--muted); }
+.lr-fig { font-family: var(--font-mono); font-weight: 700; color: var(--text); white-space: nowrap; }
+.lr-fig.pos { color: var(--pos); }
+.lr-fig.neg { color: var(--neg); }
+
+@media (max-width: 820px) { .learned-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* the out-of-distribution probe states what it is before it runs */
+.ood-note {
+  margin: 4px 0 12px; padding: 12px 14px; border-radius: 10px;
+  background: var(--bg-soft); border: 1px solid var(--border);
+  font-size: 13px; line-height: 1.65; color: var(--muted); max-width: 80ch;
+}
+.ood-note b { color: var(--text); }

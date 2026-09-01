@@ -4,6 +4,7 @@
 measured — with financial markets as a hard, non-stationary testbed.*
 
 [![CI](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/ci.yml/badge.svg)](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/ci.yml)
+[![Browser smoke](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/smoke.yml/badge.svg)](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/smoke.yml)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-d4ff3f.svg)](LICENSE)
@@ -17,7 +18,12 @@ different actions, push the agent onto distributions it never trained on, and
 re-run the paper's own statistics with your own parameters. Every experiment gets
 an id and a reproducibility receipt, and any of them can be replayed.
 
-[![RL-Trader live demo](docs/assets/og.png)](https://rl-for-crypto-and-stocks.vercel.app/)
+[![RL-Trader lab — nine experiments, recorded live against the backend](docs/assets/lab-demo.gif)](https://rl-for-crypto-and-stocks.vercel.app/#lab)
+
+<sub>Recorded by `tools/make_demo.py`, which drives the real page in headless
+Chromium against a running backend. Every figure in it was computed during the
+capture — including the frame where the agent is beaten by all four naive
+baselines.</sub>
 
 ## Abstract
 
@@ -33,8 +39,10 @@ market regimes; **(2)** how badly does an RL agent overfit a single price trajec
 and does **domain randomization** fix it; and **(3)** does an apparent out-of-sample
 edge survive **multi-seed significance testing**? The headline result is negative and
 that is the point: on real markets the agent has **no seed-robust edge over
-buy-and-hold**, and the framework's own significance tooling catches a single-seed
-"+275%" run as a false positive. In doing so the project independently reproduces, in
+buy-and-hold**, and the framework's own significance tooling is what caught it: an
+earlier build of this study published the crypto agent at +275% (commit `d4c0ef9`),
+and that run survived neither reseeding nor a two-month extension of the evaluation
+window. In doing so the project independently reproduces, in
 a new domain, the central methodological finding of Henderson et al. (2018), *Deep
 Reinforcement Learning that Matters* — that single-run RL evaluations are unreliable —
 and quantifies the memorization-vs-generalization gap that domain randomization closes
@@ -68,21 +76,32 @@ out-of-sample. Trained on randomized paths, it generalizes:
 
 ![Domain randomization ablation](docs/assets/fig_ablation.png)
 
-**Measured like a researcher — across seeds, not one lucky run.** On one favorable
-seed the crypto agent looks like it crushes buy-&-hold (+275% vs. +19%, winning 4 of
-6 coins — the run the dashboard shows). The professional move is to repeat the whole
-walk-forward across many seeds and put a confidence interval + significance test on
-it:
+**Measured like a researcher — across seeds, not one lucky run.** An earlier build
+of this study published the crypto agent at +275% against buy-&-hold's +19% (commit
+`d4c0ef9`), winning 4 of 6 coins. The professional move is not to ship that but to
+repeat the whole walk-forward across many seeds and put a confidence interval and a
+significance test on it:
 
-| Market | Agent return (95% CI, 5 seeds) | vs. buy-&-hold | Verdict |
+<!-- BEGIN GENERATED: significance-brief -->
+| Market | Agent return (95% CI, seeds) | Buy & hold | Verdict |
 |---|---:|---:|---|
-| Crypto | **−2.7%** `[−31%, +27%]` | +20% | indistinguishable (p ≈ 0.97) |
-| Stock | **−19%** `[−29%, −7%]` | +260% | significantly **worse** (p ≈ 0.002) |
+| Crypto | **+79.7%** `[+1%, +163%]` | +33% | indistinguishable (p = 0.82) |
+| Stock | **−21.5%** `[−29%, −15%]` | +240% | significantly **worse** (p = 0.0021) |
+<!-- END GENERATED: significance-brief -->
 
-The crypto confidence interval straddles zero — the +275% run sits in the lucky
-right tail, not the centre. **There is no reliable, seed-robust edge on real
-markets**, exactly as weak-form market efficiency predicts. A naive project ships
-the lucky backtest; `tools/real_significance.py` is what catches it.
+Read the spread, not the mean. The individual seeds returned:
+
+<!-- BEGIN GENERATED: seed-spread -->
+- **Stock** — −20.9%, −23.6%, −12.2%, −14.5%, −36.5%
+- **Crypto** — +225.5%, +135.0%, −3.4%, −28.8%, +70.1%
+<!-- END GENERATED: seed-spread -->
+
+One crypto seed more than tripled capital while another lost money, on identical
+code and identical data. The crypto mean is positive, but the paired test against
+buy-&-hold across the held-out pairs cannot tell the two apart, and on equities the
+agent is significantly *worse* than simply holding. **There is no reliable,
+seed-robust edge on real markets**, as weak-form market efficiency predicts. A naive
+project ships the lucky backtest; `tools/real_significance.py` is what catches it.
 
 ![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
 
@@ -139,8 +158,11 @@ itself a research skill. The experiments are designed as concrete instances of:
 - **Evaluation rigor / the reproducibility crisis in deep RL.** Henderson et al.,
   *Deep Reinforcement Learning that Matters* (AAAI 2018), showed that deep-RL results
   swing wildly across random seeds and that single-run numbers are unreliable. RQ3
-  reproduces exactly this in a financial domain: a "+275%" single-seed run collapses
-  to a confidence interval straddling zero across 5 seeds. *(See [RESULTS §5](RESULTS.md).)*
+  reproduces exactly this in a financial domain: an earlier published +275%
+  single-seed run did not survive reseeding — across 5 seeds the individual
+  returns span more than an order of magnitude, and the agent is not
+  distinguishable from buy-and-hold.
+  *(See [RESULTS §5](RESULTS.md).)*
 - **Generalization & overfitting in RL.** Training and testing on the same instance
   overstates performance (Cobbe et al., *Quantifying Generalization in RL*, ICML 2019).
   **Domain randomization** — the sim-to-real technique of Tobin et al. (IROS 2017) —
@@ -426,15 +448,19 @@ cost-and-slippage environment — so any edge has to be real.
 
 The site in [`docs/`](docs/) is a **laboratory**, not a slide deck. It is deployed
 at **[rl-for-crypto-and-stocks.vercel.app](https://rl-for-crypto-and-stocks.vercel.app/)**
-and its five panels are the four research questions made runnable.
+and its panels are the research questions made runnable.
 
 | Panel | What you can do | Live? |
 |---|---|---|
+| **Signal or Noise?** | Before testing the agent, test yourself: tell charts carrying the agent's training-time autocorrelation from pure random walks, under a design where volatility and drift are standardised away. Scored with an exact binomial test, beside a power analysis and a one-line statistical rule run on the same charts. | ✅ live |
+| **Your Turn** | Trade the same bars the agent trades, through the same environment and cost model, one bar at a time with no lookahead — then get scored against the agent and against buy-&-hold over exactly the bars you traded. | ✅ live |
 | **Agent Playground** | Configure market, data source, capital, costs, reward, shorting — then run a real episode and scrub it bar by bar against buy-&-hold. | ✅ live |
-| **Agent X-Ray** | At any bar, read the actual observation → policy → action → reward → position chain, all 28 features grouped as the pipeline defines them, plus the 20-bar window as a heatmap. | ✅ live |
+| **Agent X-Ray** | At any bar, read the actual observation → policy → action → reward → position chain, all 28 features grouped as the pipeline defines them, plus the 20-bar window as a heatmap — and an occlusion pass ranking which of those inputs actually move the action. | ✅ live |
 | **Can You Break It?** | The real domain-randomization ablation (Agent A vs Agent B) with per-seed points and CIs, plus a live shift test that drops the deployed policy onto controlled synthetic regimes. | mixed — see below |
+| **Walk-Forward** | Disjoint chronological folds from the research code's own splitter, each scaled on its training rows alone, with the deployed policy scored on every out-of-sample block — plus a second pass with the scaler fit on everything, measuring what that shortcut costs. | mixed — see below |
+| **Anything There?** | The surrogate-data falsification test: shuffle a series' returns and buy-&-hold is unchanged while every pattern is destroyed. Run with a positive control first, so the real arm's null actually means something. | precomputed — both arms are training runs |
 | **Real or Luck?** | The published single-seed headline beside the five-seed distribution, with the bootstrap and permutation machinery re-runnable at your own confidence level and resample count. | mixed — see below |
-| **Notebook** | Every experiment this session, with its config, receipt, and a Reproduce button that replays it exactly. | ✅ live |
+| **Notebook** | Every experiment this session, with its config, receipt, pre-registered prediction, and a Reproduce button that replays it exactly. | ✅ live |
 
 ### What is live, and what is not — and why
 
@@ -460,6 +486,215 @@ omitted and labelled, never filled in with a plausible number. The clearest
 example: the deployed policy archives contain the actor but **no critic head**,
 so the X-Ray's value slot reads *"not exported"* instead of showing an invented
 estimate.
+
+### What the agent is actually reading
+
+The X-Ray showed all 563 inputs but never said which mattered. An occlusion pass
+now answers that live: hold the observation fixed, replace one input with an
+uninformative baseline — a feature by its mean over the series, an account scalar
+by its value at reset — and measure how far the deterministic target position
+moves. Because a feature occupies a *column* of the flattened window, occluding
+it removes all 20 bars of that indicator, not one cell.
+
+Measured on 600-bar momentum paths, the answer was not what I expected — and it
+is less stable than a ranked bar chart makes it look:
+
+<!-- BEGIN GENERATED: attribution-table -->
+| | Strongest inputs | Largest account-state effect |
+|---|---|---:|
+| **Stock** | `high_low_range` 0.22 · `vol_ratio` 0.21 · `rsi_14` 0.21 | 0.027 |
+| **Crypto** | `high_120_dist` 0.21 · `return_120` 0.18 · `atr_norm` 0.17 | 0.025 |
+
+*600-bar momentum paths, seed 1, 80 sampled bars. Fraction of equity: 0.22 means occluding the input moves the requested position by 22 percentage points of exposure.*
+<!-- END GENERATED: attribution-table -->
+
+Both policies lean on **range, volatility and long-horizon position** features
+rather than the short-horizon momentum an intuitive reading would expect. And the
+three account scalars move the action by roughly an order of magnitude less than
+the top market features: these agents barely track their own book.
+
+The instability is worth stating plainly. These figures were first measured
+against the previous policy archives; re-measuring against the rebuilt ones left
+the magnitudes almost unchanged but **changed which feature came first in both
+markets** — stock moved from `high_120_dist` to `high_low_range`, crypto from
+`vol_regime` to `high_120_dist`. The top few features are separated by less than
+the run-to-run noise, so the ranking's *order* should not be read as a finding.
+What survives re-measurement is the shape of the answer: range and volatility
+inputs dominate, momentum does not, and account state barely registers. This is
+why the panel calls the measurement local sensitivity rather than importance.
+
+The panel ships its own limits alongside the chart, because a ranked bar chart is
+exactly the kind of output a reader takes for causation:
+
+- Occlusion is **local sensitivity, not causal importance**.
+- The 28 features are correlated, so a feature's information survives its own
+  removal through the others. Contributions are understated and a low bar is not
+  proof of irrelevance.
+- Replacing an input with its mean can produce a vector no real market would
+  generate.
+
+It does earn one clean structural check: on synthetic paths the four cross-asset
+features have no reference index and come back at exactly zero, which the panel
+names rather than leaving as four unexplained flat bars.
+
+### Is there anything there to find?
+
+Every other experiment shows the agent failing to beat buy-and-hold. None of them
+can say **why** — a weak agent and an empty market look identical from the
+outside. `tools/surrogate_test.py` separates them, using surrogate-data testing
+(Theiler et al. 1992): randomly permute a series' daily log returns and
+re-integrate. A sum is permutation-invariant, so the price ends in *exactly* the
+same place and buy-and-hold is identical — but autocorrelation, momentum and
+volatility clustering are gone. Train the same recipe on both.
+
+**The positive control is the half that matters**, and it is presented first,
+because a null from a test with unproven power says nothing:
+
+| Arm | Market | Structured | Surrogate | Difference | p |
+|---|---|---:|---:|---:|---:|
+| Synthetic (control) | stock | +3.4% | −42.7% | **+46.1%** | 0.0006 |
+| Synthetic (control) | crypto | +99.0% | −65.3% | **+164.3%** | 0.0032 |
+| Real | stock | −297.4% | −196.9% | −100.5% | 0.498 |
+| Real | crypto | −5.8% | −1309.2% | +1303.5% | 0.156 |
+
+On synthetic data with a planted AR(1) signal the agent shows a clear edge and
+loses it under shuffling, in both markets. That licenses reading the real arm:
+**the agent does no better on real price history than on the same returns in a
+random order.** On this evidence the flat performance is the market's, not the
+agent's — which is what weak-form efficiency predicts, arrived at from the
+inside.
+
+The crypto real row is instructive on its own: a +1303-point difference that is
+*not* significant, because the surrogate arm's interval runs from −2660% to
+−146%. A large point estimate with no power is not a result, and the panel says
+so rather than quoting the headline number.
+
+These artifacts predate per-arm value recording, so they carry summary
+statistics only. Rather than re-deriving a p-value from a mean, the API declares
+them non-re-analysable and `tools/surrogate_test.py` now records the per-arm
+values and `n_pairs` so future regenerations can be re-analysed live.
+
+### Does it beat a coin flip?
+
+"Beats buy-and-hold" is the bar this project discusses; it is not the first bar a
+skeptical reader has in mind. Every rollout in the Playground now scores the
+agent against the naive strategies from `rl_trader.evaluation.baselines` on the
+same series, through the same environment, paying the same costs.
+
+Two choices decide whether that table means anything. **The random arm is 24
+independent draws**, reported as a mean with its full observed range — quoting
+one random run would be exactly the single-sample mistake this project exists to
+criticise — and the agent is only described as beating it when it clears the
+whole range, not the mean. **And there are two buy-and-holds**: the cost-free
+benchmark drawn on the charts, and the strategy that goes through the
+environment and pays the entry cost. Both are shown and labelled, because
+quietly swapping one for the other flatters or penalises the agent for no stated
+reason.
+
+The agent's row is highlighted but never sorted to the top. On many paths it
+finishes last — behind a moving-average crossover, behind holding cash, and
+behind random positions — and that is the point of running the comparison.
+
+### Walk-forward, and the price of a leaky scaler
+
+The leakage controls were the least visible thing in the project: a claim in this
+README and a few lines in `rl_trader/evaluation/walk_forward.py`. The panel runs
+that same splitter — imported, not reimplemented — over a real series, fits a
+**separate feature scaler on each fold's training rows**, and scores the deployed
+policy on every out-of-sample block.
+
+**It is not a retrained walk-forward, and it says so on every response.** This
+backend has no PyTorch, so the policy is fixed across folds. What that measures is
+still worth seeing: on a 1,200-bar momentum path with four folds, one unchanged
+policy's excess return over buy-and-hold ran from **−21.7% to +18.7%** across
+chronological blocks. A single backtest would have reported any one of those.
+
+Then it runs the identical folds a second time with the scaler fit on the whole
+series, test block included — the standard mistake — and reports the difference
+fold by fold. Same policy, same prices, only the scaler's fitting window changes.
+On that series the largest single-fold gap was **4.1 percentage points**. Nothing
+about that is asserted in advance; it is whatever it comes out as, and a test
+fails if the two arms ever come back identical, because then the comparison would
+be showing nothing and should not be displayed.
+
+The aggregate carries the same resolution warning as everything else: a sign test
+over four folds cannot produce a p-value below `2/2⁴ = 0.125`, so that design
+cannot reach 0.05 whatever the effect size.
+
+### The human baseline
+
+A visitor can read every finding here and still assume they personally would have
+done better. So let them try, on the identical series, through the identical
+environment, paying the identical costs.
+
+**No lookahead is a property of the protocol, not a promise in the copy.** The
+price series lives on the server. A session hands out the warm-up window and then
+exactly one new bar per decision, so the page never holds a price the visitor has
+not already traded through — there is nothing to read ahead in. Sessions are
+in-memory, capped, and expire after 30 minutes; the API says so rather than
+implying anything durable.
+
+**It is deliberately not a like-for-like contest, and every payload says so.** The
+visitor sees a price chart and their own account; the agent sees 28 standardised
+indicators over a 20-bar window plus three account scalars. The comparison that
+*is* fair is the third line — buy-and-hold over the same bars through the same
+cost model — which is the benchmark this whole project is about. The verdict
+leads with that rather than the head-to-head, and the usual outcome, that
+neither party clears it, is the finding rather than a disappointment.
+
+### Pre-registration
+
+Every panel here lets you run something and then read a number, which is exactly
+the order in which researchers talk themselves into results. So the notebook lets
+you commit first: state the question, pick a prediction, and the backend stamps
+it onto the experiment record *before* the worker thread starts.
+
+Two details make it a real commitment rather than a caption:
+
+- **There is no endpoint that edits it.** Changing your mind after seeing the
+  outcome means creating a new experiment with a new id, and the notebook lists
+  both. The record of what you actually predicted survives.
+- **The judging rule is a module constant, not a request field.** `MATCH_BAND` is
+  ±2 percentage points of buy-and-hold, published in `/api/meta`, shown in the
+  form before you choose, restated on the result, and applied identically to
+  every prediction. You can disagree with the band; you cannot move it after the
+  fact. A test asserts that passing `match_band` in the request does nothing.
+
+A kind with no single agent-vs-benchmark number — a counterfactual, say —
+records the prediction and reports `scorable: false` rather than scoring it
+against a different quantity. And a hit is worded as weak evidence, because one
+run agreeing with one prediction is one run.
+
+### Testing the reader, not just the agent
+
+The first panel is the project's thesis turned on the visitor. Half the charts
+are drawn with the AR(1) return autocorrelation the agents were **trained
+against** (`market_regime`); half are the same generator with `momentum = 0`. A
+"real" condition instead pits disjoint slices of a ticker's own history against
+those *same slices with their daily returns permuted* — a surrogate that keeps
+the entire marginal distribution (mean, variance, skew, fat tails) and destroys
+only the ordering, so the only thing left to see is time structure.
+
+Three design choices make the result mean something:
+
+- **Confound control.** Every chart is standardised to an identical return
+  volatility and given a drift drawn from one shared distribution. Standardising
+  is affine, so it leaves autocorrelation exactly intact while erasing every
+  other cue. Classes are exactly balanced, then shuffled.
+- **The key never leaves the server.** A quiz is a deterministic function of
+  `(difficulty, source, seed, n_charts)`; scoring rebuilds it and compares. There
+  is no answer to read out of the page.
+- **The inference is exact and honestly underpowered.** Scoring reports an exact
+  two-sided binomial test, the floor `2 / 2**n` the design can attain at all, and
+  its **power**: at n = 8, a genuinely 70%-accurate observer is detected under
+  10% of the time. Failing to reach significance is not evidence of no skill —
+  the same distinction the seed-level tests below turn on.
+
+The measured effect is the point: the "trending" class has a lag-1 return
+autocorrelation of roughly **+0.11** against **−0.02** for the control. Real,
+exploitable in principle, and invisible to the eye — while the one-line
+autocorrelation rule reported beside your score typically gets 6 of 8. That gap
+is the whole argument for measuring instead of looking.
 
 ### One statistical detail the lab is careful about
 
@@ -492,12 +727,21 @@ paper.
 | `GET /api/regimes` | Synthetic distribution-shift regimes |
 | `GET /api/datasets` | Real committed per-seed and per-ticker datasets, with provenance |
 | `GET /api/generalization` | The real single-path vs domain-randomized ablation |
+| `GET /api/surrogate` | The surrogate-data falsification test, both arms, with provenance |
+| `GET /api/perception/quiz` | A balanced signal-vs-noise chart test, served without its answer key |
+| `POST /api/perception/score` | Exact binomial scoring of a submission, plus power and a statistical reference |
 | `POST /api/statistics` | Live bootstrap / permutation inference over that real data |
 | `POST /api/experiments` | Create an experiment (async; returns an id immediately) |
 | `GET /api/experiments` | Session history |
 | `GET /api/experiments/<id>` | Status, progress, result, receipt |
 | `GET /api/experiments/<id>/config` | The exact config needed to reproduce it |
 | `GET /api/experiments/<id>/xray?step=` | The full observation at one bar |
+| `GET /api/experiments/<id>/attribution` | Occlusion attribution: which inputs move the action |
+| `POST /api/experiments` `kind=walk_forward` | Rolling folds, per-fold scaling, and the leakage comparison |
+| `POST /api/experiments` `prediction=` | Pre-register a prediction; the backend stamps it before the run and scores it after |
+| `POST /api/human/start` | Open a human-baseline session (the series stays server-side) |
+| `POST /api/human/<sid>/step` | One decision; releases exactly one new bar |
+| `POST /api/human/<sid>/finish` | Score it against the agent and buy-&-hold on the same bars |
 | `GET /api/results`, `/api/live`, `/api/tickers` | The original dashboard endpoints (unchanged) |
 
 ### Run an experiment

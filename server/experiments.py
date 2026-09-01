@@ -35,6 +35,8 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
+from . import prereg
+
 MAX_EXPERIMENTS = 200
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -99,6 +101,10 @@ class Experiment:
     # description of the environment. Never generated on their behalf: an
     # invented hypothesis would be the notebook's version of a fabricated result.
     question: Optional[str] = None
+    # A prediction registered *before* the runner started. Scored by the backend
+    # from the result, never editable afterwards: changing your mind means a new
+    # experiment with a new id, and the notebook lists both.
+    prediction: Optional[Dict[str, Any]] = None
 
     # -- serialisation ---------------------------------------------------- #
     def summary(self) -> dict:
@@ -117,6 +123,7 @@ class Experiment:
             "error": self.error,
             "has_result": self.result is not None,
             "question": self.question,
+            "prediction": self.prediction,
         }
 
     def full(self) -> dict:
@@ -124,6 +131,7 @@ class Experiment:
         out = self.summary()
         out["result"] = self.result
         out["receipt"] = self.receipt()
+        out["prediction_outcome"] = prereg.evaluate(self.prediction, self.kind, self.result)
         return out
 
     def receipt(self) -> dict:
@@ -141,6 +149,7 @@ class Experiment:
             ),
             "config": self.config,
             "question": self.question,
+            "prediction": self.prediction,
             "provenance": self.provenance,
             "storage": "ephemeral — the API keeps experiments in memory only",
         }
@@ -173,8 +182,13 @@ class ExperimentManager:
         runner: Callable[["Experiment"], Dict[str, Any]],
         provenance: Optional[Dict[str, Any]] = None,
         question: Optional[str] = None,
+        prediction: Optional[Dict[str, Any]] = None,
     ) -> Experiment:
-        """Register an experiment and start it on a worker thread."""
+        """Register an experiment and start it on a worker thread.
+
+        ``prediction`` is stamped onto the record here, before the worker starts,
+        which is what makes it a pre-registration rather than a caption.
+        """
         with self._lock:
             exp = Experiment(
                 id=self._new_id(),
@@ -182,6 +196,7 @@ class ExperimentManager:
                 config=config,
                 provenance=provenance or {},
                 question=question,
+                prediction=prediction,
             )
             self._experiments[exp.id] = exp
             self._evict_locked()

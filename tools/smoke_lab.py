@@ -25,6 +25,7 @@ import argparse
 import functools
 import http.server
 import os
+import re
 import socketserver
 import sys
 import threading
@@ -148,6 +149,108 @@ def run(api: str, port: int, shot: str | None) -> None:
               "LIVE" in page.inner_text("#lab-api-status").upper(),
               page.inner_text("#lab-api-status").strip())
 
+        # ── Signal or Noise? (the default panel) ───────────────────────────
+        print("\nSignal or Noise?")
+        page.wait_for_function(
+            "() => document.querySelectorAll('.pc-card').length > 0", timeout=60000
+        )
+        n_cards = page.eval_on_selector_all(".pc-card", "els => els.length")
+        check("quiz charts rendered", n_cards == 12, f"{n_cards} charts")
+        check("the prompt comes from the backend",
+              len(page.inner_text("#pc-prompt")) > 20, page.inner_text("#pc-prompt")[:60])
+
+        painted = page.eval_on_selector(
+            "#pc-cv-0",
+            "el => { const c = el.getContext('2d');"
+            "const d = c.getImageData(0,0,el.width,el.height).data;"
+            "let n=0; for (let i=3;i<d.length;i+=4) if (d[i]>0) n++; return n; }",
+        )
+        check("sparklines painted", painted > 100, f"{painted} px")
+        # The answer key must never be in the page — that is the whole design.
+        check("no answers in the served payload",
+              "positive_class" not in page.eval_on_selector(
+                  "#pc-grid", "el => el.innerHTML"))
+        check("submit is blocked until every chart is called",
+              page.eval_on_selector("#pc-submit", "el => el.disabled"))
+
+        # Answer everything "trending" — a fixed strategy, so the score is
+        # deterministic: exactly the n/2 charts that really are trending.
+        page.eval_on_selector_all(
+            '.pc-seg button[data-val="1"]', "els => els.forEach(b => b.click())"
+        )
+        check("progress tracks the answers",
+              "12 of 12" in page.inner_text("#pc-progress"), page.inner_text("#pc-progress"))
+        page.click("#pc-submit")
+        page.wait_for_selector("#pc-result:not([hidden])", timeout=30000)
+        time.sleep(0.4)
+
+        score = page.inner_text(".pc-score-n")
+        check("balanced classes make an all-one-answer sheet score n/2",
+              score.startswith("6"), score.replace("\n", ""))
+        check("a verdict is shown", len(page.inner_text(".pc-verdict")) > 40)
+        check("the power table is rendered",
+              page.eval_on_selector_all(".pc-power tbody tr", "els => els.length") == 3)
+        check("the statistical reference is shown",
+              "of 12" in page.inner_text(".pc-ref-score"), page.inner_text(".pc-ref-score"))
+        check("the truth is revealed per chart",
+              page.eval_on_selector_all(".pc-card.is-right, .pc-card.is-wrong",
+                                        "els => els.length") == 12)
+        check("the design is on the receipt",
+              page.eval_on_selector_all("#pc-receipt dt", "els => els.length") >= 6)
+
+        # ── Your Turn (human baseline) ─────────────────────────────────────
+        print("\nYour Turn")
+        page.click('.lab-tab[data-panel="human"]')
+        page.wait_for_function(
+            "() => document.getElementById('hm-source').options.length >= 4", timeout=30000
+        )
+        page.eval_on_selector(
+            "#hm-steps", "el => { el.value = 10; el.dispatchEvent(new Event('input')); }"
+        )
+        page.click("#hm-start")
+        page.wait_for_selector("#hm-play:not([hidden])", timeout=60000)
+        time.sleep(0.4)
+
+        check("the asymmetry is stated before you start",
+              "not a like-for-like" in page.inner_text("#hm-info"))
+        check("no-lookahead is stated in the panel",
+              "read ahead" in page.inner_text("#hm-play-note"))
+        painted = page.eval_on_selector(
+            "#hm-chart",
+            "el => { const c = el.getContext('2d');"
+            "const d = c.getImageData(0,0,el.width,el.height).data;"
+            "let n=0; for (let i=3;i<d.length;i+=4) if (d[i]>0) n++; return n; }",
+        )
+        check("the revealed history is drawn", painted > 500, f"{painted} px")
+
+        # Trade every bar. The chart must grow by exactly one point per decision,
+        # which is the no-lookahead claim as seen from the browser.
+        page.click('.hm-quick button[data-val="100"]')
+        for _ in range(10):
+            page.click("#hm-trade")
+            time.sleep(0.35)
+        page.wait_for_selector("#hm-result:not([hidden])", timeout=60000)
+        time.sleep(0.5)
+
+        rows = page.eval_on_selector_all("#hm-scores tbody tr", "els => els.length")
+        check("you, the agent and buy-and-hold are all scored", rows == 3, f"{rows} rows")
+        painted = page.eval_on_selector(
+            "#hm-result-chart",
+            "el => { const c = el.getContext('2d');"
+            "const d = c.getImageData(0,0,el.width,el.height).data;"
+            "let n=0; for (let i=3;i<d.length;i+=4) if (d[i]>0) n++; return n; }",
+        )
+        check("three equity curves painted", painted > 800, f"{painted} px")
+        check("the verdict leads with the benchmark",
+              "buy-and-hold" in page.inner_text("#hm-verdict"),
+              page.inner_text("#hm-verdict")[:70])
+        check("one run is labelled a single sample",
+              "single sample" in page.inner_text("#hm-caveats"))
+
+        # ── Agent Playground ───────────────────────────────────────────────
+        print("\nAgent Playground")
+        page.click('.lab-tab[data-panel="playground"]')
+        page.wait_for_selector("#pg-mode", state="visible", timeout=20000)
         page.click('#pg-mode button[data-val="synthetic"]')
         page.wait_for_function(
             "() => document.getElementById('pg-regime').options.length >= 4", timeout=30000
@@ -186,6 +289,20 @@ def run(api: str, port: int, shot: str | None) -> None:
         time.sleep(0.4)
         check("scrubbing updates the readout", page.inner_text("#read-equity") != before)
         check("step label tracks the cursor", "/" in page.inner_text("#pg-step"))
+        # Agent vs the naive strategies, computed on the same series.
+        check("baselines are scored on the episode",
+              page.eval_on_selector_all("#pg-bl-table tbody tr", "els => els.length") == 5,
+              f'{page.eval_on_selector_all("#pg-bl-table tbody tr", "els => els.length")} rows')
+        check("the agent's row is marked but not reordered",
+              page.eval_on_selector_all("#pg-bl-table tr.is-agent", "els => els.length") == 1)
+        check("the random arm shows a range, not one draw",
+              "draws" in page.inner_text("#pg-bl-table"))
+        check("both buy-and-holds are distinguished",
+              "cost-free reference" in page.inner_text("#pg-bl-notes"))
+        check("a baseline verdict is stated",
+              len(page.inner_text("#pg-bl-verdict")) > 40,
+              page.inner_text("#pg-bl-verdict")[:70])
+
         check("no page errors", not errors, "; ".join(errors[:2]))
 
         # ── Agent X-Ray ────────────────────────────────────────────────────
@@ -215,12 +332,23 @@ def run(api: str, port: int, shot: str | None) -> None:
         )
         check("feature-window heatmap painted", painted > 5000, f"{painted} px")
 
-        # The critic genuinely is not in the deployed archives: it must be
-        # declared absent, never filled in with a plausible number.
+        # The critic's presence depends on which generation of archive is
+        # deployed, so this asserts the *honesty rule* rather than one outcome:
+        # an archive with a critic must show a real number, and one without must
+        # say so rather than filling in a plausible-looking estimate.
+        has_critic = page.evaluate(
+            "async () => { const r = await fetch(window.RL_API + '/api/meta');"
+            "const m = await r.json();"
+            "return Object.values(m.policies).every(p => p.has_value_head); }"
+        )
         absent = page.eval_on_selector("#xr-value-node", "el => el.classList.contains('is-absent')")
         value_text = page.inner_text("#xr-value").strip().lower()
-        check("missing critic is declared, not faked",
-              absent and "not exported" in value_text, value_text)
+        if has_critic:
+            ok = (not absent) and any(c.isdigit() for c in value_text)
+            check("an exported critic shows a real value", ok, value_text)
+        else:
+            ok = absent and "not exported" in value_text
+            check("a missing critic is declared, not faked", ok, value_text)
 
         # Synthetic paths have no reference index, so 4 features are inert.
         inert = page.eval_on_selector_all(".xr-feat.is-inert", "els => els.length")
@@ -233,6 +361,40 @@ def run(api: str, port: int, shot: str | None) -> None:
         )
         time.sleep(1.2)
         check("X-Ray scrub moves the decision", page.inner_text("#xr-action") != act_before)
+
+        # ── What is it reading? (occlusion attribution) ────────────────────
+        print("\nWhat is it reading?")
+        page.click("#attr-run")
+        page.wait_for_selector("#attr-out:not([hidden])", timeout=60000)
+        time.sleep(0.5)
+
+        n_rows = page.eval_on_selector_all("#attr-features .attr-row", "els => els.length")
+        check("every feature is attributed", n_rows == 28, f"{n_rows} rows")
+        check("account scalars are attributed separately",
+              page.eval_on_selector_all("#attr-account .attr-row", "els => els.length") == 3)
+        check("feature groups are summarised",
+              page.eval_on_selector_all(".attr-chip", "els => els.length") == 8)
+
+        # Ranked strongest-first, and the top bar must be a real effect.
+        vals = page.eval_on_selector_all(
+            "#attr-features .attr-val", "els => els.map(e => parseFloat(e.textContent))"
+        )
+        check("attribution is ranked", vals == sorted(vals, reverse=True))
+        check("occlusion moves the policy", vals[0] > 0.01, f"top delta {vals[0]}")
+
+        check("structurally inert features are named",
+              "rel_return_5" in page.inner_text("#attr-dead"),
+              page.inner_text("#attr-dead")[:60])
+        caveats = page.inner_text("#attr-caveats").lower()
+        check("the method's limits travel with the chart",
+              "not causal" in caveats and "correlated" in caveats)
+
+        # Switching scope must re-render the measurement already taken, not
+        # quietly run a different one behind the same label.
+        page.select_option("#attr-scope", "local")
+        time.sleep(0.5)
+        check("the local view is labelled as a single bar",
+              "one point in" in page.inner_text("#attr-caveats"))
 
         # ── What if? (counterfactual) ──────────────────────────────────────
         print("\nWhat if?")
@@ -267,8 +429,10 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("verdict names the failure",
               "lies" in page.inner_text("#gen-verdict").lower(),
               page.inner_text("#gen-verdict")[:70].strip())
+        # Scoped to the panel: the home-page cards carry the same tag class, and an
+        # unscoped selector silently matches one of those (hidden) instead.
         check("ablation is labelled precomputed",
-              page.is_visible(".tag-precomputed"))
+              page.is_visible("#panel-generalization .tag-precomputed"))
         check("regeneration command shown",
               "ablation_multiseed" in page.inner_text("#gen-receipt"))
 
@@ -293,6 +457,47 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("regimes report realised autocorrelation",
               "autocorr" in page.inner_text("#shift-bars").lower())
 
+        # ── Walk-forward ───────────────────────────────────────────────────
+        print("\nWalk-forward")
+        page.click('.lab-tab[data-panel="walkforward"]')
+        page.wait_for_selector("#wf-run", state="visible", timeout=20000)
+        # Synthetic keeps this off the network and gives every fold enough bars.
+        page.click('#wf-mode button[data-val="synthetic"]')
+        page.wait_for_function(
+            "() => document.getElementById('wf-source').options.length >= 4", timeout=30000
+        )
+        page.click("#wf-run")
+        page.wait_for_selector("#wf-out:not([hidden])", timeout=180000)
+        time.sleep(0.5)
+
+        n_folds = page.eval_on_selector_all("#wf-timeline .wf-row", "els => els.length")
+        check("every fold is drawn", n_folds == 4, f"{n_folds} folds")
+        check("fold results are tabulated",
+              page.eval_on_selector_all("#wf-table tbody tr", "els => els.length") == 4)
+
+        # The methodological claim, checked geometrically: the training block
+        # must end before the test block starts, on every fold.
+        overlaps = page.eval_on_selector_all(
+            "#wf-timeline .wf-row",
+            "els => els.filter(r => {"
+            "const a = r.querySelector('.wf-train'), b = r.querySelector('.wf-test');"
+            "return parseFloat(a.style.left) + parseFloat(a.style.width)"
+            " > parseFloat(b.style.left) + 0.01; }).length",
+        )
+        check("train and test blocks never overlap", overlaps == 0, f"{overlaps} overlapping")
+
+        summary = page.inner_text("#wf-summary")
+        check("fold-to-fold spread is reported",
+              "beat buy-and-hold on" in summary, summary.splitlines()[-1][:70])
+        check("the sign-test floor is disclosed",
+              "cannot produce a p-value below" in summary)
+        check("leakage is measured, not asserted",
+              page.eval_on_selector_all("#wf-leakage tbody tr", "els => els.length") == 4)
+        check("the fixed-policy caveat is shown with the results",
+              "not a retrained walk-forward" in page.inner_text("#wf-caveat"))
+        check("the receipt states how the scaler was fit",
+              "training rows only" in page.inner_text("#wf-receipt"))
+
         # ── Real or luck? ──────────────────────────────────────────────────
         print("\nReal or luck?")
         page.click('.lab-tab[data-panel="seeds"]')
@@ -307,10 +512,36 @@ def run(api: str, port: int, shot: str | None) -> None:
               page.eval_on_selector_all(".vp-card", "els => els.length") == 2)
 
         pair = page.inner_text("#sd-pair")
-        check("single-seed headline shown", "275" in pair, pair.split("\n")[1] if "\n" in pair else pair[:40])
-        check("interval reported as spanning zero", "spans zero" in pair.lower())
-        check("verdict states it does not survive",
-              "does not survive" in page.inner_text("#sd-verdict").lower())
+        # The published single-seed run, whatever it currently is. Pinning the
+        # literal "275" here meant this check could only ever pass against one
+        # build, and it went red the first time the study was legitimately
+        # re-run -- which is the mistake the panel itself is about.
+        # the kicker is upper-cased by CSS, so compare case-insensitively
+        check("the single run is shown beside the many",
+              "what one run says" in pair.lower() and "%" in pair,
+              " / ".join(pair.split("\n")[:2]))
+
+        # The flag and the verdict must agree with the interval they describe.
+        # Whether it contains zero is a property of the build; that the UI tells
+        # the truth about it is not.
+        ci = re.search(r"CI \[\s*([+\u2212-]?[\d.,]+)%\s*,\s*([+\u2212-]?[\d.,]+)%\s*\]", pair)
+        check("the interval is reported at all", ci is not None, pair[-90:])
+        if ci:
+            lo, hi = (float(g.replace("\u2212", "-").replace("+", "").replace(",", ""))
+                      for g in ci.groups())
+            contains_zero = lo <= 0 <= hi
+            says_spans = "spans zero" in pair.lower()
+            check("the zero flag matches the interval",
+                  says_spans == contains_zero,
+                  f"[{lo}, {hi}] flagged spans_zero={says_spans}")
+
+            verdict = page.inner_text("#sd-verdict").lower()
+            says_survives_not = "does not survive" in verdict
+            check("the verdict matches the interval",
+                  says_survives_not == contains_zero,
+                  f"contains_zero={contains_zero} verdict_says_fails={says_survives_not}")
+            check("the verdict quotes the spread it is arguing from",
+                  "luckiest" in verdict or "mean is" in verdict, verdict[:70])
 
         painted = page.eval_on_selector(
             "#sd-hist",
@@ -330,6 +561,47 @@ def run(api: str, port: int, shot: str | None) -> None:
         paper = page.inner_text("#sd-paper")
         check("published ticker-axis test shown", "p-value" in paper.lower())
 
+        # ── Is there anything there? (surrogate test) ──────────────────────
+        print("\nIs there anything there?")
+        page.click('.lab-tab[data-panel="surrogate"]')
+        page.wait_for_selector("#sg-body:not([hidden])", timeout=30000)
+        time.sleep(0.5)
+
+        arms = page.eval_on_selector_all("#sg-arms .panel-card", "els => els.length")
+        check("both arms are rendered", arms == 2, f"{arms} arms")
+        # The positive control must come first: it is what licenses the null.
+        first = page.eval_on_selector("#sg-arms .panel-card h3", "el => el.textContent")
+        check("the positive control is presented first",
+              "control" in first.lower(), first.strip()[:60])
+        rows = page.eval_on_selector_all("#sg-arms tbody tr", "els => els.length")
+        check("every market is shown in both arms", rows == 4, f"{rows} rows")
+        check("results are labelled precomputed",
+              page.eval_on_selector_all("#sg-arms .tag-precomputed", "els => els.length") == 2)
+        check("the regeneration command is published",
+              "tools/surrogate_test.py" in page.inner_text("#sg-arms"))
+
+        verdict = page.inner_text("#sg-verdict")
+        check("the verdict reads both arms together",
+              "has power" in verdict and "real price history" in verdict, verdict[:70])
+        caveats = page.inner_text("#sg-caveats")
+        check("a null is not sold as proof",
+              "not proof of no structure" in caveats)
+        # Whether the committed artifacts can be re-analysed depends on when they
+        # were generated -- older ones recorded only summaries. The receipt has
+        # to say which is true, not one fixed answer, so this asserts the rule in
+        # both directions the way the critic check does.
+        receipt = page.inner_text("#sg-receipt")
+        reanalysable = page.evaluate(
+            "async () => { const r = await fetch(window.RL_API + '/api/surrogate');"
+            "const b = await r.json(); return b.reanalysable; }"
+        )
+        if reanalysable:
+            check("re-analysable artifacts say so",
+                  "recomputed live" in receipt, receipt[-120:])
+        else:
+            check("summary-only artifacts declare their limit",
+                  "summary statistics only" in receipt, receipt[-120:])
+
         # ── Research notebook ──────────────────────────────────────────────
         print("\nResearch notebook")
         page.click('.lab-tab[data-panel="notebook"]')
@@ -343,15 +615,35 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("runs with no stated question say so",
               page.eval_on_selector_all("#nb-list .nb-q.is-unstated", "els => els.length") > 0)
 
-        # Run one with a question of our own.
+        check("the judging rule is published before you predict",
+              "fixed before the run" in page.inner_text("#nb-prereg-rule"),
+              page.inner_text("#nb-prereg-rule")[:60])
+        # "No prediction" has to stay reachable: selecting then re-clicking clears it.
+        page.click('#nb-prediction button[data-val="beats"]')
+        check("a prediction can be selected",
+              page.eval_on_selector("#nb-prediction", "el => el.dataset.value") == "beats")
+        page.click('#nb-prediction button[data-val="beats"]')
+        check("a prediction can be cleared again",
+              page.eval_on_selector("#nb-prediction", "el => el.dataset.value") == "")
+
+        # Run one with a question and a prediction of our own.
         question = "Does the agent survive mean reversion?"
         page.fill("#nb-question", question)
+        page.click('#nb-prediction button[data-val="beats"]')
         page.select_option("#nb-regime", "mean_reversion")
         page.click("#nb-run")
         page.wait_for_selector("#nb-detail-card:not([hidden])", timeout=90000)
         time.sleep(0.8)
 
         detail = page.inner_text("#nb-detail")
+        check("the prediction is on the receipt with its timestamp",
+              "registered 20" in detail, "timestamped")
+        outcome = page.eval_on_selector_all(
+            ".nb-pred-out.is-hit, .nb-pred-out.is-miss", "els => els.length"
+        )
+        check("predicted vs observed is scored", outcome == 1, f"{outcome} blocks")
+        check("the outcome restates the rule it was judged by",
+              "about the same" in page.inner_text(".nb-pred-out"))
         # inner_text returns *rendered* text and .receipt dt is uppercased in CSS,
         # so compare case-insensitively rather than against the source casing.
         lower = detail.lower()
@@ -450,13 +742,23 @@ def run(api: str, port: int, shot: str | None) -> None:
 
         check("home view is the default",
               home.eval_on_selector("#view-home", "el => el.classList.contains('active')"))
-        check("primary CTA leads to the lab",
-              home.eval_on_selector(".hero-cta .btn-primary", "el => el.getAttribute('href')")
-              == "#lab")
+        # The hero leads with the evidence now, not the tour: the primary button
+        # goes to the result section and the lab is the secondary. What matters
+        # is that both targets exist and the lab stays one click away.
+        ctas = home.eval_on_selector_all(
+            ".hero-cta a", "els => els.map(e => e.getAttribute('href'))")
+        check("the hero offers exactly two routes", len(ctas) == 2, str(ctas))
+        # The primary target is an in-page section, so the element must exist --
+        # a hero button scrolling to nothing is the failure worth catching.
+        check("the primary CTA leads to the result section",
+              ctas and ctas[0] == "#result"
+              and home.eval_on_selector_all("#result", "els => els.length") == 1,
+              str(ctas[:1]))
+        check("the lab is still one click from the hero", "#lab" in ctas, str(ctas))
         n_cards = home.eval_on_selector_all(".lab-card", "els => els.length")
-        check("every panel is advertised", n_cards == 5, f"{n_cards} cards")
+        check("every panel is advertised", n_cards == 9, f"{n_cards} cards")
         check("each card declares whether it is live",
-              home.eval_on_selector_all(".lab-card-tag", "els => els.length") == 5)
+              home.eval_on_selector_all(".lab-card-tag", "els => els.length") == 9)
         check("the training caveat is on the home page",
               "training" in home.inner_text(".lab-strip-note").lower())
 
@@ -473,16 +775,25 @@ def run(api: str, port: int, shot: str | None) -> None:
               home.eval_on_selector("#tab-seeds", "el => el.getAttribute('aria-selected')")
               == "true")
 
-        # ARIA tabs keyboard pattern.
+        # ARIA tabs keyboard pattern. Asserted against the tab strip's own order
+        # rather than a hard-coded panel name, so inserting a panel between two
+        # others cannot turn a working keyboard into a red test.
+        next_panel = home.evaluate(
+            "() => { const t = [...document.querySelectorAll('.lab-tab')];"
+            "const i = t.findIndex(e => e.dataset.panel === 'seeds');"
+            "return t[(i + 1) % t.length].dataset.panel; }"
+        )
         home.eval_on_selector("#tab-seeds", "el => el.focus()")
         home.keyboard.press("ArrowRight")
         time.sleep(0.4)
         check("arrow keys move between tabs",
-              home.eval_on_selector("#panel-notebook", "el => el.classList.contains('active')"))
+              home.eval_on_selector(
+                  f"#panel-{next_panel}", "el => el.classList.contains('active')"),
+              f"seeds -> {next_panel}")
         home.keyboard.press("Home")
         time.sleep(0.4)
         check("Home key jumps to the first tab",
-              home.eval_on_selector("#panel-playground", "el => el.classList.contains('active')"))
+              home.eval_on_selector("#panel-perception", "el => el.classList.contains('active')"))
         check("only the selected tab is in the tab order",
               home.eval_on_selector_all(".lab-tab", "els => els.filter(e => e.tabIndex === 0).length")
               == 1)

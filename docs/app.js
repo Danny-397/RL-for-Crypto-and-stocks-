@@ -178,10 +178,37 @@
   const explorer = { market: "stock", sel: null /* per_ticker obj, or null = basket avg */, cursor: 159 };
   const currentMarket = () => DATA.markets[explorer.market];
 
-  const VERDICT = {
-    stock: "Every figure here is the <b>real held-out backtest</b> for the asset you picked — out-of-sample, costs included, no cherry-picking. Held to a multi-seed bar, the stock agent trails the mega-cap bull: across <b>5 seeds</b> it averages <b>−19%</b> (95% CI [−29%, −7%]), significantly worse than buy-&amp;-hold (p ≈ 0.002).",
-    crypto: "Every figure here is the <b>real held-out backtest</b> for the asset you picked. A single seed can look spectacular (this dashboard run is +275%), but across <b>5 seeds</b> the crypto agent is <b>statistically tied</b> with buy-&amp;-hold — mean <b>−2.7%</b>, 95% CI [−31%, +27%], p ≈ 0.97. The single run sits in the lucky tail, not the centre.",
-  };
+  // Built from window.RL_SIGNIFICANCE rather than written down. These two
+  // sentences carried hand-typed statistics that a rebuild silently invalidated
+  // -- they still quoted a +275% run and a p of 0.97 after both had moved.
+  function verdictFor(market) {
+    const lead = "Every figure here is the <b>real held-out backtest</b> for the " +
+      "asset you picked — out-of-sample, costs included, no cherry-picking.";
+    const r = SIG && SIG[market];
+    if (!r) return lead;
+
+    const p1 = (v) => (v < 0 ? "−" : "+") + Math.abs(v * 100).toFixed(1) + "%";
+    const pv = r.p < 0.01 ? r.p.toFixed(4) : r.p.toFixed(2);
+    const ci = `95% CI [${p1(r.ci_low)}, ${p1(r.ci_high)}]`;
+    const spread = (r.seed_returns || []);
+    const n = r.seeds || spread.length;
+
+    if (r.p < 0.05 && r.mean < r.bh) {
+      return `${lead} Held to a multi-seed bar it trails buy-&amp;-hold: across ` +
+        `<b>${n} seeds</b> it averages <b>${p1(r.mean)}</b> (${ci}), and the paired ` +
+        `test across the held-out tickers puts it significantly <em>worse</em> ` +
+        `than simply holding (p = ${pv}).`;
+    }
+    const best = spread.length ? ` (the best of the ${n} returned ` +
+      `<b>${p1(Math.max(...spread))}</b>)` : "";
+    const here = DATA && DATA.markets[market]
+      ? ` This dashboard's run (${p1(DATA.markets[market].metrics.total_return)}) ` +
+        "is one draw from that spread, not the centre of it." : "";
+    return `${lead} A single seed can look spectacular${best}, but across ` +
+      `<b>${n} seeds</b> the mean is <b>${p1(r.mean)}</b> (${ci}), and against ` +
+      `buy-&amp;-hold across the held-out tickers the difference is <b>not ` +
+      `distinguishable</b> (p = ${pv}).${here}`;
+  }
   const VERDICT_TAIL = ' <b>The methodology is the point:</b> a multi-seed permutation study (<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>) holds the model to a real statistical bar — the rigor a quant or researcher would actually demand, rather than a cherry-picked backtest.';
 
   function renderSelection() {
@@ -663,7 +690,7 @@
     renderSeedDist(market);
     renderLearningDynamics(market);
     const v = document.getElementById("verdict");
-    if (v) v.innerHTML = `<strong>How this is evaluated.</strong> ${VERDICT[market]}${VERDICT_TAIL}`;
+    if (v) v.innerHTML = `<strong>How this is evaluated.</strong> ${verdictFor(market)}${VERDICT_TAIL}`;
     const ms = document.getElementById("live-market");
     if (ms && ms.value !== market) { ms.value = market; ms.dispatchEvent(new Event("change")); }
   }
@@ -733,6 +760,30 @@
     window.scrollTo(0, 0);
   }
 
+  // Which top-level view owns a given section, so a deep link can open the right
+  // one before scrolling to it.
+  const VIEW_OF = {
+    "view-home": () => "home",
+    "view-method": () => "how",
+    "view-market": () => (explorer.market === "crypto" ? "crypto" : "stocks"),
+    "view-lab": () => "lab",
+  };
+
+  // A hash that names a section rather than a view is an in-page anchor.
+  // showView() scrolls to the top unconditionally, which was cancelling the
+  // browser's own jump and leaving every "#features"-style link doing nothing;
+  // scrolling here, after the view switch, is what actually moves the page.
+  function scrollToSection(id) {
+    const el = id && document.getElementById(id);
+    if (!el) return false;
+    const view = el.closest(".view");
+    if (view && !view.classList.contains("active") && VIEW_OF[view.id]) {
+      showView(VIEW_OF[view.id]());
+    }
+    el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    return true;
+  }
+
   function parseHash() {
     const raw = (location.hash || "#home").replace(/^#/, "");
     const [view, tk] = raw.split("/");
@@ -758,11 +809,21 @@
     // an in-page href like "#lab/xray" silently does nothing.
     window.addEventListener("hashchange", () => {
       const { view: v, ticker: tk } = parseHash();
-      showView(valid.includes(v) ? v : "home", tk);
+      if (valid.includes(v)) { showView(v, tk); return; }
+      if (scrollToSection(v)) return;
+      showView("home", tk);
     });
 
     const { view, ticker } = parseHash();
-    showView(valid.includes(view) ? view : "home", ticker);
+    if (valid.includes(view)) {
+      showView(view, ticker);
+    } else if (document.getElementById(view)) {
+      // a section deep link, e.g. someone shares "#reproduce"
+      showView("home");
+      scrollToSection(view);
+    } else {
+      showView("home", ticker);
+    }
   }
 
   // ── live inference widget (optional Render backend) ─────────
@@ -889,9 +950,229 @@
     }
   }
 
+  // ── the generalization gap: single-asset vs cross-asset training ──
+  //
+  // Rendered from window.RL_ABLATION (tools/ablation_multiseed.py) rather than
+  // typed into the HTML. These four rows used to be hand-written, and a rebuild
+  // moved them without the page noticing — the exact drift this project is a
+  // complaint about. Re-running the sweep now rewrites the page.
+  const ABL = (window.RL_ABLATION && window.RL_ABLATION.summary) || null;
+
+  // Returns here span six orders of magnitude, so one formatter cannot serve
+  // them all. Compact units above 1000% keep the memorization artifact legible
+  // without implying digits the seed spread does not support.
+  function kPct(v) {
+    const p = v * 100, a = Math.abs(p), sign = p < 0 ? "\u2212" : "+";
+    if (a >= 1e6) return sign + (a / 1e6).toFixed(1) + "M%";
+    if (a >= 1e3) return sign + Math.round(a / 1e3).toLocaleString("en-US") + "k%";
+    return sign + a.toFixed(0) + "%";
+  }
+  const range = (lo, hi) => kPct(lo) + " \u2192 " + kPct(hi);
+
+  // A dot per seed on a scale shared by both arms, so the two are comparable by
+  // eye. Position is the whole point; colour only repeats what the label says.
+  function dotStrip(vals, lo, hi, label) {
+    const span = (hi - lo) || 1;
+    const x = (v) => (((v - lo) / span) * 92 + 4).toFixed(2);
+    const zero = lo <= 0 && hi >= 0
+      ? `<i class="rs-zero" style="left:${x(0)}%"></i>` : "";
+    const dots = vals.map((v) =>
+      `<i class="rs-dot ${v >= 0 ? "pos" : "neg"}" style="left:${x(v)}%"></i>`).join("");
+    const read = vals.map((v) => kPct(v)).join(", ");
+    return `<div class="rs-track" role="img" aria-label="${label}: ${read}">` +
+           `${zero}${dots}</div>`;
+  }
+
+  const ARMS = [
+    { key: "single", title: "Trained on one asset",
+      badge: "memorised", tone: "bad",
+      note: "It saw a single price path often enough to learn that path. The " +
+            "in-sample figure is not a strategy — it is a receipt for overfitting." },
+    { key: "domain", title: "Trained across the basket",
+      badge: "generalised", tone: "good",
+      note: "Domain randomization removes any single path to memorise, so the " +
+            "in-sample number drops by orders of magnitude — and the held-out " +
+            "number stops being negative." },
+  ];
+
+  function renderResult(market) {
+    const arms = document.getElementById("rs-arms");
+    if (!arms || !ABL || !ABL.markets[market]) return;
+    const m = ABL.markets[market];
+    const nSeeds = (ABL.seeds || []).length;
+
+    // one shared scale across both arms of this market
+    const all = ARMS.reduce((acc, a) => acc.concat(m[a.key].oos_per_seed), []);
+    const lo = Math.min(...all, 0), hi = Math.max(...all, 0);
+
+    arms.innerHTML = ARMS.map((a) => {
+      const d = m[a.key];
+      const win = d.oos_mean >= 0;
+      return `
+      <article class="rs-arm rs-${a.tone}">
+        <header class="rs-arm-head">
+          <h3>${a.title}</h3>
+          <span class="rs-badge">${a.badge}</span>
+        </header>
+        <div class="rs-row">
+          <span class="rs-k">Training <small>data it trained on</small></span>
+          <span class="rs-v rs-train">${range(d.in_min, d.in_max)}</span>
+          <span class="rs-sub">range across ${nSeeds} seeds</span>
+        </div>
+        <div class="rs-row rs-row-key">
+          <span class="rs-k">Held&#8209;out <small>data it has never seen</small></span>
+          <span class="rs-v ${win ? "rs-win" : "rs-lose"}">${kPct(d.oos_mean)}</span>
+          <span class="rs-sub">95% CI [${kPct(d.oos_ci[0])}, ${kPct(d.oos_ci[1])}]</span>
+        </div>
+        ${dotStrip(d.oos_per_seed, lo, hi, `Held-out return per seed, ${a.title}`)}
+        <p class="rs-note">${a.note}</p>
+      </article>`;
+    }).join("");
+
+    const meta = document.getElementById("rs-meta");
+    if (meta) {
+      meta.textContent = `${nSeeds} seeds \u00b7 ` +
+        `${(ABL.timesteps / 1000).toFixed(0)}k steps each \u00b7 identical held-out paths`;
+    }
+
+    const cap = document.getElementById("rs-caption");
+    if (cap) {
+      const s = m.single, d = m.domain;
+      cap.innerHTML =
+        `Each dot is one training seed's mean held-out return; the two arms share ` +
+        `an axis. Read the <b>held-out</b> row, not the training row — that is the ` +
+        `only column scored on data the agent never touched. Both intervals ` +
+        `exclude zero and they do not overlap, so the gap between the arms is not ` +
+        `seed noise. What the training row shows is how convincing an overfit ` +
+        `agent looks right up until you test it: ` +
+        `${range(s.in_min, s.in_max)} in&#8209;sample became ${kPct(s.oos_mean)} out of it.`;
+    }
+  }
+
+  function initResult() {
+    const seg = document.getElementById("rs-market");
+    if (!seg) return;
+    if (!ABL) {
+      const arms = document.getElementById("rs-arms");
+      if (arms) arms.innerHTML =
+        '<p class="rs-missing">Ablation data unavailable \u2014 run ' +
+        '<code>python tools/ablation_multiseed.py</code> to regenerate it.</p>';
+      return;
+    }
+    seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-val]");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => {
+        const on = x === b;
+        x.classList.toggle("on", on);
+        x.setAttribute("aria-pressed", String(on));
+      });
+      renderResult(b.dataset.val);
+    });
+    renderResult("stock");
+  }
+
+  // ── the same artifact, as the methodology table ─────────────
+  function initAblationTable() {
+    const body = document.getElementById("abl-body");
+    if (!body || !ABL) return;
+    const rows = [];
+    for (const [market, label] of [["stock", "Stocks"], ["crypto", "Crypto"]]) {
+      const m = ABL.markets[market];
+      if (!m) continue;
+      for (const [key, how] of [["single", "single asset"], ["domain", "across tickers"]]) {
+        const d = m[key];
+        rows.push(
+          `<tr><td class="num-l">${label} &middot; ${how}</td>` +
+          `<td class="muted-cell">${range(d.in_min, d.in_max)}</td>` +
+          `<td class="${d.oos_mean >= 0 ? "win" : "lose"}">${kPct(d.oos_mean)} ` +
+          `<small>[${kPct(d.oos_ci[0])}, ${kPct(d.oos_ci[1])}]</small></td></tr>`);
+      }
+    }
+    body.innerHTML = rows.join("");
+    const prov = document.getElementById("abl-prov");
+    if (prov) {
+      prov.textContent = `${(ABL.seeds || []).length} seeds \u00d7 ` +
+        `${(ABL.timesteps / 1000).toFixed(0)}k steps, `;
+    }
+  }
+
+  // ── "what I got wrong": the timeline reads its own evidence ──
+  //
+  // Every figure in the narrative is pulled from the same committed artifacts the
+  // charts use, so the story cannot drift away from the experiments while nobody
+  // is looking. The one superseded run it quotes is cited by commit in the HTML,
+  // because no shipped artifact holds it any more — only git does.
+  const SIG = window.RL_SIGNIFICANCE || null;
+
+  function initTimeline() {
+    const put = (id, html) => {
+      const el = document.getElementById(id);
+      if (el && html) el.innerHTML = html;
+    };
+    // A signed percentage with one decimal, for single well-determined
+    // quantities. kPct() is for the order-of-magnitude in-sample figures.
+    const p1 = (v) => (v < 0 ? "\u2212" : "+") + Math.abs(v * 100).toFixed(1) + "%";
+    // Below 0.01 the leading digits are the informative part; above it they
+    // are noise, and two decimals stop the number looking more exact than it is.
+    const pv = (p) => "p = " + (p < 0.01 ? p.toFixed(4) : p.toFixed(2));
+
+    if (ABL && ABL.markets.crypto) {
+      const c = ABL.markets.crypto;
+      put("tl-1", `${kPct(c.single.in_min)} to ${kPct(c.single.in_max)}`);
+      put("tl-2", kPct(c.single.oos_mean));
+      put("tl-3", kPct(c.domain.oos_mean));
+    }
+    if (SIG && SIG.crypto) {
+      const r = SIG.crypto.seed_returns || [];
+      if (r.length) put("tl-5a", `${p1(Math.min(...r))} to ${p1(Math.max(...r))}`);
+      put("tl-5b", pv(SIG.crypto.p));
+    }
+    if (SIG && SIG.stock) {
+      put("tl-7", p1(SIG.stock.mean));
+      put("tl-7b", pv(SIG.stock.p));
+    }
+    if (DATA && DATA.markets && DATA.markets.crypto) {
+      const m = DATA.markets.crypto;
+      put("tl-6", p1(m.metrics.total_return));
+      put("tl-6b", p1(m.bench_metrics.total_return));
+    }
+
+    // "what I learned" reads the same artifacts as the timeline
+    if (ABL && ABL.markets.crypto) {
+      const c = ABL.markets.crypto;
+      put("lr-1a", kPct(c.single.in_min));
+      put("lr-1b", kPct(c.single.in_max));
+      put("lr-2a", kPct(c.single.oos_mean));
+      put("lr-2b", kPct(c.domain.oos_mean));
+    }
+    if (SIG && SIG.crypto && (SIG.crypto.seed_returns || []).length) {
+      const r = SIG.crypto.seed_returns;
+      put("lr-3", `${p1(Math.min(...r))} to ${p1(Math.max(...r))}`);
+    }
+    if (DATA && DATA.markets && DATA.markets.crypto) {
+      put("lr-4", p1(DATA.markets.crypto.metrics.total_return));
+    }
+
+    // The reproducibility claim has to state its own limit, or it is marketing.
+    const warn = document.getElementById("repro-warn");
+    if (warn && DATA) {
+      const end = (DATA.markets && DATA.markets.stock && DATA.markets.stock.end_date) || "";
+      warn.innerHTML =
+        `<b>The honest limit:</b> this build was generated ${DATA.generated}` +
+        (end ? ` on data through ${fmtDay(end)}` : "") +
+        `. Re-running against a later snapshot will move these numbers \u2014 ` +
+        `step 06 above is exactly that happening. Reproducing the published ` +
+        `figures means reproducing the pinned window too.`;
+    }
+  }
+
   // ── boot ────────────────────────────────────────────────────
   initHero();
   initStats();
+  initResult();
+  initAblationTable();
+  initTimeline();
   initLive();      // must run before the router so the live-market change handler exists
   initExplorer();  // data note + scrubber wiring
   initRouter();    // Home / Stocks / Crypto top-level tabs

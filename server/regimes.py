@@ -155,6 +155,23 @@ def _switching_ohlcv(n_steps: int, seed: Optional[int], n_segments: int = 4) -> 
     )
 
 
+def build_regime_frame(
+    regime: str, seed: Optional[int] = None, n_steps: int = 650
+) -> pd.DataFrame:
+    """The raw OHLCV frame for ``regime``, before any feature engineering.
+
+    Callers that need to control the *scaling* themselves — walk-forward fits a
+    separate scaler per fold — need the frame rather than a pre-scaled
+    :class:`MarketData`, so the two construction paths share this one generator
+    and cannot diverge.
+    """
+    if regime == SWITCHING_KEY:
+        return _switching_ohlcv(n_steps, seed)
+    if regime not in REGIMES:
+        raise ValueError(f"unknown regime {regime!r}")
+    return generate_synthetic_ohlcv(n_steps=n_steps, seed=seed, **REGIMES[regime].params)
+
+
 def build_regime_data(regime: str, seed: Optional[int] = None, n_steps: int = 650):
     """Generate one synthetic series for ``regime`` as scaled :class:`MarketData`.
 
@@ -162,17 +179,13 @@ def build_regime_data(regime: str, seed: Optional[int] = None, n_steps: int = 65
     the path actually generated — measured, not assumed — so the UI can show
     that a "mean reversion" path really does have negative return autocorrelation.
     """
+    df = build_regime_frame(regime, seed=seed, n_steps=n_steps)
     if regime == SWITCHING_KEY:
-        df = _switching_ohlcv(n_steps, seed)
         params: Dict[str, float] = {"n_segments": 4}
         label = "Regime Switching"
     else:
-        if regime not in REGIMES:
-            raise ValueError(f"unknown regime {regime!r}")
-        spec = REGIMES[regime]
-        params = dict(spec.params)
-        label = spec.label
-        df = generate_synthetic_ohlcv(n_steps=n_steps, seed=seed, **spec.params)
+        params = dict(REGIMES[regime].params)
+        label = REGIMES[regime].label
 
     data = market_data_from_df(df)
 

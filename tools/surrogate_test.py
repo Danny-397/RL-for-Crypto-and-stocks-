@@ -239,6 +239,15 @@ def run_real(market, seeds, timesteps, data_dir, log) -> dict:
 
 
 def _summary(market, edge_struct, edge_surr, diff, p) -> dict:
+    """Summarise one market's two arms.
+
+    The per-arm values are recorded alongside the summary statistics, not just
+    the means. Without them a published p-value can only be quoted, never
+    recomputed — anyone re-reading the artifact (the interactive lab included)
+    would have to take the number on trust or reconstruct it from a mean, which
+    is not possible. ``n_pairs`` is stored explicitly for the same reason: it
+    fixes the permutation test's resolution floor at ``2 / 2**n``.
+    """
     cs, cu = bootstrap_ci(edge_struct), bootstrap_ci(edge_surr)
     return {
         "market": market,
@@ -248,6 +257,9 @@ def _summary(market, edge_struct, edge_surr, diff, p) -> dict:
         "surrogate_ci": [round(cu.mean, 4), round(cu.low, 4), round(cu.high, 4)],
         "diff": float(diff),
         "p": float(p),
+        "n_pairs": int(len(edge_struct)),
+        "values_structured": [float(v) for v in edge_struct],
+        "values_surrogate": [float(v) for v in edge_surr],
     }
 
 

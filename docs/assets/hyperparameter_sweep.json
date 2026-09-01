@@ -1,0 +1,478 @@
+{
+ "generated": "2026-08-31",
+ "timesteps": 60000,
+ "seeds_per_config": 3,
+ "design": "one factor at a time around the published defaults",
+ "knobs": {
+  "learning_rate": [
+   0.0001,
+   0.001
+  ],
+  "clip_ratio": [
+   0.1,
+   0.3
+  ],
+  "gae_lambda": [
+   0.9,
+   0.99
+  ],
+  "entropy_coef": [
+   0.0,
+   0.05
+  ]
+ },
+ "markets": {
+  "stock": {
+   "rows": [
+    {
+     "config": "baseline",
+     "knob": null,
+     "value": null,
+     "n_seeds": 3,
+     "mean_return": -0.126932,
+     "benchmark_return": 2.395301,
+     "mean_edge": -2.522233,
+     "edge_ci": [
+      -2.522233,
+      -2.562485,
+      -2.488535
+     ],
+     "worst_seed_edge": -2.562485,
+     "best_seed_edge": -2.488535,
+     "seed_edges": [
+      -2.51568,
+      -2.562485,
+      -2.488535
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "learning_rate=0.0001",
+     "knob": "learning_rate",
+     "value": 0.0001,
+     "n_seeds": 3,
+     "mean_return": -0.158693,
+     "benchmark_return": 2.395301,
+     "mean_edge": -2.553994,
+     "edge_ci": [
+      -2.553994,
+      -2.577745,
+      -2.510634
+     ],
+     "worst_seed_edge": -2.577745,
+     "best_seed_edge": -2.510634,
+     "seed_edges": [
+      -2.573602,
+      -2.577745,
+      -2.510634
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "learning_rate=0.001",
+     "knob": "learning_rate",
+     "value": 0.001,
+     "n_seeds": 3,
+     "mean_return": -0.308743,
+     "benchmark_return": 2.395301,
+     "mean_edge": -2.704044,
+     "edge_ci": [
+      -2.704044,
+      -2.736586,
+      -2.671694
+     ],
+     "worst_seed_edge": -2.736586,
+     "best_seed_edge": -2.671694,
+     "seed_edges": [
+      -2.703853,
+      -2.736586,
+      -2.671694
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "clip_ratio=0.1",
+     "knob": "clip_ratio",
+     "value": 0.1,
+     "n_seeds": 3,
+     "mean_return": -0.085072,
+     "benchmark_return": 2.395301,
+     "mean_edge": -2.480373,
+     "edge_ci": [
+      -2.480373,
+      -2.641042,
+      -2.386847
+     ],
+     "worst_seed_edge": -2.641042,
+     "best_seed_edge": -2.386847,
+     "seed_edges": [
+      -2.641042,
+      -2.413228,
+      -2.386847
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "clip_ratio=0.3",
+     "knob": "clip_ratio",
+     "value": 0.3,
+     "n_seeds": 3,
+     "mean_return": -0.297764,
+     "benchmark_return": 2.395301,
+     "mean_edge": -2.693065,
+     "edge_ci": [
+      -2.693065,
+      -2.847349,
+      -2.592922
+     ],
+     "worst_seed_edge": -2.847349,
+     "best_seed_edge": -2.592922,
+     "seed_edges": [
+      -2.847349,
+      -2.638923,
+      -2.592922
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "gae_lambda=0.9",
+     "knob": "gae_lambda",
+     "value": 0.9,
+     "n_seeds": 3,
+     "mean_return": -0.089189,
+     "benchmark_return": 2.395301,
+     "mean_edge": -2.48449,
+     "edge_ci": [
+      -2.48449,
+      -2.570005,
+      -2.427722
+     ],
+     "worst_seed_edge": -2.570005,
+     "best_seed_edge": -2.427722,
+     "seed_edges": [
+      -2.570005,
+      -2.427722,
+      -2.455743
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "gae_lambda=0.99",
+     "knob": "gae_lambda",
+     "value": 0.99,
+     "n_seeds": 3,
+     "mean_return": -0.240641,
+     "benchmark_return": 2.395301,
+     "mean_edge": -2.635942,
+     "edge_ci": [
+      -2.635942,
+      -2.666512,
+      -2.608208
+     ],
+     "worst_seed_edge": -2.666512,
+     "best_seed_edge": -2.608208,
+     "seed_edges": [
+      -2.666512,
+      -2.633107,
+      -2.608208
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "entropy_coef=0",
+     "knob": "entropy_coef",
+     "value": 0.0,
+     "n_seeds": 3,
+     "mean_return": -0.148664,
+     "benchmark_return": 2.395301,
+     "mean_edge": -2.543965,
+     "edge_ci": [
+      -2.543965,
+      -2.57619,
+      -2.481166
+     ],
+     "worst_seed_edge": -2.57619,
+     "best_seed_edge": -2.481166,
+     "seed_edges": [
+      -2.574538,
+      -2.57619,
+      -2.481166
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "entropy_coef=0.05",
+     "knob": "entropy_coef",
+     "value": 0.05,
+     "n_seeds": 3,
+     "mean_return": -0.120024,
+     "benchmark_return": 2.395301,
+     "mean_edge": -2.515325,
+     "edge_ci": [
+      -2.515325,
+      -2.567399,
+      -2.412522
+     ],
+     "worst_seed_edge": -2.567399,
+     "best_seed_edge": -2.412522,
+     "seed_edges": [
+      -2.566056,
+      -2.567399,
+      -2.412522
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    }
+   ],
+   "summary": {
+    "market": "stock",
+    "n_configs": 9,
+    "n_seeds": 3,
+    "n_positive": 0,
+    "baseline_edge": -2.522233,
+    "best_config": "clip_ratio=0.1",
+    "best_edge": -2.480373,
+    "worst_config": "learning_rate=0.001",
+    "worst_edge": -2.704044,
+    "spread": 0.223671,
+    "sign_test_floor": 0.25,
+    "verdict": "No configuration produced a positive edge on stock. Across 9 recipes spanning four hyper-parameters, the best still trailed buy-and-hold by 248.0%. The flat result is not an artifact of one unlucky setting.",
+    "power_note": "Each configuration is 3 seeds, so a sign test over them cannot produce a p-value below 0.2500. Nothing here is a significance claim; the sweep answers the descriptive question of whether the conclusion moves when the recipe does."
+   }
+  },
+  "crypto": {
+   "rows": [
+    {
+     "config": "baseline",
+     "knob": null,
+     "value": null,
+     "n_seeds": 3,
+     "mean_return": -0.083233,
+     "benchmark_return": 0.334891,
+     "mean_edge": -0.418124,
+     "edge_ci": [
+      -0.418124,
+      -0.68054,
+      -0.158779
+     ],
+     "worst_seed_edge": -0.68054,
+     "best_seed_edge": -0.158779,
+     "seed_edges": [
+      -0.415054,
+      -0.158779,
+      -0.68054
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "learning_rate=0.0001",
+     "knob": "learning_rate",
+     "value": 0.0001,
+     "n_seeds": 3,
+     "mean_return": 0.023604,
+     "benchmark_return": 0.334891,
+     "mean_edge": -0.311287,
+     "edge_ci": [
+      -0.311287,
+      -0.432788,
+      -0.180056
+     ],
+     "worst_seed_edge": -0.432788,
+     "best_seed_edge": -0.180056,
+     "seed_edges": [
+      -0.321016,
+      -0.180056,
+      -0.432788
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "learning_rate=0.001",
+     "knob": "learning_rate",
+     "value": 0.001,
+     "n_seeds": 3,
+     "mean_return": -0.363076,
+     "benchmark_return": 0.334891,
+     "mean_edge": -0.697967,
+     "edge_ci": [
+      -0.697967,
+      -0.914491,
+      -0.289918
+     ],
+     "worst_seed_edge": -0.914491,
+     "best_seed_edge": -0.289918,
+     "seed_edges": [
+      -0.889492,
+      -0.914491,
+      -0.289918
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "clip_ratio=0.1",
+     "knob": "clip_ratio",
+     "value": 0.1,
+     "n_seeds": 3,
+     "mean_return": 0.004362,
+     "benchmark_return": 0.334891,
+     "mean_edge": -0.330529,
+     "edge_ci": [
+      -0.330529,
+      -0.502439,
+      -0.164547
+     ],
+     "worst_seed_edge": -0.502439,
+     "best_seed_edge": -0.164547,
+     "seed_edges": [
+      -0.164547,
+      -0.502439,
+      -0.324602
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "clip_ratio=0.3",
+     "knob": "clip_ratio",
+     "value": 0.3,
+     "n_seeds": 3,
+     "mean_return": -0.091035,
+     "benchmark_return": 0.334891,
+     "mean_edge": -0.425926,
+     "edge_ci": [
+      -0.425926,
+      -0.846679,
+      -0.189791
+     ],
+     "worst_seed_edge": -0.846679,
+     "best_seed_edge": -0.189791,
+     "seed_edges": [
+      -0.241308,
+      -0.189791,
+      -0.846679
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "gae_lambda=0.9",
+     "knob": "gae_lambda",
+     "value": 0.9,
+     "n_seeds": 3,
+     "mean_return": -0.058316,
+     "benchmark_return": 0.334891,
+     "mean_edge": -0.393207,
+     "edge_ci": [
+      -0.393207,
+      -0.686092,
+      0.026946
+     ],
+     "worst_seed_edge": -0.686092,
+     "best_seed_edge": 0.026946,
+     "seed_edges": [
+      -0.686092,
+      0.026946,
+      -0.520475
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": false
+    },
+    {
+     "config": "gae_lambda=0.99",
+     "knob": "gae_lambda",
+     "value": 0.99,
+     "n_seeds": 3,
+     "mean_return": -0.095887,
+     "benchmark_return": 0.334891,
+     "mean_edge": -0.430778,
+     "edge_ci": [
+      -0.430778,
+      -0.558649,
+      -0.186148
+     ],
+     "worst_seed_edge": -0.558649,
+     "best_seed_edge": -0.186148,
+     "seed_edges": [
+      -0.547538,
+      -0.558649,
+      -0.186148
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "entropy_coef=0",
+     "knob": "entropy_coef",
+     "value": 0.0,
+     "n_seeds": 3,
+     "mean_return": -0.404377,
+     "benchmark_return": 0.334891,
+     "mean_edge": -0.739268,
+     "edge_ci": [
+      -0.739268,
+      -0.831282,
+      -0.661338
+     ],
+     "worst_seed_edge": -0.831282,
+     "best_seed_edge": -0.661338,
+     "seed_edges": [
+      -0.831282,
+      -0.661338,
+      -0.725184
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": true
+    },
+    {
+     "config": "entropy_coef=0.05",
+     "knob": "entropy_coef",
+     "value": 0.05,
+     "n_seeds": 3,
+     "mean_return": -0.085756,
+     "benchmark_return": 0.334891,
+     "mean_edge": -0.420647,
+     "edge_ci": [
+      -0.420647,
+      -0.747271,
+      0.221666
+     ],
+     "worst_seed_edge": -0.747271,
+     "best_seed_edge": 0.221666,
+     "seed_edges": [
+      0.221666,
+      -0.747271,
+      -0.736337
+     ],
+     "positive_edge": false,
+     "ci_excludes_zero": false
+    }
+   ],
+   "summary": {
+    "market": "crypto",
+    "n_configs": 9,
+    "n_seeds": 3,
+    "n_positive": 0,
+    "baseline_edge": -0.418124,
+    "best_config": "learning_rate=0.0001",
+    "best_edge": -0.311287,
+    "worst_config": "entropy_coef=0",
+    "worst_edge": -0.739268,
+    "spread": 0.427981,
+    "sign_test_floor": 0.25,
+    "verdict": "No configuration produced a positive edge on crypto. Across 9 recipes spanning four hyper-parameters, the best still trailed buy-and-hold by 31.1%. The flat result is not an artifact of one unlucky setting.",
+    "power_note": "Each configuration is 3 seeds, so a sign test over them cannot produce a p-value below 0.2500. Nothing here is a significance claim; the sweep answers the descriptive question of whether the conclusion moves when the recipe does."
+   }
+  }
+ }
+}

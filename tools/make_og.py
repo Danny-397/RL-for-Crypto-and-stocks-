@@ -54,11 +54,12 @@ def main() -> None:
     # title block
     fig.text(0.06, 0.74, "RL·Trader", color=TEXT, fontsize=64, fontweight="bold",
              fontfamily="DejaVu Sans")
-    fig.text(0.061, 0.62, "Deep reinforcement learning that trades stocks & crypto",
+    fig.text(0.061, 0.62, "Can a deep-RL trading agent actually generalize?",
              color=CYAN, fontsize=24)
-    fig.text(0.061, 0.20,
-             "from-scratch PPO  ·  stocks & crypto  ·  28 features  ·  multi-seed evaluated",
-             color=GREY, fontsize=16, fontfamily="DejaVu Sans Mono")
+    fig.text(0.061, 0.09,
+             "from-scratch PPO  ·  domain randomization  ·  multi-seed significance"
+             "  ·  honest negative result",
+             color=GREY, fontsize=13, fontfamily="DejaVu Sans Mono")
 
     os.makedirs(os.path.join("docs", "assets"), exist_ok=True)
     out = os.path.join("docs", "assets", "og.png")

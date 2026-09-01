@@ -1,0 +1,90 @@
+name: Browser smoke
+
+# The pytest suite proves the backend is right. It cannot prove the *page*
+# works — that charts paint, that a scrubber moves the readouts, or (the one
+# failure mode this site must not have) that an unreachable backend produces an
+# honest error instead of a plausible-looking fake. Those 130+ assertions used
+# to run only on a developer's machine, which meant a frontend regression could
+# reach main with every check green.
+#
+# It is a separate workflow rather than another job in ci.yml because it has a
+# different failure meaning and a much heavier setup: a ~150 MB Chromium, cached
+# between runs so the cost is paid once per browser release.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    name: Lab smoke (headless Chromium)
+    runs-on: ubuntu-latest
+    # Four browser phases against a live backend. A healthy run is ~3 minutes;
+    # this cap stops a hung page from burning an hour of runner time.
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # server/requirements.txt only — no torch, and deliberately no
+          # `pip install -e .`. The backend puts the repo root on sys.path
+          # itself, so this job doubles as a standing check that the serving
+          # path really is NumPy-only: an accidental torch import in server/
+          # fails here instead of at deploy time on Render.
+          pip install -r server/requirements.txt
+          pip install playwright
+
+      - name: Cache the Chromium download
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/smoke.yml') }}
+
+      - name: Install Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: python -m playwright install --with-deps chromium
+
+      - name: Install Chromium system deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: python -m playwright install-deps chromium
+
+      - name: Start the backend
+        run: |
+          # The exact command render.yaml uses, so this also checks that the
+          # production entrypoint still starts.
+          python -m gunicorn --chdir server app:app \
+            --workers 1 --bind 127.0.0.1:8000 --timeout 120 > backend.log 2>&1 &
+          # Poll rather than sleep: a fixed wait is either wasteful or flaky, and
+          # a flaky smoke test is worse than none.
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/api/meta > /dev/null 2>&1; then
+              echo "backend up after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "backend never became ready"; cat backend.log; exit 1
+
+      - name: Run the lab smoke test
+        run: python tools/smoke_lab.py --screenshot lab.png
+
+      - name: Upload the screenshot and backend log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-artifacts
+          path: |
+            lab.png
+            backend.log
+          if-no-files-found: warn
+          retention-days: 7

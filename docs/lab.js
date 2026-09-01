@@ -136,11 +136,13 @@
       ctx.clearRect(0, 0, w, h);
 
       // horizontal gridlines + value labels
+      // A sparkline (grid:false) deliberately shows no axis: in the signal-or-noise
+      // test a y-axis would hand over scale information the design works to remove.
       ctx.font = "10px ui-monospace, monospace";
       ctx.fillStyle = COLORS.text;
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      for (let g = 0; g <= 3; g++) {
+      for (let g = 0; o.grid !== false && g <= 3; g++) {
         const v = lo + ((hi - lo) * g) / 3;
         const y = Y(v);
         ctx.strokeStyle = COLORS.grid;
@@ -275,6 +277,498 @@
       `</div>`
     );
   }
+
+  /* ── Signal or Noise? ───────────────────────────────────── */
+  /* A controlled test of the visitor's own pattern detection.
+   *
+   * The answer key never reaches the browser: charts arrive unlabelled, and the
+   * backend rescores by rebuilding the identical quiz from its seed. Nothing is
+   * graded locally, so there is nothing here to read ahead in — and the verdict
+   * shown is an exact binomial test computed server-side, not a canned message. */
+  const Perception = (function () {
+    let quiz = null;      // { params, meta, charts } as served
+    let answers = [];     // 0 | 1 | null per chart — the visitor's calls
+    let scored = false;
+    let tickers = null;   // lazily fetched, only for the real-data condition
+    const sparks = [];    // Chart instances, kept so a resize can redraw them
+
+    const CLASS_NAMES = {
+      trending: ["Random walk", "Trending"],
+      real: ["Reshuffled", "Real"],
+    };
+
+    function names() {
+      return CLASS_NAMES[(quiz && quiz.meta.positive_class) || "trending"];
+    }
+
+    function difficulty() { return $("pc-difficulty").dataset.value; }
+
+    /* The source control means different things in the two conditions, so its
+     * label and options are rebuilt rather than reused. */
+    async function fillSources() {
+      const sel = $("pc-source");
+      const label = $("pc-source-label");
+      sel.innerHTML = "";
+      if (difficulty() === "synthetic") {
+        label.textContent = "Trained-on regime";
+        [["stock", "Stock agent's regime"], ["crypto", "Crypto agent's regime"]].forEach(
+          ([v, t]) => sel.add(new Option(t, v))
+        );
+        return;
+      }
+      label.textContent = "Ticker";
+      if (!tickers) {
+        try { tickers = await api.get("/api/tickers"); }
+        catch (err) { tickers = { stock: ["SPY"], crypto: ["BTC-USD"] }; }
+      }
+      [].concat(tickers.stock || [], tickers.crypto || []).forEach((t) =>
+        sel.add(new Option(t, t))
+      );
+    }
+
+    function params() {
+      const n = parseInt($("pc-n").value, 10);
+      const src = $("pc-source").value;
+      const p = { difficulty: difficulty(), n_charts: n, seed: quiz ? quiz.params.seed : 0 };
+      if (p.difficulty === "synthetic") p.market = src;
+      else p.ticker = src;
+      return p;
+    }
+
+    async function load() {
+      const p = params();
+      // A fresh seed per quiz, so a visitor can repeat the experiment rather than
+      // re-take the same one and mistake memory for skill.
+      p.seed = Math.floor(Math.random() * 2147483647);
+      const qs = Object.keys(p).map((k) => `${k}=${encodeURIComponent(p[k])}`).join("&");
+
+      showError($("pc-error"), null);
+      $("pc-result").hidden = true;
+      $("pc-actions").hidden = true;
+      $("pc-grid").innerHTML = "";
+      $("pc-receipt").innerHTML = "";
+      setStatus($("pc-status"), "building a fresh quiz…", true);
+
+      try {
+        quiz = await api.get(`/api/perception/quiz?${qs}`);
+      } catch (err) {
+        setStatus($("pc-status"), "");
+        showError($("pc-error"), `Could not build a quiz: ${err.message}`);
+        return;
+      }
+      answers = new Array(quiz.charts.length).fill(null);
+      scored = false;
+      setStatus($("pc-status"), "");
+      $("pc-prompt").textContent = quiz.meta.prompt;
+      render();
+      $("pc-actions").hidden = false;
+      updateProgress();
+    }
+
+    function render() {
+      const grid = $("pc-grid");
+      grid.innerHTML = "";
+      sparks.length = 0;
+      const [negName, posName] = names();
+
+      quiz.charts.forEach((chart, i) => {
+        const card = document.createElement("div");
+        card.className = "pc-card";
+        card.id = `pc-card-${i}`;
+        card.innerHTML =
+          `<div class="pc-card-head"><span class="pc-n">${i + 1}</span>` +
+          `<span class="pc-truth" id="pc-truth-${i}"></span></div>` +
+          `<canvas class="pc-canvas" id="pc-cv-${i}"></canvas>` +
+          `<div class="seg pc-seg" data-chart="${i}">` +
+          `<button type="button" data-val="1">${posName}</button>` +
+          `<button type="button" data-val="0">${negName}</button></div>`;
+        grid.appendChild(card);
+
+        const c = Chart($(`pc-cv-${i}`), {
+          height: 96,
+          grid: false,
+          pad: { l: 4, r: 4, t: 8, b: 8 },
+        });
+        c.setSeries([{ values: chart.prices, color: COLORS.bench, width: 1.4 }]);
+        sparks.push(c);
+      });
+
+      grid.querySelectorAll(".pc-seg button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (scored) return;
+          const seg = btn.parentElement;
+          const idx = parseInt(seg.dataset.chart, 10);
+          answers[idx] = parseInt(btn.dataset.val, 10);
+          seg.querySelectorAll("button").forEach((b) =>
+            b.setAttribute("aria-pressed", String(b === btn))
+          );
+          updateProgress();
+        });
+      });
+    }
+
+    function updateProgress() {
+      const done = answers.filter((a) => a != null).length;
+      $("pc-progress").textContent = `${done} of ${answers.length} called`;
+      $("pc-submit").disabled = done !== answers.length || scored;
+    }
+
+    async function submit() {
+      setStatus($("pc-status"), "scoring against the answer key…", true);
+      $("pc-submit").disabled = true;
+      let out;
+      try {
+        out = await api.post("/api/perception/score", {
+          params: quiz.params,
+          answers: answers,
+        });
+      } catch (err) {
+        setStatus($("pc-status"), "");
+        showError($("pc-error"), `Scoring failed: ${err.message}`);
+        $("pc-submit").disabled = false;
+        return;
+      }
+      setStatus($("pc-status"), "");
+      scored = true;
+      reveal(out);
+      renderResult(out);
+      updateProgress();
+    }
+
+    /* Mark every card with the truth and the number that decided it. */
+    function reveal(out) {
+      const [negName, posName] = names();
+      out.per_chart.forEach((r) => {
+        const card = $(`pc-card-${r.index}`);
+        card.classList.add(r.correct ? "is-right" : "is-wrong");
+        $(`pc-truth-${r.index}`).innerHTML =
+          `<b>${r.truth ? posName : negName}</b> · <span class="pc-ac">ρ₁ = ` +
+          `${fmt.signed(r.autocorr_lag1, 3)}</span>`;
+        card.querySelectorAll(".pc-seg button").forEach((b) => (b.disabled = true));
+      });
+    }
+
+    function renderResult(out) {
+      const m = out.meta;
+      const ref = out.reference;
+      const pw = out.power;
+      const powerRows = pw.power
+        .map(
+          (r) =>
+            `<tr><td>${Math.round(r.true_accuracy * 100)}% accurate</td>` +
+            `<td class="${r.power < 0.5 ? "neg" : "pos"}">${Math.round(r.power * 100)}%</td></tr>`
+        )
+        .join("");
+
+      $("pc-result").hidden = false;
+      $("pc-result").innerHTML =
+        `<div class="pc-score">` +
+        `<div class="pc-score-main"><span class="pc-score-n">${out.correct}` +
+        `<span class="pc-score-d">/${out.n}</span></span>` +
+        `<span class="pc-score-lbl">chance is ${out.expected_by_chance}</span></div>` +
+        metric("p-value", out.p_value.toFixed(4), out.significant_at_05 ? "pos" : "neutral",
+               out.test) +
+        metric("Your accuracy", (out.accuracy * 100).toFixed(0) + "%", "neutral") +
+        `</div>` +
+        `<p class="pc-verdict">${out.verdict}</p>` +
+
+        `<div class="pc-two">` +
+        `<div class="pc-box"><h4>What a statistic saw</h4>` +
+        `<p class="xr-hint">${ref.description}</p>` +
+        `<p class="pc-ref-score">${ref.correct} of ${ref.n} ` +
+        `<span class="pc-ref-sub">(p = ${ref.p_value.toFixed(4)})</span></p>` +
+        `<p class="xr-hint">${ref.caveat}</p></div>` +
+
+        `<div class="pc-box"><h4>Could this test even detect skill?</h4>` +
+        `<table class="pc-power"><thead><tr><th>If you were…</th>` +
+        `<th>chance of proving it</th></tr></thead><tbody>${powerRows}</tbody></table>` +
+        `<p class="xr-hint">${pw.explanation}</p></div>` +
+        `</div>` +
+
+        `<p class="pc-tie">The smallest p-value ${out.n} charts can produce at all is ` +
+        `<b>${pw.min_attainable_p.toFixed(4)}</b> — a hard floor set by the design, not by ` +
+        `the data. The project's seed-level tests hit exactly this wall: with 5 seeds a ` +
+        `sign-flip test cannot go below p = 0.0625, so it can never reach significance ` +
+        `however large the effect.</p>`;
+
+      const overlap = m.realised.classes_overlap
+        ? "yes — at this length the classes are not cleanly separated"
+        : "no — the classes separated cleanly this time";
+      $("pc-receipt").innerHTML =
+        [
+          ["Condition", m.difficulty === "synthetic"
+            ? `synthetic · φ = ${m.signal_phi} vs φ = 0`
+            : `real · ${m.ticker} vs its own reshuffled returns`],
+          ["Design", m.design],
+          ["Normalisation", m.normalisation],
+          ["Measured ρ₁ (signal / control)",
+           `${fmt.signed(m.realised.mean_autocorr_signal, 3)} / ` +
+           `${fmt.signed(m.realised.mean_autocorr_control, 3)}`],
+          ["Classes overlap?", overlap],
+          ["Bars per chart", String(m.bars_per_chart)],
+          ["Quiz seed", String(m.seed)],
+        ]
+          .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
+          .join("");
+    }
+
+    function bindSeg(id, onChange) {
+      const seg = $(id);
+      seg.querySelectorAll("button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          seg.dataset.value = btn.dataset.val;
+          seg.querySelectorAll("button").forEach((b) =>
+            b.setAttribute("aria-pressed", String(b === btn))
+          );
+          onChange(btn.dataset.val);
+        });
+      });
+    }
+
+    async function init() {
+      if (!api.ok) return;
+      bindSeg("pc-difficulty", async () => { await fillSources(); load(); });
+      $("pc-n").addEventListener("input", (e) => {
+        $("pc-n-val").textContent = e.target.value;
+      });
+      $("pc-n").addEventListener("change", load);
+      $("pc-source").addEventListener("change", load);
+      $("pc-new").addEventListener("click", load);
+      $("pc-submit").addEventListener("click", submit);
+      window.addEventListener("resize", () => sparks.forEach((c) => c.redraw()));
+      // A hidden canvas has zero width, so anything drawn while the panel was
+      // inactive comes back blank. Redraw on the way in.
+      window.addEventListener("lab:panel", (e) => {
+        if (e.detail.panel === "perception") sparks.forEach((c) => c.redraw());
+      });
+      await fillSources();
+      await load();
+    }
+
+    return { init, redraw: () => sparks.forEach((c) => c.redraw()) };
+  })();
+
+  /* ── Your Turn (human baseline) ─────────────────────────── */
+  /* The visitor trades the same bars the agent trades.
+   *
+   * The one property this panel must not violate is no-lookahead, and it is not
+   * enforced here — it is enforced by the protocol. The client never holds a
+   * price it has not traded through, because the server only ever sends one. All
+   * this module does is draw what it has been given. */
+  const Human = (function () {
+    let session = null;
+    let prices = [];
+    let chart = null;
+    let resultChart = null;
+    let tickers = null;
+
+    function mode() { return $("hm-mode").dataset.value; }
+    function market() { return $("hm-market").dataset.value; }
+
+    async function fillSources() {
+      const sel = $("hm-source");
+      sel.innerHTML = "";
+      if (mode() === "historical") {
+        $("hm-source-label").textContent = "Ticker";
+        if (!tickers) {
+          try { tickers = await api.get("/api/tickers"); }
+          catch (err) { tickers = { stock: ["SPY"], crypto: ["BTC-USD"] }; }
+        }
+        (tickers[market()] || []).forEach((t) => sel.add(new Option(t, t)));
+        return;
+      }
+      $("hm-source-label").textContent = "Regime";
+      try {
+        const body = await api.get("/api/regimes");
+        body.regimes.forEach((r) => sel.add(new Option(r.label, r.key)));
+        sel.value = "momentum";
+      } catch (err) { sel.add(new Option("Momentum", "momentum")); }
+    }
+
+    function config() {
+      const cfg = { market: market(), mode: mode() };
+      if (mode() === "historical") cfg.ticker = $("hm-source").value;
+      else {
+        cfg.regime = $("hm-source").value;
+        cfg.seed = Math.floor(Math.random() * 100000);
+        cfg.n_steps = 900;
+      }
+      return cfg;
+    }
+
+    function drawPrices() {
+      if (!chart) chart = Chart($("hm-chart"), { height: 220, fmtY: (v) => v.toFixed(0) });
+      chart.setSeries([{ values: prices, color: COLORS.bench, width: 1.8 }]);
+    }
+
+    function showAccount(acct) {
+      $("hm-account").innerHTML =
+        `<span class="hm-a"><b>${fmt.money(acct.equity)}</b> equity</span>` +
+        `<span class="hm-a ${fmt.cls(acct.return_so_far)}">` +
+        `${fmt.pct(acct.return_so_far, 1)}</span>` +
+        `<span class="hm-a">position ${Math.round(acct.position_fraction * 100)}%</span>`;
+    }
+
+    async function start() {
+      const btn = $("hm-start");
+      btn.disabled = true;
+      showError($("hm-error"), null);
+      $("hm-result").hidden = true;
+      setStatus($("hm-status"), "opening a session…", true);
+      try {
+        session = await api.post("/api/human/start", {
+          max_steps: Number($("hm-steps").value),
+          config: config(),
+        });
+      } catch (err) {
+        showError($("hm-error"), String(err.message || err));
+        setStatus($("hm-status"), "", false);
+        btn.disabled = false;
+        return;
+      }
+      prices = session.prices.slice();
+      setStatus($("hm-status"), session.session_id, false);
+      $("hm-info").textContent = session.information_note;
+      $("hm-play-note").textContent = session.lookahead_note;
+      $("hm-play").hidden = false;
+      $("hm-target").value = 0;
+      $("hm-target-val").textContent = "0%";
+      $("hm-trade").disabled = false;
+      $("hm-progress").textContent = `1 / ${session.max_steps}`;
+      showAccount(session.account);
+      drawPrices();
+      btn.disabled = false;
+    }
+
+    async function trade() {
+      if (!session) return;
+      const btn = $("hm-trade");
+      btn.disabled = true;
+      try {
+        const out = await api.post(`/api/human/${session.session_id}/step`, {
+          action: Number($("hm-target").value) / 100,
+        });
+        prices.push(out.price);
+        drawPrices();
+        showAccount(out.account);
+        $("hm-progress").textContent =
+          `${Math.min(out.step + 1, out.max_steps)} / ${out.max_steps}`;
+        if (out.done) {
+          $("hm-progress").textContent = `${out.step} / ${out.max_steps} · ${out.reason}`;
+          await finish();
+          return;
+        }
+      } catch (err) {
+        showError($("hm-error"), String(err.message || err));
+      }
+      btn.disabled = false;
+    }
+
+    function scoreRow(name, block, cls) {
+      const m = block.metrics;
+      return (
+        `<tr><td>${name}</td>` +
+        `<td class="${fmt.cls(m.total_return)}"><b>${fmt.pct(m.total_return, 1)}</b></td>` +
+        `<td>${fmt.num(m.sharpe)}</td>` +
+        `<td class="neg">${fmt.pct(-Math.abs(m.max_drawdown), 1)}</td></tr>`
+      );
+    }
+
+    async function finish() {
+      if (!session) return;
+      $("hm-trade").disabled = true;
+      setStatus($("hm-status"), "scoring against the agent…", true);
+      let res;
+      try {
+        res = await api.post(`/api/human/${session.session_id}/finish`, {});
+      } catch (err) {
+        showError($("hm-error"), String(err.message || err));
+        setStatus($("hm-status"), "", false);
+        return;
+      }
+      setStatus($("hm-status"), res.session_id + " · scored", false);
+      $("hm-play").hidden = true;
+      $("hm-result").hidden = false;
+
+      if (!resultChart) {
+        resultChart = Chart($("hm-result-chart"), {
+          height: 240, fmtY: (v) => "$" + Math.round(v / 1000) + "k",
+        });
+      }
+      resultChart.setSeries([
+        { values: res.you.equity_curve, color: COLORS.pos, width: 2.2 },
+        { values: res.agent.equity_curve, color: COLORS.agent, width: 1.8 },
+        { values: res.benchmark.equity_curve, color: COLORS.bench, width: 1.6, dash: [4, 3] },
+      ]);
+
+      $("hm-scores").innerHTML =
+        `<div class="wf-table-wrap"><table class="wf-table"><thead><tr>` +
+        `<th>Who</th><th>Return</th><th>Sharpe</th><th>Max drawdown</th></tr></thead><tbody>` +
+        scoreRow("You", res.you) +
+        scoreRow("The agent", res.agent) +
+        scoreRow("Buy &amp; hold", res.benchmark) +
+        `</tbody></table></div>`;
+      $("hm-verdict").textContent = res.verdict;
+      $("hm-caveats").innerHTML =
+        `<p class="attr-method">${res.information_note}</p>` +
+        `<ul><li>${res.sample_note}</li><li>You made ${res.you.trades} position ` +
+        `changes across ${res.bars_traded} bars; the agent averaged a ` +
+        `${Math.round(res.agent.mean_position * 100)}% position.</li></ul>`;
+      session = null;
+    }
+
+    function bindSeg(id, onChange) {
+      const seg = $(id);
+      seg.addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-val]");
+        if (!btn) return;
+        seg.dataset.value = btn.dataset.val;
+        seg.querySelectorAll("button").forEach((b) =>
+          b.setAttribute("aria-pressed", String(b === btn))
+        );
+        onChange(btn.dataset.val);
+      });
+    }
+
+    function init() {
+      if (!$("hm-start")) return;
+      bindSeg("hm-market", fillSources);
+      bindSeg("hm-mode", fillSources);
+      $("hm-steps").addEventListener("input", (e) => {
+        $("hm-steps-val").textContent = e.target.value;
+      });
+      $("hm-target").addEventListener("input", (e) => {
+        $("hm-target-val").textContent = e.target.value + "%";
+      });
+      $("hm-play").querySelector(".hm-quick").addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-val]");
+        if (!btn) return;
+        $("hm-target").value = btn.dataset.val;
+        $("hm-target-val").textContent = btn.dataset.val + "%";
+      });
+      $("hm-start").addEventListener("click", start);
+      $("hm-trade").addEventListener("click", trade);
+      $("hm-finish").addEventListener("click", finish);
+      $("hm-again").addEventListener("click", function () {
+        $("hm-result").hidden = true;
+        start();
+      });
+      window.addEventListener("resize", function () {
+        if (chart) chart.redraw();
+        if (resultChart) resultChart.redraw();
+      });
+      window.addEventListener("lab:panel", function (e) {
+        if (e.detail.panel !== "human") return;
+        if (chart) chart.redraw();
+        if (resultChart) resultChart.redraw();
+      });
+      if (!api.ok) return;
+      fillSources();
+    }
+
+    return { init };
+  })();
+
 
   /* ── Playground ─────────────────────────────────────────── */
   const Playground = (function () {
@@ -432,6 +926,49 @@
           `<b>${(meta_.realised.annualised_vol * 100).toFixed(0)}%</b>. Measured, not assumed.</div>`;
       }
       el.notes.innerHTML = notes;
+      renderBaselines(trace.baselines);
+    }
+
+    /* The agent beside the naive strategies on its own series.
+     *
+     * The agent's row is highlighted but never sorted to the top: it is placed
+     * where its return puts it, which on many paths is last. Hiding that would
+     * defeat the point of running the comparison at all. */
+    function renderBaselines(bl) {
+      const box = $("pg-baselines");
+      if (!bl || !bl.rows) { box.hidden = true; return; }
+      box.hidden = false;
+
+      const ordered = bl.rows.slice().sort((a, b) => b.total_return - a.total_return);
+      const head =
+        "<thead><tr><th>Strategy</th><th>Return</th><th>Sharpe</th>" +
+        "<th>Max drawdown</th></tr></thead>";
+      const body = ordered
+        .map(function (r) {
+          const range = r.worst != null
+            ? `<span class="sg-ci">${fmt.pct(r.worst, 1)} to ${fmt.pct(r.best, 1)} over ${r.n_seeds} draws</span>`
+            : "";
+          const desc = r.description ? `<span class="sg-ci">${r.description}</span>` : "";
+          return (
+            `<tr class="${r.key === "agent" ? "is-agent" : ""}">` +
+            `<td>${r.label}${desc}${range}</td>` +
+            `<td class="${fmt.cls(r.total_return)}"><b>${fmt.pct(r.total_return, 1)}</b></td>` +
+            `<td>${fmt.num(r.sharpe)}</td>` +
+            `<td class="neg">${fmt.pct(-Math.abs(r.max_drawdown), 1)}</td></tr>`
+          );
+        })
+        .join("");
+      $("pg-bl-table").innerHTML = head + "<tbody>" + body + "</tbody>";
+      $("pg-bl-verdict").textContent = bl.verdict;
+
+      let extra = `<div class="caveat">${bl.random_note}</div>`;
+      if (bl.cost_free_benchmark) {
+        extra +=
+          `<div class="caveat">${bl.cost_free_benchmark.label}: ` +
+          `<b>${fmt.pct(bl.cost_free_benchmark.total_return, 1)}</b>. ` +
+          `${bl.cost_free_benchmark.note}</div>`;
+      }
+      $("pg-bl-notes").innerHTML = extra;
     }
 
     function setCursor(i) {
@@ -1303,6 +1840,338 @@
   })();
 
 
+  /* -- Walk-forward ---------------------------------------- */
+  /* Disjoint chronological folds, each with its own scaler, plus a direct
+   * measurement of what fitting that scaler on the test block costs.
+   *
+   * The one thing this panel must never imply is that it retrained per fold. It
+   * cannot — the backend has no torch — so the same fixed policy is evaluated on
+   * every fold, and the backend's own note saying so is rendered with the
+   * results rather than tucked into a tooltip. */
+  const WalkForward = (function () {
+    let tickers = null;
+    let last = null;
+
+    function mode() { return $("wf-mode").dataset.value; }
+    function market() { return $("wf-market").dataset.value; }
+
+    async function fillSources() {
+      const sel = $("wf-source");
+      sel.innerHTML = "";
+      if (mode() === "historical") {
+        $("wf-source-label").textContent = "Ticker";
+        if (!tickers) {
+          try { tickers = await api.get("/api/tickers"); }
+          catch (err) { tickers = { stock: ["SPY"], crypto: ["BTC-USD"] }; }
+        }
+        (tickers[market()] || []).forEach((t) => sel.add(new Option(t, t)));
+        return;
+      }
+      $("wf-source-label").textContent = "Regime";
+      try {
+        const body = await api.get("/api/regimes");
+        body.regimes.forEach((r) => sel.add(new Option(r.label, r.key)));
+        sel.value = "momentum";
+      } catch (err) { sel.add(new Option("Momentum", "momentum")); }
+    }
+
+    function config() {
+      const cfg = { market: market(), mode: mode() };
+      if (mode() === "historical") cfg.ticker = $("wf-source").value;
+      else {
+        cfg.regime = $("wf-source").value;
+        cfg.seed = 3;
+        // Folds need history: a 650-bar default would leave blocks too short to
+        // step through once the feature warm-up is taken off the front.
+        cfg.n_steps = 1600;
+      }
+      return cfg;
+    }
+
+    function timeline(res) {
+      const total = res.n_rows || 1;
+      return res.plan
+        .map((f) => {
+          const l = (f.train_start / total) * 100;
+          const w = ((f.train_end - f.train_start) / total) * 100;
+          const tl = (f.test_start / total) * 100;
+          const tw = ((f.test_end - f.test_start) / total) * 100;
+          const range = f.test_from ? `${f.test_from} → ${f.test_to}` :
+            `bars ${f.test_start}–${f.test_end}`;
+          return (
+            `<div class="wf-row"><span class="wf-row-k">Fold ${f.fold + 1}</span>` +
+            `<span class="wf-track">` +
+            `<i class="wf-train" style="left:${l}%;width:${w}%"></i>` +
+            `<i class="wf-test" style="left:${tl}%;width:${tw}%"></i></span>` +
+            `<span class="wf-row-v">${range}</span></div>`
+          );
+        })
+        .join("");
+    }
+
+    function table(res) {
+      const head =
+        "<thead><tr><th>Fold</th><th>Train bars</th><th>Test bars</th>" +
+        "<th>Agent</th><th>Buy &amp; hold</th><th>Excess</th></tr></thead>";
+      const body = res.folds
+        .map(
+          (f) =>
+            `<tr><td>${f.fold + 1}</td><td>${f.train_bars}</td><td>${f.test_bars}</td>` +
+            `<td class="${fmt.cls(f.agent_return)}">${fmt.pct(f.agent_return, 1)}</td>` +
+            `<td class="${fmt.cls(f.benchmark_return)}">${fmt.pct(f.benchmark_return, 1)}</td>` +
+            `<td class="${fmt.cls(f.excess_return)}"><b>${fmt.pct(f.excess_return, 1)}</b></td></tr>`
+        )
+        .join("");
+      return head + "<tbody>" + body + "</tbody>";
+    }
+
+    function render(body) {
+      const res = body.result;
+      last = res;
+      $("wf-timeline").innerHTML = timeline(res);
+      $("wf-table").innerHTML = table(res);
+
+      const s = res.summary;
+      $("wf-summary").innerHTML =
+        `<div class="pc-score">` +
+        metric("Mean excess", fmt.pct(s.mean_excess_return, 1), fmt.cls(s.mean_excess_return),
+               "across " + s.n_folds + " folds") +
+        metric("Worst fold", fmt.pct(s.worst_fold_excess, 1), "neg") +
+        metric("Best fold", fmt.pct(s.best_fold_excess, 1), "pos") +
+        metric("Folds beaten", s.folds_beaten + " / " + s.n_folds, "neutral") +
+        `</div><p class="pc-verdict">${s.spread_note}</p>`;
+
+      const lk = res.leakage;
+      $("wf-leakage").innerHTML = lk
+        ? `<h4 class="attr-h">What fitting the scaler on the test block costs</h4>` +
+          `<div class="wf-table-wrap"><table class="wf-table"><thead><tr><th>Fold</th>` +
+          `<th>Scaler on train rows</th><th>Scaler on everything</th><th>Difference</th>` +
+          `</tr></thead><tbody>` +
+          lk.per_fold
+            .map(
+              (r) =>
+                `<tr><td>${r.fold + 1}</td>` +
+                `<td>${fmt.pct(r.train_only_return, 1)}</td>` +
+                `<td>${fmt.pct(r.full_sample_return, 1)}</td>` +
+                `<td class="${fmt.cls(r.delta)}"><b>${fmt.pct(r.delta, 1)}</b></td></tr>`
+            )
+            .join("") +
+          `</tbody></table></div>` +
+          `<p class="xr-hint">Largest single-fold difference: <b>${fmt.pct(lk.max_abs_delta, 1)}</b>. ` +
+          `${lk.note}</p>`
+        : "";
+
+      $("wf-caveat").innerHTML =
+        `<p class="attr-method">${res.fixed_policy_note}</p>` +
+        `<ul><li>${res.scheme_note}</li><li>${res.inference_note}</li></ul>`;
+
+      const m = res.meta;
+      $("wf-receipt").innerHTML = [
+        ["Experiment", body.id],
+        ["Data", m.synthetic ? `synthetic · ${m.regime} · seed ${m.seed}`
+                             : `${m.ticker} · ${m.provider}`],
+        ["Dataset hash", m.dataset_hash],
+        ["Rows after feature warm-up", String(res.n_rows)],
+        ["Scheme", `${res.scheme} · first training window ${Math.round(res.train_min_frac * 100)}%`],
+        ["Scaler", "fit per fold on training rows only"],
+        ["Policy", "the single deployed policy, unchanged across folds"],
+      ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+
+      $("wf-out").hidden = false;
+    }
+
+    async function run() {
+      const btn = $("wf-run");
+      btn.disabled = true;
+      showError($("wf-error"), null);
+      $("wf-out").hidden = true;
+      setStatus($("wf-status"), "splitting and evaluating…", true);
+      const fill = $("wf-bar").firstElementChild;
+      fill.style.width = "0%";
+      try {
+        const body = await api.runExperiment(
+          {
+            kind: "walk_forward",
+            n_folds: Number($("wf-folds").value),
+            scheme: $("wf-scheme").value,
+            compare_leakage: true,
+            config: config(),
+          },
+          (b) => { fill.style.width = Math.round((b.progress || 0) * 100) + "%"; }
+        );
+        fill.style.width = "100%";
+        render(body);
+        setStatus($("wf-status"), `${body.id} · ${body.elapsed_sec}s`, false);
+      } catch (err) {
+        showError($("wf-error"), String(err.message || err));
+        setStatus($("wf-status"), "", false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function bindSeg(id, onChange) {
+      const seg = $(id);
+      seg.addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-val]");
+        if (!btn) return;
+        seg.dataset.value = btn.dataset.val;
+        seg.querySelectorAll("button").forEach((b) =>
+          b.setAttribute("aria-pressed", String(b === btn))
+        );
+        onChange(btn.dataset.val);
+      });
+    }
+
+    async function showSchemeNote() {
+      try {
+        const meta = await api.get("/api/meta");
+        const key = $("wf-scheme").value;
+        const row = (meta.walk_forward.schemes || []).find((s) => s.key === key);
+        $("wf-scheme-note").textContent = row ? row.description : "";
+      } catch (err) { /* the note is nice to have, not load-bearing */ }
+    }
+
+    function init() {
+      if (!$("wf-run")) return;
+      bindSeg("wf-market", fillSources);
+      bindSeg("wf-mode", fillSources);
+      $("wf-folds").addEventListener("input", (e) => {
+        $("wf-folds-val").textContent = e.target.value;
+      });
+      $("wf-scheme").addEventListener("change", showSchemeNote);
+      $("wf-run").addEventListener("click", run);
+      if (!api.ok) return;
+      fillSources();
+      showSchemeNote();
+    }
+
+    return { init, get last() { return last; } };
+  })();
+
+
+  /* -- What is it reading? (occlusion attribution) --------- */
+  /* Ranks the agent's inputs by how far the target position moves when each one
+   * is removed. Every bar here is a real forward pass through the deployed
+   * policy — and every limit of the method travels with it, because a ranked
+   * bar chart is exactly the kind of output a reader will take for causation. */
+  const Attribution = (function () {
+    let expId = null;
+    let step = 0;
+    let last = null;
+
+    /* Bars are drawn relative to the strongest effect measured, so the chart
+     * says "relative to the largest", never "share of the decision". */
+    function bars(rows, valueKey, max) {
+      return rows
+        .map((r) => {
+          const v = r[valueKey];
+          const w = max > 1e-12 ? Math.max(1, (v / max) * 100) : 0;
+          return (
+            `<div class="attr-row"><span class="attr-name">${r.name}</span>` +
+            `<span class="attr-track"><i style="width:${w.toFixed(1)}%"></i></span>` +
+            `<span class="attr-val">${v.toFixed(3)}</span></div>`
+          );
+        })
+        .join("");
+    }
+
+    function render(out) {
+      last = out;
+      const scope = $("attr-scope").value;
+      const episode = scope === "episode" && out.episode;
+      const rows = episode ? out.episode.features : out.local.market;
+      const key = episode ? "mean_abs_delta" : "abs_delta";
+      const acctKey = episode ? "mean_abs_delta" : "abs_delta";
+      const acct = episode ? out.episode.account : out.local.account;
+      const max = Math.max.apply(null, rows.map((r) => r[key]).concat([0]));
+
+      $("attr-groups").innerHTML = out.groups
+        .slice()
+        .sort((a, b) => b.share - a.share)
+        .map(
+          (g) =>
+            `<div class="attr-chip"><span class="attr-chip-k">${g.label}</span>` +
+            `<span class="attr-chip-v">${(g.share * 100).toFixed(0)}%</span></div>`
+        )
+        .join("");
+
+      $("attr-features").innerHTML = bars(rows, key, max);
+      // Account scalars share the market block's scale, so the comparison
+      // between "what the market says" and "what my book says" is honest.
+      $("attr-account").innerHTML = bars(acct, acctKey, max);
+
+      const dead = episode ? out.episode.dead_features : [];
+      $("attr-dead").innerHTML = dead.length
+        ? `<p class="xr-hint attr-dead">Exactly zero everywhere sampled: ` +
+          `<b>${dead.join(", ")}</b>. ${out.inert_note || ""}</p>`
+        : "";
+
+      $("attr-caveats").innerHTML =
+        `<p class="attr-method">${out.method}</p><ul>` +
+        out.caveats.map((c) => `<li>${c}</li>`).join("") +
+        `</ul>` +
+        (episode
+          ? `<p class="xr-hint">Averaged over ${out.episode.bars_sampled} bars ` +
+            `sampled across the ${out.episode.bars_total}-bar episode ` +
+            `(every ${out.episode.stride}). Magnitudes are averaged, not signed: ` +
+            `a feature the agent leans on in both directions would otherwise ` +
+            `cancel itself out to zero.</p>`
+          : `<p class="xr-hint">Measured at bar ${out.step} only — one point in ` +
+            `input space. The episode view is the more stable ranking.</p>`);
+
+      $("attr-out").hidden = false;
+    }
+
+    async function run() {
+      if (!expId) return;
+      const btn = $("attr-run");
+      btn.disabled = true;
+      showError($("attr-error"), null);
+      setStatus($("attr-status"), "occluding each input…", true);
+      try {
+        const out = await api.get(
+          `/api/experiments/${expId}/attribution?step=${step}&bars=60`
+        );
+        render(out);
+        setStatus($("attr-status"), `${out.episode.bars_sampled} bars measured`, false);
+      } catch (err) {
+        showError($("attr-error"), String(err.message || err));
+        setStatus($("attr-status"), "", false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function init() {
+      if (!$("attr-run")) return;
+      $("attr-run").addEventListener("click", run);
+      // Switching scope re-renders what was already measured — it does not
+      // silently re-run a different experiment behind the label.
+      $("attr-scope").addEventListener("change", function () {
+        if (last) render(last);
+      });
+      window.addEventListener("lab:trace", function (e) {
+        expId = e.detail.body.id;
+        last = null;
+        $("attr-out").hidden = true;
+        setStatus($("attr-status"), "", false);
+      });
+      window.addEventListener("lab:cursor", function (e) {
+        if (step === e.detail.step) return;
+        step = e.detail.step;
+        // The local view belongs to a bar; keep it honest by clearing it.
+        if (last && $("attr-scope").value === "local") {
+          last = null;
+          $("attr-out").hidden = true;
+        }
+      });
+    }
+
+    return { init };
+  })();
+
+
   /* -- What if? (environment counterfactual) --------------- */
   /* Replays one bar under alternative actions from an identical environment
    * state. The alternatives are scored on price movement that already
@@ -1432,6 +2301,245 @@
   })();
 
 
+  /* -- How many runs would it take? ------------------------ */
+  /* The natural sequel to every resolution floor on this site. Simulated
+   * server-side against the real sign-flip test — there is no closed form here
+   * and a t-test formula would give a smooth, confident, wrong answer. */
+  const PowerCalc = (function () {
+    function pct(id) { return Number($(id).value) / 100; }
+
+    function render(out) {
+      const cur = out.current;
+      const need = out.required_n;
+      $("pw-scores").innerHTML =
+        metric("Power at " + (cur ? cur.n : "—") + " runs",
+               cur ? Math.round(cur.power * 100) + "%" : "—",
+               cur && cur.power >= out.target ? "pos" : "neg",
+               cur && !cur.attainable ? "below the floor" : "chance of detecting it") +
+        metric("Runs needed for " + Math.round(out.target * 100) + "%",
+               need == null ? "more than " + out.max_n : String(need),
+               need == null ? "neg" : "neutral") +
+        metric("Floor at " + (cur ? cur.n : "—"),
+               cur ? cur.floor.toFixed(4) : "—", "neutral",
+               "smallest attainable p");
+      $("pw-verdict").innerHTML = out.verdict.replace(
+        /\*\*(.+?)\*\*/g, "<b>$1</b>"
+      );
+
+      const rows = out.curve
+        .map(function (r) {
+          return (
+            `<tr><td>${r.n}</td>` +
+            `<td class="${r.power >= out.target ? "pos" : "neutral"}">${Math.round(r.power * 100)}%</td>` +
+            `<td>${r.floor.toFixed(4)}</td>` +
+            `<td>${r.attainable ? (r.exact ? "exact" : "sampled") : "below floor"}</td></tr>`
+          );
+        })
+        .join("");
+      $("pw-curve").innerHTML =
+        "<thead><tr><th>Paired runs</th><th>Power</th><th>Floor</th>" +
+        "<th>Permutations</th></tr></thead><tbody>" + rows + "</tbody>";
+
+      $("pw-method").innerHTML = `<p class="attr-method">${out.method}</p>`;
+      $("pw-out").hidden = false;
+    }
+
+    async function run() {
+      const btn = $("pw-run");
+      btn.disabled = true;
+      showError($("pw-error"), null);
+      setStatus($("pw-status"), "simulating the test…", true);
+      try {
+        render(await api.post("/api/power", {
+          effect: pct("pw-effect"),
+          sd: pct("pw-sd"),
+          have_n: Number($("pw-have").value),
+          n_sims: 1500,
+        }));
+        setStatus($("pw-status"), "", false);
+      } catch (err) {
+        setStatus($("pw-status"), "", false);
+        showError($("pw-error"), String(err.message || err));
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function init() {
+      if (!$("pw-run")) return;
+      [["pw-effect", "pw-effect-val", "+", "%"],
+       ["pw-sd", "pw-sd-val", "", "%"],
+       ["pw-have", "pw-have-val", "", ""]].forEach(function (spec) {
+        $(spec[0]).addEventListener("input", function (e) {
+          $(spec[1]).textContent = spec[2] + e.target.value + spec[3];
+        });
+      });
+      $("pw-run").addEventListener("click", run);
+    }
+
+    return { init };
+  })();
+
+
+  /* -- Hyper-parameter sensitivity ------------------------- */
+  /* The sibling of the seed study: does the conclusion survive a change of
+   * recipe? Rows are rendered in their published order and never sorted by
+   * outcome — ranking nine recipes and quoting the winner is exactly the
+   * p-hacking the rest of this lab argues against. */
+  const HyperParams = (function () {
+    function marketBlock(block) {
+      const s = block.summary || {};
+      const head =
+        "<thead><tr><th>Configuration</th><th>Edge vs buy &amp; hold</th>" +
+        "<th>95% CI across seeds</th><th>Seed range</th></tr></thead>";
+      const rows = block.rows
+        .map(function (r) {
+          const ciText = r.edge_ci
+            ? `${fmt.pct(r.edge_ci[1], 1)} to ${fmt.pct(r.edge_ci[2], 1)}`
+            : "—";
+          const range = r.worst_seed_edge != null
+            ? `${fmt.pct(r.worst_seed_edge, 1)} / ${fmt.pct(r.best_seed_edge, 1)}`
+            : "—";
+          return (
+            `<tr class="${r.is_baseline ? "is-agent" : ""}">` +
+            `<td>${r.config}${r.is_baseline ? " <span class=\"sg-ci\">published default</span>" : ""}</td>` +
+            `<td class="${fmt.cls(r.mean_edge)}"><b>${fmt.pct(r.mean_edge, 1)}</b></td>` +
+            `<td>${ciText}</td><td>${range}</td></tr>`
+          );
+        })
+        .join("");
+      return (
+        `<h4 class="attr-h">${block.market}</h4>` +
+        `<div class="wf-table-wrap"><table class="wf-table">${head}` +
+        `<tbody>${rows}</tbody></table></div>` +
+        (s.verdict ? `<p class="xr-hint">${s.verdict}</p>` : "") +
+        (s.power_note ? `<p class="xr-hint">${s.power_note}</p>` : "")
+      );
+    }
+
+    function render(body) {
+      $("hp-headline").textContent = body.headline;
+      $("hp-markets").innerHTML = body.markets.map(marketBlock).join("");
+      $("hp-caveats").innerHTML =
+        `<p class="attr-method">${body.design}</p><ul>` +
+        body.caveats.map((c) => `<li>${c}</li>`).join("") +
+        "</ul>";
+      const knobs = Object.keys(body.knobs || {})
+        .map((k) => `${k} → ${body.knobs[k].join(", ")}`)
+        .join(" · ");
+      $("hp-receipt").innerHTML = [
+        ["Knobs varied", knobs],
+        ["Seeds per configuration", String(body.seeds_per_config)],
+        ["Timesteps per run", String(body.timesteps)],
+        ["Generated", body.generated],
+        ["Source", body.source],
+        ["Regenerate with", `<code>${body.generated_by}</code>`],
+      ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+      $("hp-body").hidden = false;
+    }
+
+    async function load() {
+      if (!api.ok) return;
+      setStatus($("hp-status"), "loading the sweep…", true);
+      try {
+        render(await api.get("/api/hyperparameters"));
+        setStatus($("hp-status"), "", false);
+      } catch (err) {
+        setStatus($("hp-status"), "", false);
+        showError($("hp-error"), `Could not load the sweep: ${err.message}`);
+      }
+    }
+
+    function init() { if ($("hp-card")) load(); }
+
+    return { init };
+  })();
+
+
+  /* -- Is there anything there? (surrogate-data test) ------- */
+  /* The project's sharpest result, and the only one that can distinguish "the
+   * agent is weak" from "the market is empty".
+   *
+   * Both arms are full training runs, so these are committed results and the
+   * panel says so on every card rather than borrowing the credibility of the
+   * live panels. The positive control is rendered FIRST and given equal weight,
+   * because a null from a test with unproven power means nothing. */
+  const Surrogate = (function () {
+    function ci(bounds) {
+      return `[${fmt.pct(bounds[1], 1)}, ${fmt.pct(bounds[2], 1)}]`;
+    }
+
+    function marketRow(row, structuredLabel) {
+      const cls = row.significant_at_05 ? "pos" : "neutral";
+      return (
+        `<tr><td>${row.market}</td>` +
+        `<td>${fmt.pct(row.edge_structured, 1)}<span class="sg-ci">${ci(row.structured_ci)}</span></td>` +
+        `<td>${fmt.pct(row.edge_surrogate, 1)}<span class="sg-ci">${ci(row.surrogate_ci)}</span></td>` +
+        `<td class="${fmt.cls(row.diff)}"><b>${fmt.pct(row.diff, 1)}</b></td>` +
+        `<td class="${cls}">${row.p.toFixed(4)}</td></tr>`
+      );
+    }
+
+    function armCard(arm, index) {
+      const head =
+        `<thead><tr><th>Market</th><th>${arm.structured_label}</th>` +
+        `<th>Surrogate (shuffled)</th><th>Difference</th><th>p</th></tr></thead>`;
+      const rows = arm.markets.map((r) => marketRow(r, arm.structured_label)).join("");
+      const reads = arm.markets
+        .map((r) => `<li>${r.interpretation}</li>`)
+        .join("");
+      return (
+        `<div class="panel-card">` +
+        `<div class="gen-head"><h3>${index} &middot; ${arm.label} ` +
+        `<span class="tag-precomputed">Real &middot; precomputed</span></h3></div>` +
+        `<p class="xr-hint">${arm.expectation}</p>` +
+        `<div class="wf-table-wrap"><table class="wf-table sg-table">${head}` +
+        `<tbody>${rows}</tbody></table></div>` +
+        `<ul class="sg-reads">${reads}</ul>` +
+        `<dl class="receipt"><dt>Paired on</dt><dd>${arm.axis}</dd>` +
+        `<dt>Source</dt><dd>${arm.source}</dd>` +
+        `<dt>Regenerate with</dt><dd><code>${arm.generated_by}</code></dd></dl>` +
+        `</div>`
+      );
+    }
+
+    function render(body) {
+      $("sg-verdict").textContent = body.verdict || "";
+      // The control is rendered first because it is what licenses reading the
+      // second arm at all.
+      $("sg-arms").innerHTML = body.arms
+        .map((arm, i) => armCard(arm, i + 1))
+        .join("");
+      $("sg-method").textContent = body.method;
+      $("sg-caveats").innerHTML =
+        "<ul>" + body.caveats.map((c) => `<li>${c}</li>`).join("") + "</ul>";
+      $("sg-receipt").innerHTML = [
+        ["Technique", "surrogate-data testing"],
+        ["Reference", body.reference],
+        ["Computed", "offline — both arms are full PPO training runs"],
+        ["Re-analysable here", body.reanalysis_note],
+      ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+      $("sg-body").hidden = false;
+    }
+
+    async function load() {
+      if (!api.ok) return;
+      setStatus($("sg-status"), "loading committed results…", true);
+      try {
+        render(await api.get("/api/surrogate"));
+        setStatus($("sg-status"), "", false);
+      } catch (err) {
+        setStatus($("sg-status"), "", false);
+        showError($("sg-error"), `Could not load the surrogate results: ${err.message}`);
+      }
+    }
+
+    function init() { load(); }
+
+    return { init };
+  })();
+
+
   /* -- Research notebook ----------------------------------- */
   /* Every experiment this session has run, with the config that produced it.
    *
@@ -1535,6 +2643,25 @@
         .join("");
     }
 
+    /* Predicted vs observed, rendered only when a prediction was actually made.
+     * The backend decides matched/unmatched; nothing here re-judges it, and an
+     * experiment kind with no benchmark comparison says so rather than being
+     * scored against a different quantity. */
+    function predictionBlock(outcome) {
+      if (!outcome) return "";
+      if (!outcome.scorable) {
+        return '<div class="nb-pred-out is-unscored"><b>Prediction: ' +
+               escapeHtml(outcome.predicted) + "</b> — " +
+               escapeHtml(outcome.reason) + "</div>";
+      }
+      const cls = outcome.matched ? "is-hit" : "is-miss";
+      return '<div class="nb-pred-out ' + cls + '">' +
+             '<span class="nb-pred-tag">' + (outcome.matched ? "as predicted" : "not as predicted") +
+             "</span>" +
+             '<p>' + escapeHtml(outcome.verdict) + "</p>" +
+             '<p class="xr-hint">' + escapeHtml(outcome.rule) + "</p></div>";
+    }
+
     function escapeHtml(str) {
       const d = document.createElement("div");
       d.textContent = str;
@@ -1576,6 +2703,10 @@
           ["Experiment", body.id],
           ["Kind", kindLabel(body.kind)],
           ["Question", body.question || "— not stated —"],
+          ["Prediction", body.prediction
+            ? body.prediction.statement + " (registered " +
+              body.prediction.registered_at_utc + ")"
+            : "— none registered —"],
           ["Status", body.status + (body.error ? " · " + body.error : "")],
           ["Started", receipt.created_at_utc],
           ["Elapsed", body.elapsed_sec + "s"],
@@ -1603,6 +2734,7 @@
                  .map((e) => "<dt>" + e[0] + "</dt><dd>" + escapeHtml(String(e[1])) + "</dd>")
                  .join("") +
           "</dl>" +
+          predictionBlock(body.prediction_outcome) +
           '<div class="caveat">This config round-trips exactly: replaying it rebuilds ' +
           "an identical environment and reproduces these numbers.</div>";
       } catch (err) {
@@ -1644,10 +2776,14 @@
       $("nb-bar").firstElementChild.style.width = "0%";
       const kind = $("nb-kind").value;
       const question = $("nb-question").value.trim();
+      // Read once, here, and sent with the creation request — the backend stamps
+      // it before the runner starts. There is no path that edits it afterwards.
+      const prediction = $("nb-prediction").dataset.value;
 
       const payload = {
         kind: kind,
         question: question || undefined,
+        prediction: prediction || undefined,
         config: {
           market: $("nb-market").dataset.value || "stock",
           mode: "synthetic",
@@ -1695,6 +2831,21 @@
       });
       $("nb-kind").addEventListener("change", syncKind);
       $("nb-run").addEventListener("click", run);
+      // Clicking the selected prediction again clears it: "no prediction" has to
+      // stay reachable, or the form would quietly invent one.
+      const pred = $("nb-prediction");
+      pred.addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-val]");
+        if (!btn) return;
+        const off = pred.dataset.value === btn.dataset.val;
+        pred.dataset.value = off ? "" : btn.dataset.val;
+        pred.querySelectorAll("button").forEach((b) =>
+          b.setAttribute("aria-pressed", String(!off && b === btn))
+        );
+      });
+      api.get("/api/meta")
+        .then((m) => { $("nb-prereg-rule").textContent = m.preregistration.rule; })
+        .catch(() => {});
       $("nb-refresh").addEventListener("click", refresh);
       $("nb-reproduce").addEventListener("click", reproduce);
       $("nb-close").addEventListener("click", function () {
@@ -1763,7 +2914,8 @@
    * to find it. Keyboard behaviour follows the ARIA tabs pattern: arrows move
    * between tabs, Home/End jump to the ends, and a roving tabindex keeps a
    * single stop in the page's tab order. */
-  const PANELS = ["playground", "xray", "generalization", "seeds", "notebook"];
+  const PANELS = ["perception", "human", "playground", "xray", "generalization",
+                  "walkforward", "seeds", "surrogate", "notebook"];
 
   function showPanel(name, updateHash) {
     if (PANELS.indexOf(name) === -1) name = PANELS[0];
@@ -1820,10 +2972,17 @@
     if (!$("view-lab")) return;
     initTabs();
     initStatus();
+    Perception.init();
+    Human.init();
     Playground.init();
     XRay.init();
+    Attribution.init();
     Generalization.init();
+    WalkForward.init();
     Seeds.init();
+    Surrogate.init();
+    HyperParams.init();
+    PowerCalc.init();
     WhatIf.init();
     Notebook.init();
   }
@@ -1832,5 +2991,8 @@
   else boot();
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
-  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel, Playground, XRay, Generalization, Seeds, WhatIf, Notebook };
+  window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel,
+                   Perception, Human, Playground, XRay, Attribution,
+                   Generalization, WalkForward, Seeds, Surrogate, HyperParams,
+                   PowerCalc, WhatIf, Notebook };
 })();
