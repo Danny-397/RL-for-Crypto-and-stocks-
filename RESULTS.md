@@ -26,7 +26,7 @@ respectively.
    **+275% against buy-&-hold's +19%**, winning 4 of 6 coins. Taken alone, that is a
    tempting headline. It was not one: it survived neither reseeding (§5) nor moving
    the evaluation window forward by two months (§4).
-3. **Multi-seed evaluation dissolves the illusion (RQ3).** Across **5 seeds** the
+3. **Multi-seed evaluation dissolves the illusion (RQ3).** Across **10 seeds** the
    crypto agent's individual returns span more than an order of magnitude — one seed
    more than triples capital, another loses money — and the paired permutation test
    cannot distinguish the agent from buy-&-hold. On equities it is significantly
@@ -337,10 +337,10 @@ vs. buy-&-hold *across the held-out tickers*.
 <!-- BEGIN GENERATED: significance-full -->
 | Market | Agent return (95% CI across seeds) | Buy & hold | Agent − B&H | p-value | Verdict |
 |---|---:|---:|---:|---:|---|
-| Stock | **−21.5%** `[−29.0%, −14.9%]` | +239.5% | −261.1% | **0.0021** | significantly **worse** than B&H |
-| Crypto | **+79.7%** `[+1.1%, +163.3%]` | +33.5% | +46.2% | 0.82 | **indistinguishable** from B&H |
+| Stock | **−19.1%** `[−26.7%, −11.2%]` | +239.5% | −258.6% | **0.0021** | significantly **worse** than B&H |
+| Crypto | **+56.8%** `[+16.3%, +106.3%]` | +33.5% | +23.3% | 0.79 | **indistinguishable** from B&H |
 
-*5 independent training seeds per market. The p-value is a paired permutation test of agent vs. buy-and-hold across the held-out tickers (10 equities, 6 crypto pairs), not across seeds — the two axes answer different questions and their p-values are not comparable.*
+*10 independent training seeds per market. The p-value is a paired permutation test of agent vs. buy-and-hold across the held-out tickers (10 equities, 6 crypto pairs), not across seeds — the two axes answer different questions and their p-values are not comparable.*
 <!-- END GENERATED: significance-full -->
 
 **Reading it (28-feature model, incl. cross-asset features).** The two markets fail
@@ -351,13 +351,17 @@ average across seeds; what it did *not* do is beat buy-and-hold, which the paire
 permutation test cannot distinguish it from. Per-seed returns were:
 
 <!-- BEGIN GENERATED: seed-spread -->
-- **Stock** — −20.9%, −23.6%, −12.2%, −14.5%, −36.5%
-- **Crypto** — +225.5%, +135.0%, −3.4%, −28.8%, +70.1%
+- **Stock** — −20.9%, −23.6%, −12.2%, −14.5%, −36.5%, −36.9%, +4.1%, −4.4%, −15.8%, −29.9%
+- **Crypto** — +225.5%, +135.0%, −3.4%, −28.8%, +70.1%, +81.7%, −14.4%, +30.1%, +26.8%, +45.0%
 <!-- END GENERATED: seed-spread -->
 
-A study whose seeds range this widely cannot support a claim about any one of them,
-and with 5 seeds the sign-flip test on that axis could not reach p ≤ 0.05 even in
-principle (its floor is 2/2⁵ = 0.0625) — see the power calculator in the lab.
+A study whose seeds range this widely cannot support a claim about any one of them.
+This study originally ran **5** seeds, at which the sign-flip test on the seed axis
+could not reach p ≤ 0.05 even in principle — its floor is 2/2⁵ = 0.0625, which the
+lab's power calculator reports for any design that small. It was rerun at **10**
+seeds for exactly that reason, dropping the floor to 2/2¹⁰ = 0.002 and roughly
+halving the width of the crypto interval. The conclusion did not change; the
+ability of the test to have detected a change is what improved.
 **There is no reliable, seed-robust edge on real markets**, even after adding
 relative-strength and market-regime features. A naive project would have shipped the
 §3 table as a win; the multi-seed test is what catches it.
