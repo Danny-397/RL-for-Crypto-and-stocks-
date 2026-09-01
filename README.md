@@ -103,6 +103,25 @@ agent is significantly *worse* than simply holding. **There is no reliable,
 seed-robust edge on real markets**, as weak-form market efficiency predicts. A naive
 project ships the lucky backtest; `tools/real_significance.py` is what catches it.
 
+**"Maybe PPO is just the wrong tool."** That is the obvious objection to a negative
+result, and the rule-based baselines cannot answer it. So two ordinary supervised
+models — ridge regression on the next bar's return, logistic regression on its
+direction, both written from scratch in NumPy — were fit on the *same* features and
+*same* training split and traded through the *same* environment at the *same* costs:
+
+<!-- BEGIN GENERATED: supervised-brief -->
+| Market | Ridge | Logistic | PPO agent | Buy & hold |
+|---|---:|---:|---:|---:|
+| Stocks | −6.0% | +3.1% | −4.7% | **+239.3%** |
+| Crypto | +0.7% | −7.4% | +38.7% | **+33.2%** |
+<!-- END GENERATED: supervised-brief -->
+
+Neither beat buy-and-hold in either market, so two unrelated method classes land in
+the same place. Their in-sample directional accuracy was *above* chance, so they did
+fit their training data — and none of it survived out of sample. That is the
+overfitting result again, reached by a completely different route.
+(`tools/supervised_report.py`)
+
 ![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
 
 **It also does the harder problem: cross-sectional allocation.** The same PPO agent

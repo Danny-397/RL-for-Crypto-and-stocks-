@@ -457,6 +457,28 @@ def supervised_table() -> Optional[str]:
     return "\n".join(out).rstrip() if out else None
 
 
+def supervised_brief() -> Optional[str]:
+    """Condensed for the README: the learned arms against the passive benchmark."""
+    art = _asset("supervised.json")
+    if not art:
+        return None
+    rows = ["| Market | Ridge | Logistic | PPO agent | Buy & hold |",
+            "|---|---:|---:|---:|---:|"]
+    seen = False
+    for market, label in (("stock", "Stocks"), ("crypto", "Crypto")):
+        b = art.get("markets", {}).get(market)
+        if not b:
+            continue
+        seen = True
+        st = b["strategies"]
+        rows.append(
+            f"| {label} | {pct(st['ridge_forecast']['total_return'])} | "
+            f"{pct(st['logistic_direction']['total_return'])} | "
+            f"{pct(st['PPO agent']['total_return'])} | "
+            f"**{pct(st['buy_and_hold']['total_return'])}** |")
+    return "\n".join(rows) if seen else None
+
+
 def cost_table() -> Optional[str]:
     """Held-out return against the friction it pays."""
     art = _asset("cost_sensitivity.json")
@@ -633,6 +655,7 @@ BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "attribution-table": attribution_table,
     "sweep-table": sweep_table,
     "supervised-table": supervised_table,
+    "supervised-brief": supervised_brief,
     "cost-table": cost_table,
     "surrogate-robust": surrogate_robust,
     "tex-ablation": tex_ablation,
