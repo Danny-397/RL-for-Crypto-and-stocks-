@@ -142,3 +142,30 @@ def test_the_crypto_interval_is_not_described_as_straddling_zero(results: str):
     excludes_zero = sig["crypto"]["ci_low"] > 0 or sig["crypto"]["ci_high"] < 0
     if excludes_zero:
         assert "straddles zero" not in results
+
+
+def test_the_stated_smoke_check_count_matches_the_smoke_suite():
+    """README quoted 77 browser checks while the suite had grown to 137.
+
+    Harmless on its own -- it understated the work -- but it is the same defect
+    as every other number here: a figure copied once and then left behind by the
+    thing it describes. Counting it is cheap, so nothing is gained by trusting
+    the copy.
+    """
+    with io.open(os.path.join(REPO, "tools", "smoke_lab.py"),
+                 encoding="utf-8") as fh:
+        smoke = fh.read()
+    # Call sites, not the definition: `def check(` is the helper itself.
+    calls = len(re.findall(r"(?<![\w.])check\(", smoke))
+    helper = len(re.findall(r"def\s+check\w*\(", smoke))
+    actual = calls - helper
+
+    readme = _read("README.md")
+    claims = [int(n) for n in re.findall(r"(\d+)\s+(?:headless-)?browser checks",
+                                         readme)]
+    assert claims, "README no longer states how many smoke checks there are"
+    for claimed in claims:
+        assert claimed == actual, (
+            f"README claims {claimed} browser checks; tools/smoke_lab.py has "
+            f"{actual}")
+

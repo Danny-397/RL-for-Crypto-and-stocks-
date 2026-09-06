@@ -315,7 +315,7 @@ tests/               # pytest suite (envs, agent, features, reward, recurrent, s
                      #   normalization, portfolio, snapshot, lab backend, HTTP API)
 tools/
 ├── fetch_data.py        # download a real OHLCV basket; --end pins a snapshot
-├── smoke_lab.py         # 77 headless-browser checks against the live lab
+├── smoke_lab.py         # 137 headless-browser checks against the live lab
 ├── build_site_data.py   # train + backtest -> docs/results.js for the dashboard
 ├── ablation.py          # domain-randomization overfitting study
 ├── baseline_report.py   # agent vs. buy-&-hold / random / momentum
@@ -569,12 +569,14 @@ volatility clustering are gone. Train the same recipe on both.
 **The positive control is the half that matters**, and it is presented first,
 because a null from a test with unproven power says nothing:
 
+<!-- BEGIN GENERATED: surrogate-brief -->
 | Arm | Market | Structured | Surrogate | Difference | p |
 |---|---|---:|---:|---:|---:|
-| Synthetic (control) | stock | +3.4% | −42.7% | **+46.1%** | 0.0006 |
-| Synthetic (control) | crypto | +99.0% | −65.3% | **+164.3%** | 0.0032 |
-| Real | stock | −297.4% | −196.9% | −100.5% | 0.498 |
-| Real | crypto | −5.8% | −1309.2% | +1303.5% | 0.156 |
+| Synthetic (control) | crypto | +68.6% | −55.7% | **+124.3%** | **0.0075** |
+| Synthetic (control) | stock | +1.8% | −47.7% | **+49.5%** | **0.0026** |
+| Real | crypto | −20.6% | −977.0% | +956.4% | 0.1225 |
+| Real | stock | −253.4% | −136.3% | −117.1% | 0.4150 |
+<!-- END GENERATED: surrogate-brief -->
 
 On synthetic data with a planted AR(1) signal the agent shows a clear edge and
 loses it under shuffling, in both markets. That licenses reading the real arm:
@@ -583,15 +585,20 @@ random order.** On this evidence the flat performance is the market's, not the
 agent's — which is what weak-form efficiency predicts, arrived at from the
 inside.
 
-The crypto real row is instructive on its own: a +1303-point difference that is
-*not* significant, because the surrogate arm's interval runs from −2660% to
-−146%. A large point estimate with no power is not a result, and the panel says
-so rather than quoting the headline number.
+The crypto real row is instructive on its own: a large positive point estimate
+that is *not* significant, because the surrogate arm's interval is enormous —
+reshuffling fat-tailed crypto returns occasionally creates paths on which a
+leveraged agent loses catastrophically, and those dominate the mean. A large
+point estimate with no power is not a result, and the panel says so rather than
+quoting the headline number.
 
-These artifacts predate per-arm value recording, so they carry summary
-statistics only. Rather than re-deriving a p-value from a mean, the API declares
-them non-re-analysable and `tools/surrogate_test.py` now records the per-arm
-values and `n_pairs` so future regenerations can be re-analysed live.
+`tools/surrogate_test.py` records the per-arm values and `n_pairs`, so every row
+above is re-analysable live rather than being a stored summary a p-value would
+have to be re-derived from. That is what lets the median-based variant in
+[RESULTS §6](RESULTS.md) run without retraining anything: same paired null, same
+pairs, a statistic chosen to be immune to the heavy tails. An artifact that
+carries only summary statistics is still marked non-re-analysable by the API
+instead of being silently re-analysed.
 
 ### Does it beat a coin flip?
 
@@ -720,7 +727,7 @@ is the whole argument for measuring instead of looking.
 The project reports two numbers that live on **different axes**, and pairing on
 the wrong one silently changes the claim:
 
-- **across training seeds** (n = 5) — "how repeatable is this?" → bootstrap CI
+- **across training seeds** (n = 10) — "how repeatable is this?" → bootstrap CI
 - **across held-out tickers** (n = 10 / 6) — "is the cross-sectional edge real?"
   → paired permutation test, which is where the published p-value comes from
 
@@ -730,9 +737,14 @@ assignments, so **p can never fall below `2 / 2**n`** — 0.0625 at n = 5, and
 design cannot reach significance at 0.05 whatever the effect size. The lab
 reports this resolution floor beside every test, because *"underpowered by
 construction"* and *"no effect"* are different statements. It shows up concretely
-in the ablation: the held-out difference between the two agents is **+61.4% with
-a 95% CI of [+37%, +82%]** — decisive — yet **p = 0.063**, because five pairs
-cannot resolve further.
+in the ablation, where the held-out difference between the two agents is
+decisive and the p-value still cannot clear the floor, because five pairs
+cannot resolve further:
+
+<!-- BEGIN GENERATED: ablation-resolution -->
+- **Stock** — held-out difference **+72.8%**, 95% CI `[+46%, +95%]`, yet **p = 0.0630** against a floor of 0.0625 at 5 pairs.
+- **Crypto** — held-out difference **+180.1%**, 95% CI `[+125%, +237%]`, yet **p = 0.0630** against a floor of 0.0625 at 5 pairs.
+<!-- END GENERATED: ablation-resolution -->
 
 ## API
 
@@ -828,7 +840,7 @@ all**, and the lab layers live experiments on top when `window.RL_API` is set.
 ```bash
 python tools/build_site_data.py --real --timesteps 200000   # regenerate docs/results.js
 python server/app.py                                        # the experiment API
-python tools/smoke_lab.py                                   # 77 browser checks against both
+python tools/smoke_lab.py                                   # 137 browser checks against both
 ```
 
 `tools/smoke_lab.py` drives the real page in headless Chromium. Its most important
