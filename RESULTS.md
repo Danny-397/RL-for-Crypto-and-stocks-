@@ -177,7 +177,7 @@ Seed 42, 200,000 timesteps, test window ending 2026-08-28:
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| **PPO agent** | −14.1% | −0.22 | 37.9% |
+| **PPO agent** | −4.7% | −0.09 | 35.0% |
 | Buy & hold | +239.3% | +1.12 | 26.9% |
 | MA crossover | +74.5% | +0.78 | 23.4% |
 | Flat (cash) | +0.0% | +0.00 | 0.0% |
@@ -187,7 +187,7 @@ Seed 42, 200,000 timesteps, test window ending 2026-08-28:
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| **PPO agent** | +1.4% | +0.09 | 70.5% |
+| **PPO agent** | +38.7% | +0.21 | 66.6% |
 | Buy & hold | +33.2% | +0.38 | 73.7% |
 | MA crossover | +8.3% | +0.24 | 59.9% |
 | Flat (cash) | +0.0% | +0.00 | 0.0% |

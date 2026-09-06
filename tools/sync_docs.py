@@ -267,6 +267,72 @@ def _surrogate_arm(name: str) -> Optional[str]:
     return "\n".join(rows)
 
 
+def surrogate_brief() -> Optional[str]:
+    """Both arms in one table, for the README, which argues in a single pass.
+
+    RESULTS.md splits the control from the real arm because it argues at length
+    between them. The README does not, and so carried this as a hand-typed table
+    -- which then drifted onto a third set of numbers agreeing with neither the
+    artifacts nor RESULTS.md, in the section of the repository that explains why
+    hand-typed numbers must not be trusted.
+    """
+    rows = ["| Arm | Market | Structured | Surrogate | Difference | p |",
+            "|---|---|---:|---:|---:|---:|"]
+    seen = False
+    for name, label in (("synthetic", "Synthetic (control)"), ("real", "Real")):
+        art = _asset(f"surrogate_{name}.json")
+        if not art:
+            continue
+        for market in sorted(art):
+            r = art[market]
+            seen = True
+            p_ = r["p"]
+            diff = pct(r["diff"], 1)
+            rows.append(
+                f"| {label} | {market} | {pct(r['edge_structured'], 1)} | "
+                f"{pct(r['edge_surrogate'], 1)} | "
+                f"{f'**{diff}**' if p_ < 0.05 else diff} | "
+                f"{f'**{p_:.4f}**' if p_ < 0.05 else f'{p_:.4f}'} |")
+    return "\n".join(rows) if seen else None
+
+
+def ablation_resolution() -> Optional[str]:
+    """The ablation's paired difference beside the floor its design cannot beat.
+
+    The README quoted this to show that "decisive" and "significant" come apart
+    at five pairs. It is exactly the kind of claim that has to be recomputed
+    rather than remembered: the figure went stale at +61.4% while the rebuilt
+    artifact said +72.8%, leaving a paragraph about statistical care carrying a
+    number no run had produced.
+    """
+    art = _asset("ablation_multiseed.json")
+    if not art:
+        return None
+    try:
+        import numpy as np
+
+        from rl_trader.evaluation.statistics import bootstrap_ci, paired_permutation_test
+    except ImportError:            # pragma: no cover - research extras absent
+        return None
+
+    markets = (art.get("summary") or art).get("markets") or {}
+    rows: List[str] = []
+    for market, label in (("stock", "Stock"), ("crypto", "Crypto")):
+        arms = markets.get(market)
+        if not arms:
+            continue
+        dom = np.asarray(arms["domain"]["oos_per_seed"], dtype=float)
+        sing = np.asarray(arms["single"]["oos_per_seed"], dtype=float)
+        est = bootstrap_ci(dom - sing)
+        obs, p_ = paired_permutation_test(dom, sing)
+        floor = 2.0 / (2 ** len(dom))
+        rows.append(
+            f"- **{label}** — held-out difference **{pct(obs)}**, 95% CI "
+            f"`[{pct(est.low, 0)}, {pct(est.high, 0)}]`, yet **p = {p_:.4f}** "
+            f"against a floor of {floor:.4f} at {len(dom)} pairs.")
+    return "\n".join(rows) if rows else None
+
+
 def surrogate_control() -> Optional[str]:
     return _surrogate_arm("synthetic")
 
@@ -648,6 +714,8 @@ BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "headline-run": headline_run,
     "ablation-table": ablation_table,
     "surrogate-control": surrogate_control,
+    "surrogate-brief": surrogate_brief,
+    "ablation-resolution": ablation_resolution,
     "surrogate-real": surrogate_real,
     "baselines-table": baselines_table,
     "portfolio-table": portfolio_table,

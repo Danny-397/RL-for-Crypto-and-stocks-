@@ -25,7 +25,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 from rl_trader.config.training_config import crypto_config, stock_config  # noqa: E402
-from rl_trader.data.data_loader import load_ohlcv_csv, prepare_market_data  # noqa: E402
+from rl_trader.data.data_loader import (  # noqa: E402
+    attach_market_index,
+    load_ohlcv_csv,
+    prepare_market_data,
+)
 from rl_trader.envs import make_env  # noqa: E402
 from rl_trader.evaluation.baselines import evaluate_baselines  # noqa: E402
 from rl_trader.evaluation.evaluate_agent import backtest  # noqa: E402
@@ -55,10 +59,22 @@ def _cfg(market):
 
 
 def _basket(market, data_dir="data/raw"):
+    """Held-out splits for every ticker, built the way the agent was trained.
+
+    The market index has to be merged in before the features are computed. Four
+    of the agent's 28 inputs are cross-asset (rel_return_5/20, market_trend,
+    market_ret_20) and without a reference series they are not merely noisy --
+    they come back at exactly zero, std 0. This function omitted the merge while
+    every other real-data tool performed it, so the figures and baselines.json
+    scored the policy on an observation it had never trained against, and
+    RESULTS.md carried two different held-out returns for the same run: -14.1%
+    here against -4.7% from the headline and supervised tables.
+    """
     out = {}
     for path in sorted(glob.glob(os.path.join(data_dir, market, "*.csv"))):
         ticker = os.path.splitext(os.path.basename(path))[0]
-        splits = prepare_market_data(load_ohlcv_csv(path), market=market,
+        df = attach_market_index(load_ohlcv_csv(path), data_dir, market)
+        splits = prepare_market_data(df, market=market,
                                      train_frac=0.6, val_frac=0.0)
         if len(splits["test"]) > 60:
             out[ticker] = splits
