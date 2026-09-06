@@ -310,8 +310,8 @@ def ablation_resolution() -> Optional[str]:
         return None
     try:
         import numpy as np
-        from rl_trader.evaluation.statistics import (
-            bootstrap_ci, paired_permutation_test)
+
+        from rl_trader.evaluation.statistics import bootstrap_ci, paired_permutation_test
     except ImportError:            # pragma: no cover - research extras absent
         return None
 

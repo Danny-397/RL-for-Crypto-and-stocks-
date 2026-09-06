@@ -92,8 +92,7 @@ def test_omitting_the_index_flatlines_exactly_the_cross_asset_features():
     dead, the static check is still right but its rationale has changed and the
     docstring above needs rewriting.
     """
-    from rl_trader.data.data_loader import (
-        attach_market_index, load_ohlcv_csv, prepare_market_data)
+    from rl_trader.data.data_loader import attach_market_index, load_ohlcv_csv, prepare_market_data
 
     path = os.path.join(DATA, "stock", "AAPL.csv")
     if not os.path.exists(path):

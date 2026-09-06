@@ -26,7 +26,10 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 from rl_trader.config.training_config import crypto_config, stock_config  # noqa: E402
 from rl_trader.data.data_loader import (  # noqa: E402
-    attach_market_index, load_ohlcv_csv, prepare_market_data)
+    attach_market_index,
+    load_ohlcv_csv,
+    prepare_market_data,
+)
 from rl_trader.envs import make_env  # noqa: E402
 from rl_trader.evaluation.baselines import evaluate_baselines  # noqa: E402
 from rl_trader.evaluation.evaluate_agent import backtest  # noqa: E402
