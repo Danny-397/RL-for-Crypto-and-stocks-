@@ -48,8 +48,8 @@
     <nav class="nav-links" id="nav-tabs">
       <a href="#home" class="navtab active" data-view="home">Home</a>
       <a href="#how" class="navtab" data-view="how">How it works</a>
-      <a href="#stocks" class="navtab" data-view="stocks">Stocks</a>
       <a href="#crypto" class="navtab" data-view="crypto">Crypto</a>
+      <a href="#stocks" class="navtab" data-view="stocks">Stocks</a>
       <a href="#lab" class="navtab navtab-lab" data-view="lab">Lab</a>
     </nav>
     <a class="btn btn-ghost nav-cta" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">
@@ -67,21 +67,23 @@
         <div class="eyebrow"><span class="pulse"></span> DEEP RL &middot; RESEARCH STUDY + INTERACTIVE LAB</div>
         <h1>How do deep-RL agents <span class="grad">generalize</span> — and how do you tell a real result from luck?</h1>
         <p class="lede">
-          A from-scratch study of two ways RL fools you: <strong>memorising the
-          training path</strong>, and <strong>a single lucky seed</strong>. I built
-          <strong>PPO from the algorithm up</strong>, used domain randomization to fix
-          overfitting, and ran <strong>multi-seed significance tests</strong> to check
-          whether any edge is real. The testbed — deliberately hard — is financial
-          markets: non-stationary, noisy, near-random-walk.
-          <strong>Every experiment below is runnable in your browser</strong> — not a
-          write-up of the results, the results being produced.
+          A from-scratch study of the two ways RL fools you: <strong>memorising the
+          training path</strong> and <strong>a single lucky seed</strong>. PPO built
+          from the algorithm up, domain randomization against the first failure,
+          multi-seed significance tests against the second — on crypto and equities,
+          chosen as a testbed because they are hard: non-stationary, noisy,
+          near-random-walk.
+        </p>
+        <p class="lede lede-sub">
+          Every experiment below runs in your browser. It is a research project, not
+          a trading product: nothing here places an order or predicts a price.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="#result">See the result &darr;</a>
           <a class="btn btn-ghost navtab" data-view="lab" href="#lab">Run an experiment &rarr;</a>
         </div>
         <div class="hero-tags">
-          <span>PPO from scratch</span><span>Domain randomization</span><span>Multi-seed significance</span><span>Reproduces Henderson et&nbsp;al. 2018</span><span>Honest negative result</span>
+          <span>PPO from scratch</span><span>Domain randomization</span><span>Multi-seed significance</span>
         </div>
       </div>
 
@@ -90,8 +92,8 @@
         <div class="chart-card">
           <div class="chart-head">
             <div class="chart-title">
-              <span class="live"><span class="live-dot"></span>LIVE AGENT</span>
-              <span class="chart-sub">PPO policy &middot; test split</span>
+              <span class="chart-badge" id="hero-badge">HELD-OUT BACKTEST</span>
+              <span class="chart-sub" id="hero-sub">daily bars</span>
             </div>
             <div class="chart-legend">
               <span class="lg lg-agent">Agent</span>
@@ -105,6 +107,50 @@
             <div class="stat"><span class="k">Max DD</span><span class="v" id="m-dd">0.0%</span></div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════ WHAT THIS IS ═══════════════════ -->
+    <!-- The three questions every visitor arrives with, answered before they
+         have to hunt: what is this for, is it trading my money, and how fresh
+         are the numbers. The freshness card is rendered from the results
+         artifact rather than typed, so it cannot drift from the last rebuild. -->
+    <section class="section purpose-section" id="what-this-is">
+      <div class="purpose-grid">
+        <article class="purpose-card">
+          <h3><span class="purpose-icon" aria-hidden="true">◆</span> What this is</h3>
+          <p>
+            A <b>reinforcement-learning research study</b> — does one PPO recipe
+            generalize across market regimes, and does an apparent edge survive
+            being tested properly — published together with the experiments that
+            produced it, so you can re-run them rather than trust them.
+          </p>
+        </article>
+        <article class="purpose-card purpose-not">
+          <h3><span class="purpose-icon" aria-hidden="true">✕</span> What it is not</h3>
+          <p>
+            Not a trading bot, a signal service, or investment advice. It places
+            <b>no orders</b>, connects to <b>no broker or exchange</b>, and holds
+            no money. The agent's headline finding is <em>negative</em> — no
+            seed-robust edge over buy-and-hold — which is the result, not a
+            disclaimer.
+          </p>
+        </article>
+        <article class="purpose-card purpose-data">
+          <h3><span class="purpose-icon" aria-hidden="true">↻</span> Real-time? No.</h3>
+          <p>
+            <b>Daily closing bars</b> — one price per day, never intraday and
+            never streaming. The figures on this page are a fixed snapshot: they
+            change only when the pipeline is re-run and committed, and the agent
+            never retrains while you use it.
+            <span id="purpose-freshness"></span>
+          </p>
+          <p class="purpose-foot">
+            The one live path is the lab's out-of-distribution test, which
+            downloads fresh daily bars for a ticker you type and runs the same
+            frozen policy over them.
+          </p>
+        </article>
       </div>
     </section>
 
@@ -125,8 +171,8 @@
 
       <div class="rs-toolbar">
         <div class="seg" id="rs-market" role="group" aria-label="Choose a market">
-          <button type="button" data-val="stock" class="on" aria-pressed="true">Stocks</button>
-          <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+          <button type="button" data-val="crypto" class="on" aria-pressed="true">Crypto</button>
+          <button type="button" data-val="stock" aria-pressed="false">Stocks</button>
         </div>
         <span class="rs-meta" id="rs-meta"></span>
       </div>
@@ -141,7 +187,7 @@
       <div class="stat-cell"><div class="num" data-count="16">16</div><div class="lbl">Real tickers backtested</div></div>
       <div class="stat-cell"><div class="num" data-count="10" id="stat-seeds">10</div><div class="lbl">Seeds in the significance study</div></div>
       <div class="stat-cell"><div class="num" data-count="28">28</div><div class="lbl">Engineered features</div></div>
-      <div class="stat-cell"><div class="num" data-count="367">367</div><div class="lbl">Tests passing</div></div>
+      <div class="stat-cell"><div class="num" data-count="418">418</div><div class="lbl">Tests passing</div></div>
     </section>
 
     <!-- ═══════════════════ WHAT I GOT WRONG ═══════════════════ -->
@@ -691,7 +737,7 @@
       <div class="section-head">
         <div class="kicker">THE HONEST PART</div>
         <h2>And then: does it actually work?</h2>
-        <p>A single training run can look brilliant by luck. So every result is held to a <strong>multi-seed permutation test</strong> — the whole thing is retrained under 5 independent random seeds, and the edge only counts if it survives. Watch it play out per market on the <a href="#stocks" class="navtab" data-view="stocks">Stocks</a> and <a href="#crypto" class="navtab" data-view="crypto">Crypto</a> tabs, or read the full methodology in <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>.</p>
+        <p>A single training run can look brilliant by luck. So every result is held to a <strong>multi-seed permutation test</strong> — the whole thing is retrained under 5 independent random seeds, and the edge only counts if it survives. Watch it play out per market on the <a href="#crypto" class="navtab" data-view="crypto">Crypto</a> and <a href="#stocks" class="navtab" data-view="stocks">Stocks</a> tabs, or read the full methodology in <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>.</p>
       </div>
     </section>
     </div><!-- /view-method -->
@@ -822,8 +868,8 @@
         </div>
         <div class="live-controls">
           <select id="live-market" class="live-select">
-            <option value="stock">Stock</option>
             <option value="crypto">Crypto</option>
+            <option value="stock">Stock</option>
           </select>
           <input id="live-ticker" class="live-select live-input" list="ticker-suggestions"
                  placeholder="Type any ticker — e.g. TSLA or DOGE-USD" autocomplete="off" spellcheck="false" />
@@ -943,9 +989,9 @@
           <div class="panel-card" id="hm-setup">
             <div class="gen-head">
               <h3>Set up a run <span class="tag-real">Live</span></h3>
-              <div class="seg" id="hm-market" data-value="stock">
-                <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
-                <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+              <div class="seg" id="hm-market" data-value="crypto">
+                <button type="button" data-val="crypto" aria-pressed="true">Crypto</button>
+                <button type="button" data-val="stock" aria-pressed="false">Stocks</button>
               </div>
             </div>
             <div class="shift-controls">
@@ -1016,9 +1062,9 @@
 
               <div class="ctl">
                 <label>Market</label>
-                <div class="seg" id="pg-market" data-value="stock">
-                  <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
-                  <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+                <div class="seg" id="pg-market" data-value="crypto">
+                  <button type="button" data-val="crypto" aria-pressed="true">Crypto</button>
+                  <button type="button" data-val="stock" aria-pressed="false">Stocks</button>
                 </div>
               </div>
 
@@ -1033,7 +1079,7 @@
               <div id="pg-hist-row">
                 <div class="ctl">
                   <label for="pg-ticker">Ticker</label>
-                  <input type="text" id="pg-ticker" value="AAPL" autocomplete="off"
+                  <input type="text" id="pg-ticker" value="BTC-USD" autocomplete="off"
                          spellcheck="false" placeholder="AAPL, BTC-USD, ..." />
                 </div>
               </div>
@@ -1317,9 +1363,9 @@
           <div class="panel-card">
             <div class="gen-head">
               <h3>1 &middot; Trained two ways <span class="tag-precomputed">Real &middot; precomputed</span></h3>
-              <div class="seg gen-market" id="gen-market" data-value="stock">
-                <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
-                <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+              <div class="seg gen-market" id="gen-market" data-value="crypto">
+                <button type="button" data-val="crypto" aria-pressed="true">Crypto</button>
+                <button type="button" data-val="stock" aria-pressed="false">Stocks</button>
               </div>
             </div>
             <p class="xr-hint">Two identical PPO agents. <b>A</b> trained on one fixed price path;
@@ -1361,9 +1407,9 @@
             <div class="shift-controls">
               <div class="ctl">
                 <label>Market</label>
-                <div class="seg" id="shift-market" data-value="stock">
-                  <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
-                  <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+                <div class="seg" id="shift-market" data-value="crypto">
+                  <button type="button" data-val="crypto" aria-pressed="true">Crypto</button>
+                  <button type="button" data-val="stock" aria-pressed="false">Stocks</button>
                 </div>
               </div>
               <div class="ctl">
@@ -1403,9 +1449,9 @@
           <div class="panel-card">
             <div class="gen-head">
               <h3>Run the folds <span class="tag-mixed">Live evaluation &middot; fixed policy</span></h3>
-              <div class="seg" id="wf-market" data-value="stock">
-                <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
-                <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+              <div class="seg" id="wf-market" data-value="crypto">
+                <button type="button" data-val="crypto" aria-pressed="true">Crypto</button>
+                <button type="button" data-val="stock" aria-pressed="false">Stocks</button>
               </div>
             </div>
 
@@ -1663,9 +1709,9 @@
               </div>
               <div class="ctl">
                 <label>Market</label>
-                <div class="seg" id="nb-market" data-value="stock">
-                  <button type="button" data-val="stock" aria-pressed="true">Stocks</button>
-                  <button type="button" data-val="crypto" aria-pressed="false">Crypto</button>
+                <div class="seg" id="nb-market" data-value="crypto">
+                  <button type="button" data-val="crypto" aria-pressed="true">Crypto</button>
+                  <button type="button" data-val="stock" aria-pressed="false">Stocks</button>
                 </div>
               </div>
               <div class="ctl" id="nb-regime-ctl">

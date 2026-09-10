@@ -218,3 +218,84 @@ def test_the_live_widget_is_framed_as_research_not_as_a_trading_tool(index: str)
     assert "never trained on" in block
     assert "not financial advice" in block
     assert "no retraining" in block
+
+
+# --------------------------------------------------------------------------- #
+# What the page says it is                                                     #
+# --------------------------------------------------------------------------- #
+def test_the_hero_chart_is_not_presented_as_a_live_agent(index: str):
+    """It replayed a stored backtest under a pulsing "LIVE AGENT" badge.
+
+    Every other honesty check on this page is about a number that drifted. This
+    one is about a word: the hero chart is the first thing a visitor sees, it
+    animates, and it was labelled as if a policy were trading somewhere right
+    then. Nothing in this project trades, and the data underneath it is a fixed
+    snapshot of daily closes.
+    """
+    assert "LIVE AGENT" not in index
+    assert 'id="hero-badge"' in index, "the hero chart lost its provenance badge"
+
+
+def test_the_hero_badge_names_the_market_the_hero_actually_plots(app_js: str):
+    """Badge and series are written from one constant, so they cannot disagree.
+
+    The hero plotted stocks. Pointing it at crypto means touching the curve, the
+    three metrics under it and the label above it; miss one and the page shows a
+    crypto equity curve captioned as equities, which is precisely the class of
+    error the rest of this suite exists to catch.
+    """
+    assert 'const HERO_MARKET = "crypto";' in app_js
+    i = app_js.index("function initHero()")
+    hero = app_js[i: i + 1200]
+    assert "DATA.markets.stock" not in hero, (
+        "the hero still reads a hard-coded market instead of HERO_MARKET")
+    assert "DATA.markets[HERO_MARKET]" in hero
+    label = app_js[app_js.index("function labelHero()"):][:600]
+    assert "HERO_MARKET" in label, "the badge text is not derived from HERO_MARKET"
+
+
+def test_the_page_states_what_it_is_and_what_it_is_not(index: str):
+    """A stranger should not have to infer either from the charts.
+
+    The question this band answers came from a reader, not a test: *what is this
+    for, and is it trading real money?* A site whose whole argument is about not
+    overclaiming can afford to say so in the open.
+    """
+    i = index.index('id="what-this-is"')
+    band = index[i: i + 3000]
+    assert "research study" in band.lower()
+    for phrase in ("no orders", "no broker or exchange", "investment advice"):
+        assert phrase in band, f"the disclosure no longer says {phrase!r}"
+
+
+def test_the_page_answers_the_real_time_question_in_the_open(index: str):
+    """"Is this live?" has one honest answer here, and it is no.
+
+    Daily closes, a snapshot rebuilt by hand, a frozen policy. The lab's
+    out-of-distribution test is the single live-fetching path on the site, and it
+    is named as the exception rather than left for the reader to discover.
+    """
+    i = index.index('id="what-this-is"')
+    band = index[i: i + 3000]
+    assert "Daily closing bars" in band
+    assert "never intraday" in band and "never streaming" in band
+    assert "fixed snapshot" in band
+    assert "out-of-distribution test" in band, (
+        "the one live path is no longer named as the exception")
+
+
+def test_the_freshness_line_is_read_from_the_results_artifact():
+    """When the pipeline is re-run, this line has to move on its own.
+
+    Typed by hand it would be stale the first time anyone regenerated
+    ``docs/results.js`` -- and a stale "last rebuilt" date is a worse claim than
+    no date at all, because it is checkable and wrong.
+    """
+    index = _read("index.html")
+    assert '<span id="purpose-freshness"></span>' in index, (
+        "the freshness line must be a render target, not typed copy")
+    app = _read("app.js")
+    i = app.index("purpose-freshness")
+    context = app[i: i + 700]
+    assert "DATA.generated" in context
+    assert "end_date" in context, "the newest bar is no longer read from the data"

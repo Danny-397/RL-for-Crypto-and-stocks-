@@ -311,7 +311,7 @@
       sel.innerHTML = "";
       if (difficulty() === "synthetic") {
         label.textContent = "Trained-on regime";
-        [["stock", "Stock agent's regime"], ["crypto", "Crypto agent's regime"]].forEach(
+        [["crypto", "Crypto agent's regime"], ["stock", "Stock agent's regime"]].forEach(
           ([v, t]) => sel.add(new Option(t, v))
         );
         return;
@@ -778,6 +778,7 @@
     let cursor = 0;
 
     const el = {};
+    const MARKET_DEFAULT = { stock: "AAPL", crypto: "BTC-USD" };
 
     function cacheEls() {
       [
@@ -1055,7 +1056,16 @@
         c.canvas.addEventListener("touchmove", (e) => { e.preventDefault(); move(e); }, { passive: false });
       });
 
-      bindSegment(el.market);
+      // The ticker box is free text, so switching market can leave a stock
+      // symbol under the crypto policy -- a run that either 404s or, worse,
+      // quietly scores the wrong agent. Swap it only while it still holds the
+      // other market's default, which leaves anything the user typed alone.
+      bindSegment(el.market, (market) => {
+        const other = market === "crypto" ? MARKET_DEFAULT.stock : MARKET_DEFAULT.crypto;
+        if (el.ticker.value.trim().toUpperCase() === other) {
+          el.ticker.value = MARKET_DEFAULT[market];
+        }
+      });
       bindSegment(el.mode, syncMode);
       bindSegment(el.reward);
       bindSegment(el.short);
@@ -1307,7 +1317,9 @@
    *     controlled synthetic distributions on demand. */
   const Generalization = (function () {
     let data = null;
-    let market = "stock";
+    // Mirrors #gen-market's data-value in the HTML: the two have to start on the
+    // same market or the panel renders one arm under the other's label.
+    let market = "crypto";
 
     async function load() {
       try {
