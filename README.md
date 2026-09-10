@@ -25,6 +25,20 @@ Chromium against a running backend. Every figure in it was computed during the
 capture — including the frame where the agent is beaten by all four naive
 baselines.</sub>
 
+## What this is — and what it is not
+
+|  |  |
+|---|---|
+| **What it is** | A reinforcement-learning research study: does one PPO recipe generalize across market regimes, and does an apparent edge survive being tested properly? The experiments ship with it, runnable. |
+| **What it is not** | Not a trading bot, a signal service, or investment advice. It places no orders, connects to no broker or exchange, and holds no money. |
+| **Is it real-time?** | No. **Daily closing bars** — one price per day, never intraday, never streaming. |
+| **Does it update itself?** | No. Every published figure is a fixed snapshot, regenerated only when the pipeline is re-run and committed; the window is pinned in [`data/SNAPSHOT.json`](data/SNAPSHOT.json). The agent never retrains on new data. |
+| **What *is* live** | One path: the lab's out-of-distribution test downloads fresh daily bars for a ticker you type and runs the same **frozen** policy over them — no retraining, no fine-tuning. |
+
+The headline finding is **negative** — no seed-robust edge over buy-and-hold — and
+that is the contribution, not a caveat. The point of the project is the machinery
+that establishes it.
+
 ## Abstract
 
 Deep reinforcement learning is notoriously easy to *fool yourself* with: agents
@@ -315,7 +329,7 @@ tests/               # pytest suite (envs, agent, features, reward, recurrent, s
                      #   normalization, portfolio, snapshot, lab backend, HTTP API)
 tools/
 ├── fetch_data.py        # download a real OHLCV basket; --end pins a snapshot
-├── smoke_lab.py         # 137 headless-browser checks against the live lab
+├── smoke_lab.py         # 142 headless-browser checks against the live lab
 ├── build_site_data.py   # train + backtest -> docs/results.js for the dashboard
 ├── ablation.py          # domain-randomization overfitting study
 ├── baseline_report.py   # agent vs. buy-&-hold / random / momentum
@@ -840,7 +854,7 @@ all**, and the lab layers live experiments on top when `window.RL_API` is set.
 ```bash
 python tools/build_site_data.py --real --timesteps 200000   # regenerate docs/results.js
 python server/app.py                                        # the experiment API
-python tools/smoke_lab.py                                   # 137 browser checks against both
+python tools/smoke_lab.py                                   # 142 browser checks against both
 ```
 
 `tools/smoke_lab.py` drives the real page in headless Chromium. Its most important

@@ -789,6 +789,23 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("the training caveat is on the home page",
               "training" in home.inner_text(".lab-strip-note").lower())
 
+        # What the page says it is. The static suite pins the copy; only a browser
+        # can prove the two rendered bits actually rendered -- the hero badge and
+        # the freshness line are both written by JS from the results artifact, so
+        # a silent failure there leaves a chart with no provenance at all.
+        badge = home.inner_text("#hero-badge").upper()
+        check("the hero badge names the market it plots", "CRYPTO" in badge, badge)
+        check("the hero is not sold as a live agent", "LIVE" not in badge, badge)
+        fresh = home.inner_text("#purpose-freshness")
+        check("the freshness line rendered from the artifact",
+              "rebuilt" in fresh.lower() and re.search(r"\d{4}", fresh) is not None,
+              fresh)
+        purpose = home.inner_text("#what-this-is").lower()
+        check("the page states it places no orders",
+              "no orders" in purpose and "investment advice" in purpose)
+        check("the page answers the real-time question",
+              "never streaming" in purpose and "fixed snapshot" in purpose)
+
         # A deep link has to move the view *and* select the panel.
         home.click('.lab-card[data-panel="seeds"]')
         time.sleep(1.0)

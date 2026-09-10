@@ -175,7 +175,7 @@
   }
 
   // ── markets explorer: state + per-asset rendering ──────────
-  const explorer = { market: "stock", sel: null /* per_ticker obj, or null = basket avg */, cursor: 159 };
+  const explorer = { market: "crypto", sel: null /* per_ticker obj, or null = basket avg */, cursor: 159 };
   const currentMarket = () => DATA.markets[explorer.market];
 
   // Built from window.RL_SIGNIFICANCE rather than written down. These two
@@ -357,15 +357,37 @@
     out.innerHTML = `<b>${when}</b> &middot; price <b>$${p.toFixed(2)}</b> &middot; agent held ${pos}`;
   }
 
-  // ── hero chart (animated reveal of real stock data) ─────────
+  // ── hero chart (animated reveal of a stored held-out backtest) ──
+  //
+  // Crypto leads the site: it is the arm where the agent is not simply beaten by
+  // buy-&-hold, and the one the surrogate and seed studies have the most to say
+  // about. The badge is written from this constant rather than typed into the
+  // HTML, so switching the hero market cannot leave the label describing the
+  // other one -- the exact drift this project keeps finding in its own numbers.
+  const HERO_MARKET = "crypto";
+
+  function labelHero() {
+    const badge = document.getElementById("hero-badge");
+    const sub = document.getElementById("hero-sub");
+    const m = DATA && DATA.markets[HERO_MARKET];
+    const label = HERO_MARKET === "crypto" ? "CRYPTO" : "STOCKS";
+    if (badge) badge.textContent = `${label} · HELD-OUT BACKTEST`;
+    if (sub && m) {
+      sub.textContent = m.start_date
+        ? `daily bars · ${fmtMon(m.start_date)}–${fmtMon(m.end_date)}`
+        : "daily bars";
+    }
+  }
+
   function initHero() {
     const canvas = document.getElementById("equityChart");
     if (!canvas) return;
+    labelHero();
 
     let agent, bench;
-    if (DATA && DATA.markets.stock) {
-      agent = DATA.markets.stock.equity_agent;
-      bench = DATA.markets.stock.equity_bench;
+    if (DATA && DATA.markets[HERO_MARKET]) {
+      agent = DATA.markets[HERO_MARKET].equity_agent;
+      bench = DATA.markets[HERO_MARKET].equity_bench;
     } else {
       // Fallback synthetic curve if results.js is absent.
       agent = Array.from({ length: 80 }, (_, i) => 1 + i * 0.004 + Math.sin(i / 6) * 0.02);
@@ -387,7 +409,7 @@
     function revealHeroMetrics() {
       if (done || !DATA) return;
       done = true;
-      const m = DATA.markets.stock.metrics;
+      const m = DATA.markets[HERO_MARKET].metrics;
       countTo("m-return", 0, m.total_return * 100, 800, (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + "%");
       countTo("m-sharpe", 0, m.sharpe, 800, (v) => v.toFixed(2));
       countTo("m-dd", 0, m.max_drawdown * 100, 800, (v) => v.toFixed(1) + "%");
@@ -700,7 +722,9 @@
     const note = document.getElementById("data-note");
     if (note) {
       note.textContent =
-        `Trained on ${DATA.data_source} · ${DATA.timesteps.toLocaleString()} steps · ${DATA.generated}.`;
+        `Trained on ${DATA.data_source} · ${DATA.timesteps.toLocaleString()} steps · ` +
+        `rebuilt ${DATA.generated}. Daily bars, not live prices: these charts are a ` +
+        `stored backtest and change only when the pipeline is re-run.`;
     }
     const range = document.getElementById("scrubRange");
     if (range) range.addEventListener("input", () => {
@@ -1069,7 +1093,7 @@
       });
       renderResult(b.dataset.val);
     });
-    renderResult("stock");
+    renderResult("crypto");
   }
 
   // ── the same artifact, as the methodology table ─────────────
@@ -1077,7 +1101,7 @@
     const body = document.getElementById("abl-body");
     if (!body || !ABL) return;
     const rows = [];
-    for (const [market, label] of [["stock", "Stocks"], ["crypto", "Crypto"]]) {
+    for (const [market, label] of [["crypto", "Crypto"], ["stock", "Stocks"]]) {
       const m = ABL.markets[market];
       if (!m) continue;
       for (const [key, how] of [["single", "single asset"], ["domain", "across tickers"]]) {
@@ -1172,7 +1196,25 @@
     }
   }
 
+  // ── "how fresh is this?" — answered from the artifact ───────
+  //
+  // The band above it states the rule (a fixed snapshot, rebuilt by hand); this
+  // line states the current one. Typed by hand it would be wrong the first time
+  // anyone re-ran the pipeline, which is the failure this project exists to
+  // catch, so it is read from the results artifact instead.
+  function initFreshness() {
+    const el = document.getElementById("purpose-freshness");
+    if (!el || !DATA) return;
+    const ends = Object.values(DATA.markets || {})
+      .map((m) => m.end_date).filter(Boolean).sort();
+    const newest = ends.length ? ends[ends.length - 1] : "";
+    el.innerHTML =
+      `Last rebuilt <b>${fmtDay(DATA.generated) || DATA.generated}</b>` +
+      (newest ? ` · newest bar <b>${fmtDay(newest)}</b>` : "");
+  }
+
   // ── boot ────────────────────────────────────────────────────
+  initFreshness();
   initHero();
   initStats();
   initResult();

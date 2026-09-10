@@ -165,8 +165,9 @@ h2 {
   background: var(--grad); -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-.lede { color: var(--muted); font-size: 18px; margin: 22px 0 30px; max-width: 540px; }
+.lede { color: var(--muted); font-size: 18px; margin: 22px 0 18px; max-width: 540px; }
 .lede strong { color: var(--text); }
+.lede-sub { font-size: 15px; margin-bottom: 30px; }
 .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; }
 .hero-tags {
   display: flex; gap: 10px; flex-wrap: wrap; margin-top: 30px;
@@ -191,14 +192,21 @@ h2 {
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
 }
-.chart-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
+.chart-title { min-width: 0; }
 .live {
   display: inline-flex; align-items: center; gap: 7px;
   font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.14em; color: var(--volt);
 }
+.chart-badge {
+  display: inline-block;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em;
+  color: var(--cyan); border: 1px solid rgba(54, 224, 255, 0.35);
+  border-radius: 6px; padding: 3px 9px;
+}
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--volt); animation: pulse 1.6s infinite; }
 .chart-sub { display: block; font-size: 11px; color: var(--faint); margin-top: 4px; font-family: var(--font-mono); }
-.chart-legend { display: flex; gap: 14px; }
+.chart-legend { display: flex; gap: 14px; flex: 0 0 auto; white-space: nowrap; }
 .lg { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
 .lg::before { content: ""; width: 14px; height: 3px; border-radius: 2px; }
 .lg-agent::before { background: var(--volt); }
@@ -212,6 +220,29 @@ h2 {
 .chart-foot .stat { display: flex; flex-direction: column; }
 .chart-foot .k { font-size: 11px; color: var(--faint); font-family: var(--font-mono); letter-spacing: .08em; }
 .chart-foot .v { font-size: 18px; font-weight: 700; font-family: var(--font-display); color: var(--volt); }
+
+/* ── "What this is" band ────────────────────────────────── */
+.purpose-section { padding-top: 8px; padding-bottom: 8px; }
+.purpose-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.purpose-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px 24px;
+}
+.purpose-card h3 {
+  font-family: var(--font-display); font-size: 15px; letter-spacing: -0.01em;
+  display: flex; align-items: center; gap: 9px; margin-bottom: 10px;
+}
+.purpose-card p { color: var(--muted); font-size: 14.5px; line-height: 1.62; }
+.purpose-card b { color: var(--text); font-weight: 600; }
+.purpose-icon { font-size: 12px; color: var(--cyan); }
+.purpose-not .purpose-icon { color: var(--neg); }
+.purpose-data .purpose-icon { color: var(--volt); }
+.purpose-foot {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+  font-size: 13px !important; color: var(--faint) !important;
+}
+#purpose-freshness { display: block; margin-top: 8px; font-family: var(--font-mono); font-size: 12.5px; }
+@media (max-width: 900px) { .purpose-grid { grid-template-columns: 1fr; } }
 
 /* ── Stats strip ────────────────────────────────────────── */
 .stats {
