@@ -328,11 +328,11 @@ experiment.
 ## 5. Real-data significance — does the single-seed win survive?
 
 This is the section that matters. `tools/real_significance.py` repeats the entire
-real walk-forward across **5 independent seeds**, then reports a bootstrap 95% CI
+real walk-forward across **10 independent seeds**, then reports a bootstrap 95% CI
 on the basket-mean return *across seeds* and a paired permutation test of the agent
 vs. buy-&-hold *across the held-out tickers*.
 
-`python tools/real_significance.py --seeds 5 --timesteps 150000`
+`python tools/real_significance.py --seeds 10 --timesteps 150000`
 
 <!-- BEGIN GENERATED: significance-full -->
 | Market | Agent return (95% CI across seeds) | Buy & hold | Agent − B&H | p-value | Verdict |
@@ -421,6 +421,68 @@ ahead, the honest reading would have been "one of eighteen, at three seeds"
 rather than a discovery, and the panel on the site is written to say exactly that
 if it ever happens.
 
+### 5c. Does it survive a different *slice of history*? — multi-fold walk-forward
+
+§5 varies the **seed** and holds the split fixed. It cannot tell you whether the
+result is an artifact of *which* 40% of history happened to be the test block.
+This section closes that gap — it is the "multi-*fold*" item §9 listed as an
+extension, now run.
+
+`tools/walk_forward_report.py` drives `rl_trader.evaluation.walk_forward`, whose
+splitter was already unit-tested but had no caller. For each of 5 seeds it
+retrains **from scratch** on an expanding window and scores the agent on the
+disjoint block that follows. Same seed convention as §5 (seeds 100–104, the first five of its ten), same
+150k-step budget, same frozen data snapshot (through 2026-06-17).
+
+```
+python tools/walk_forward_report.py --market crypto --tickers BTC-USD \n    --folds 4 --seeds 5 --timesteps 150000
+```
+
+**Scope:** BTC-USD only, not the 6-ticker basket of §5. This trades asset breadth
+for time breadth; it is an additional axis, not a replacement for §5.
+
+| Fold | Test window | Agent (mean, 95% CI over 5 seeds) | Buy & hold | Beats B&H |
+|---|---|---:|---:|:---:|
+| 0 | 2019-08-10 .. 2021-04-26 | **-21.6%** `[-53.3%, +3.4%]` | +375.8% | no |
+| 1 | 2021-04-27 .. 2023-01-12 | **-39.4%** `[-72.1%, +2.9%]` | -65.7% | **yes** |
+| 2 | 2023-01-13 .. 2024-09-29 | **-35.9%** `[-50.9%, -22.0%]` | +229.7% | no |
+| 3 | 2024-09-30 .. 2026-06-17 | **-24.5%** `[-36.5%, -14.2%]` | +1.7% | no |
+
+Per-seed returns within each fold — the §5 seed-luck story, now visible *inside*
+every period:
+
+| Fold | Agent return by seed (100–104) |
+|---|---|
+| 0 | +8.4%, -3.4%, +1.8%, -80.0%, -34.9% |
+| 1 | -65.7%, -32.5%, -80.3%, +48.6%, -66.9% |
+| 2 | -14.6%, -65.1%, -33.6%, -40.7%, -25.5% |
+| 3 | -9.7%, -27.5%, -14.6%, -46.8%, -23.9% |
+
+**Pooled over folds x seeds (n=20): -30.3% `[-43.9%, -16.0%]`.**
+
+**Reading it.** Three things, and the third is the one that matters:
+
+1. **The agent loses money in all four periods.** Not "fails to beat the
+   benchmark" — the mean return is negative in 4/4 folds, across a bull run, a
+   crash, a recovery, and recent history.
+2. **Its one win over buy-&-hold is not a win.** Fold 1 is the 2022 crypto
+   winter: the agent returned -39.4% against buy-&-hold's -65.7%. It lost less by
+   being less exposed, which is what holding cash does. That is the only fold of
+   four where it comes out ahead.
+3. **On this asset the agent is not merely edgeless — it is reliably negative.**
+   Pooled across folds the interval **excludes zero**. That is a narrower claim
+   than §5 and should be read beside it, not against it: §5 averages six coins
+   and reports a positive crypto mean (**+56.8%** `[+16.3%, +106.3%]`, 10 seeds)
+   that still cannot be distinguished from buy-&-hold. Here, on BTC-USD alone and
+   across four different slices of history, the agent loses money outright.
+   Adding the time axis did not rescue the result; it sharpened the verdict
+   against it.
+
+Seed spread stays enormous within folds — fold 1 ranges from -80.3% to +48.6%,
+fold 0 from -80.0% to +8.4%. A single fold and a single seed could have been
+reported as either a disaster or a modest win.
+
+Run 2026-09-13/14, 356 minutes wall-clock.
 
 ## 6. Signal or noise? — a surrogate-data falsification test
 
@@ -580,9 +642,11 @@ exploitable cross-sectional signal, so equal-weight diversification is hard to b
   ticker's OHLCV. The remaining levers are *more* exogenous data: macro series
   (VIX, rates, the dollar) and ultimately fundamentals / news sentiment — not a
   bigger network.
-- **Real-data walk-forward could be multi-*fold*** (the `evaluation/walk_forward.py`
-  splitter is built for this) — §5 already adds multi-*seed* CIs on the real basket;
-  rolling re-training folds would add a second axis of robustness.
+- **Real-data walk-forward is now multi-*fold*, but only on one asset.** §5c runs
+  4 rolling folds x 5 seeds on BTC-USD and finds the agent reliably negative in
+  every period. The remaining gap is breadth: §5c is a single ticker, §5 is a
+  6-ticker basket on one split. Running the full basket multi-fold is ~6x the
+  compute of §5c and would let both axes be reported together.
 - **Head-to-head feed-forward vs. LSTM** and cost/turnover-sensitivity sweeps are
   natural extensions the codebase is already structured for.
 
