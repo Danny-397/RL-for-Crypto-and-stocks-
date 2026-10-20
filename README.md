@@ -177,8 +177,16 @@ This framework is a disciplined attempt to study them *properly*:
   result is a distribution, not an anecdote.
 - **Stable, reproducible training.** A running observation normaliser (Welford,
   exported and applied at serve time) keeps inputs well-scaled, and full seeding of
-  Torch + NumPy + the environment RNG makes a run **bit-for-bit reproducible** — the
-  same seed reproduces the documented numbers.
+  Torch + NumPy + the environment RNG makes a run **bit-for-bit reproducible on a
+  given dataset** — the same seed over the same bars gives the same numbers.
+  The dataset is the part that needs care: `tools/fetch_data.py` pulls a *relative*
+  window, so an unpinned re-fetch shifts the train/test split and the figures move
+  with it. `data/SNAPSHOT.json` pins the exact bars behind the published results
+  (per-file sha256), `make verify-data` checks a local copy against it, and `make
+  build` now refuses to run unless that check passes. Reproducing the documented
+  numbers therefore means matching the snapshot first — `data/raw/` is gitignored,
+  so a fresh clone fetches with `--end` set to the snapshot date rather than
+  taking today's window.
 
 ---
 

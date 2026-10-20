@@ -46,7 +46,16 @@ fetch:
 verify-data:
 	$(PY) tools/fetch_data.py --verify
 
-build: fetch
+# Gated on verify-data, not fetch. fetch pulls a RELATIVE window, so building
+# straight off it silently shifts the train/test split and quietly produces
+# figures that no longer match the published ones -- the one failure this
+# project can least afford to ship. Verifying instead turns that into a loud
+# error. On a fresh clone (data/raw/ is gitignored) run, once:
+#
+#     python tools/fetch_data.py --end <SNAPSHOT created_utc date>
+#
+# then `make verify-data` should pass and the published numbers are in reach.
+build: verify-data
 	$(PY) tools/build_site_data.py --real --timesteps $(TIMESTEPS)
 
 build-synth:
