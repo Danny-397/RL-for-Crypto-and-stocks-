@@ -148,8 +148,15 @@ def convert(tex_body: str) -> str:
         import pypandoc
     except ImportError:
         sys.exit("pandoc is needed:  pip install pypandoc_binary")
+    # --shift-heading-level-by=1 because LaTeX \section maps to level 1, which
+    # would give the page seven <h1>s. The site's template supplies the only
+    # <h1> and builds its table of contents and anchors from <h2>, so sections
+    # have to land there.
     return pypandoc.convert_text(
-        tex_body, "gfm", format="latex", extra_args=["--wrap=none"]
+        tex_body,
+        "gfm",
+        format="latex",
+        extra_args=["--wrap=none", "--shift-heading-level-by=1"],
     )
 
 
