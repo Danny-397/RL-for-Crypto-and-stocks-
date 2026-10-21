@@ -47,11 +47,11 @@ Training on a *single* price series is a trap: the agent memorizes it. We train 
 | Market | Train  |           In-sample |              Held-out \[95% CI\] |
 |:-------|:-------|--------------------:|---------------------------------:|
 | Stock  | single |   `+17k`–`+30k` |             `-26` `[-37,-9]` |
-| Stock  | domain |     `-1`–`+128` |   `mathbf{+47}` `[+31,+64]` |
+| Stock  | domain |     `-1`–`+128` |   `+47` `[+31,+64]` |
 | Crypto | single | `+322k`–`+4.0M` |            `-51` `[-62,-39]` |
-| Crypto | domain |     `+5`–`+154` | `mathbf{+129}` `[+82,+185]` |
+| Crypto | domain |     `+5`–`+154` | `+129` `[+82,+185]` |
 
-Domain-randomization ablation, 5 seeds `times` 60k steps; all cells are percent returns. Held-out is the mean over 30 unseen paths — identical for every arm and seed — with a bootstrap 95% CI across seeds. In-sample is a *range* over seeds, not a mean: it is one leveraged compounding return on a memorized path and spans orders of magnitude. The domain-randomized arm’s in-sample figure is its return on the very path the single-path agent memorized.
+Domain-randomization ablation, 5 seeds `×` 60k steps; all cells are percent returns. Held-out is the mean over 30 unseen paths — identical for every arm and seed — with a bootstrap 95% CI across seeds. In-sample is a *range* over seeds, not a mean: it is one leveraged compounding return on a memorized path and spans orders of magnitude. The domain-randomized arm’s in-sample figure is its return on the very path the single-path agent memorized.
 
 </div>
 
@@ -68,14 +68,14 @@ Two caveats the distribution makes visible and a single run would hide. Equities
 
 ### RQ3: Does the edge survive multiple seeds?
 
-A single backtest is an anecdote. On synthetic markets where a signal provably exists, the agent is repeatably profitable across 5 seeds — its bootstrap interval excludes zero in both markets — yet remains statistically indistinguishable from buy-and-hold under a paired permutation test. On *real* markets the two markets fail differently (Table 2). On equities the agent is significantly *worse* than the mega-cap bull. On crypto the mean across seeds is positive and its interval excludes zero, so the agent did make money on average; what it did not do is beat buy-and-hold, which the paired test cannot distinguish it from. The per-seed returns span more than an order of magnitude, and with 5 seeds a sign-flip test on that axis cannot reach `p{le}0.05` even in principle — its floor is `2/2^5{=}0.0625`. An earlier build of this study (commit `d4c0ef9`) published the crypto agent at `+275%` against buy-and-hold’s `+19%`; rebuilding the identical recipe — same code, same seed, same budget — against a data snapshot pinned two months later erased that headline entirely. The run was not merely seed-lucky but window-lucky.
+A single backtest is an anecdote. On synthetic markets where a signal provably exists, the agent is repeatably profitable across 5 seeds — its bootstrap interval excludes zero in both markets — yet remains statistically indistinguishable from buy-and-hold under a paired permutation test. On *real* markets the two markets fail differently (Table 2). On equities the agent is significantly *worse* than the mega-cap bull. On crypto the mean across seeds is positive and its interval excludes zero, so the agent did make money on average; what it did not do is beat buy-and-hold, which the paired test cannot distinguish it from. The per-seed returns span more than an order of magnitude, and with 5 seeds a sign-flip test on that axis cannot reach `p≤0.05` even in principle — its floor is `2/2^5=0.0625`. An earlier build of this study (commit `d4c0ef9`) published the crypto agent at `+275%` against buy-and-hold’s `+19%`; rebuilding the identical recipe — same code, same seed, same budget — against a data snapshot pinned two months later erased that headline entirely. The run was not merely seed-lucky but window-lucky.
 
 <div id="tab:real">
 
 | Market |             Agent (95% CI) |    vs. B&H | Verdict                  |
 |:-------|---------------------------:|-----------:|:-------------------------|
-| Crypto | `+56.8%` `[+16,+106]` |  `+23%` | indist. (`p{=}0.7871`) |
-| Stock  |  `-19.1%` `[-27,-11]` | `-259%` | worse (`p{=}0.0021`)   |
+| Crypto | `+56.8%` `[+16,+106]` |  `+23%` | indist. (`p=0.7871`) |
+| Stock  |  `-19.1%` `[-27,-11]` | `-259%` | worse (`p=0.0021`)   |
 
 Real-market multi-seed significance (5 seeds, held-out walk-forward). The lucky single-seed crypto “win” does not survive resampling.
 
@@ -87,12 +87,12 @@ This is exactly the warning of Henderson et al. \[1\]: a single run is not ev
 
 The results above show the agent does not beat the market — but is that because the agent is weak, or because there is no exploitable structure to find? We adapt **surrogate-data testing** from nonlinear time-series analysis \[7\]. A *return-shuffled surrogate* randomly permutes a series’ daily log-returns and re-integrates them. Because a sum is permutation-invariant, the surrogate ends at the identical price — *buy-and-hold is unchanged* — but momentum, autocorrelation, and volatility clustering are destroyed. We then train and evaluate the same recipe on structured data and on its surrogate and compare the agent’s edge over buy-and-hold.
 
-The logic is a controlled falsification. On synthetic data with a *known* AR(1) momentum signal, a valid test must find `text{edge}_{text{structured}} gg
-text{edge}_{text{surrogate}}`: the agent should exploit the signal and lose that edge once shuffling removes it. This is our positive control (Table 3), and it confirms the test has power. Applied to real markets, the test finds *no* significant difference between real and return-shuffled data: on equities the agent does no better on real prices than on structure-free surrogates (`Delta` nowhere near significant), the clean null predicted by §3.3. The crypto arm is inconclusive — heavy-tailed returns produce occasional blow-ups on reshuffled paths that inflate the surrogate loss and dominate the mean, and the gap is not significant; a median-based or exposure-capped statistic is the natural remedy. Neither market shows demonstrable exploited structure, corroborating §3.3 from a fresh angle and turning “markets are efficient” from an appeal to authority into a falsifiable test.
+The logic is a controlled falsification. On synthetic data with a *known* AR(1) momentum signal, a valid test must find `edge_structured ≫
+edge_surrogate`: the agent should exploit the signal and lose that edge once shuffling removes it. This is our positive control (Table 3), and it confirms the test has power. Applied to real markets, the test finds *no* significant difference between real and return-shuffled data: on equities the agent does no better on real prices than on structure-free surrogates (`Δ` nowhere near significant), the clean null predicted by §3.3. The crypto arm is inconclusive — heavy-tailed returns produce occasional blow-ups on reshuffled paths that inflate the surrogate loss and dominate the mean, and the gap is not significant; a median-based or exposure-capped statistic is the natural remedy. Neither market shows demonstrable exploited structure, corroborating §3.3 from a fresh angle and turning “markets are efficient” from an appeal to authority into a falsifiable test.
 
 <div id="tab:surrogate">
 
-| Market |  Structured |   Surrogate |   `Delta` |      `p` |
+| Market |  Structured |   Surrogate |   `Δ` |      `p` |
 |:-------|------------:|------------:|-------------:|-----------:|
 | Crypto | `+68.6%` | `-55.7%` | `+124.3%` | `0.0075` |
 | Stock  |  `+1.8%` | `-47.7%` |  `+49.5%` | `0.0026` |

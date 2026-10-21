@@ -143,6 +143,81 @@ def preprocess(tex: str) -> tuple[str, dict]:
     return tex, stats
 
 
+# Inline-math commands the paper uses, mapped to the character a reader
+# expects. Order matters: wrappers that take an argument come first.
+MATH_REPLACEMENTS = [
+    # Wrappers -- keep the contents, drop the command.
+    (r"\\mathbf\{([^{}]*)\}", r"\1"),
+    (r"\\mathrm\{([^{}]*)\}", r"\1"),
+    (r"\\mathit\{([^{}]*)\}", r"\1"),
+    (r"\\text\{([^{}]*)\}", r"\1"),
+    (r"\\textbf\{([^{}]*)\}", r"\1"),
+    # Relations and operators.
+    (r"\\leq(?![a-zA-Z])", "\u2264"),
+    (r"\\le(?![a-zA-Z])", "\u2264"),
+    (r"\\geq(?![a-zA-Z])", "\u2265"),
+    (r"\\ge(?![a-zA-Z])", "\u2265"),
+    (r"\\neq(?![a-zA-Z])", "\u2260"),
+    (r"\\gg(?![a-zA-Z])", "\u226b"),
+    (r"\\ll(?![a-zA-Z])", "\u226a"),
+    (r"\\approx(?![a-zA-Z])", "\u2248"),
+    # Greek, as used for hyperparameters and deltas.
+    (r"\\Delta(?![a-zA-Z])", "\u0394"),
+    (r"\\alpha(?![a-zA-Z])", "\u03b1"),
+    (r"\\beta(?![a-zA-Z])", "\u03b2"),
+    (r"\\gamma(?![a-zA-Z])", "\u03b3"),
+    (r"\\delta(?![a-zA-Z])", "\u03b4"),
+    (r"\\epsilon(?![a-zA-Z])", "\u03b5"),
+    (r"\\theta(?![a-zA-Z])", "\u03b8"),
+    (r"\\lambda(?![a-zA-Z])", "\u03bb"),
+    (r"\\mu(?![a-zA-Z])", "\u03bc"),
+    (r"\\pi(?![a-zA-Z])", "\u03c0"),
+    (r"\\sigma(?![a-zA-Z])", "\u03c3"),
+    (r"\\times(?![a-zA-Z])", "\u00d7"),
+    (r"\\cdot(?![a-zA-Z])", "\u00b7"),
+    (r"\\pm(?![a-zA-Z])", "\u00b1"),
+    (r"\\sim(?![a-zA-Z])", "~"),
+    (r"\\to(?![a-zA-Z])", "\u2192"),
+    (r"\\infty(?![a-zA-Z])", "\u221e"),
+    # Escapes and spacing.
+    (r"\\%", "%"),
+    (r"\\\$", "$"),
+    (r"\\&", "&"),
+    (r"\\_", "_"),
+    (r"\\,", " "),
+    (r"\\;", " "),
+    (r"\\:", " "),
+    (r"\\!", ""),
+    (r"\\ ", " "),
+]
+
+
+def flatten_math(md: str) -> tuple[str, set[str]]:
+    """Turn pandoc's $`...`$ inline math into plain inline code.
+
+    Returns the rewritten text and the set of LaTeX commands it did not know
+    how to render. Stripping backslashes wholesale is not good enough: it
+    turned `\\le` into the bare word "le" and `p \\le 0.05` was published as
+    "p{le}0.05". Grouping braces have to go too, since `p{=}0.787` reached the
+    live page looking exactly like that.
+    """
+    unmapped: set[str] = set()
+
+    def one(match: re.Match) -> str:
+        body = match.group(1)
+        for pattern, repl in MATH_REPLACEMENTS:
+            body = re.sub(pattern, repl, body)
+        # Anything still carrying a backslash is a command with no mapping.
+        for name in re.findall(r"\\([a-zA-Z]+)", body):
+            unmapped.add("\\" + name)
+        body = re.sub(r"\\([a-zA-Z]+)", r"\1", body)
+        # Grouping braces carry no meaning once the math is plain text.
+        body = body.replace("{", "").replace("}", "")
+        return "`" + body + "`"
+
+    return re.sub(r"\$`([^`]*)`\$", one, md), unmapped
+
+
 def convert(tex_body: str) -> str:
     try:
         import pypandoc
@@ -181,8 +256,14 @@ def main() -> int:
     # The paper has no equation environments, so every one of these is short
     # notation ($`+275\%`$, $`[-1,1]`$); render them as plain code instead.
     math = len(re.findall(r"\$`[^`]*`\$", md))
-    md = re.sub(r"\$`([^`]*)`\$", lambda m: "`" + m.group(1).replace("\\%", "%").replace("\\", "") + "`", md)
+    md, unmapped = flatten_math(md)
     print("  math spans flattened:", math)
+    if unmapped:
+        print("  UNMAPPED MATH COMMANDS:", ", ".join(sorted(unmapped)),
+              file=sys.stderr)
+        print("  -> add them to MATH_REPLACEMENTS; they would otherwise render "
+              "as bare words", file=sys.stderr)
+        return 1
 
     print("  abstract sections   :", stats["abstract"])
     print("  citations rewritten :", stats["cites"], f"({stats['bibitems']} references)")
