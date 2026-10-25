@@ -661,7 +661,7 @@ python tools/build_site_data.py --real --timesteps 200000   # real walk-forward 
 python tools/baseline_report.py                             # agent vs baselines (§3)
 python tools/ablation.py --timesteps 60000                  # the overfitting ablation (§1)
 python tools/significance.py --market crypto --seeds 5      # synthetic multi-seed test (§2)
-python tools/real_significance.py --seeds 5                 # real-data multi-seed test (§5)
+python tools/real_significance.py --seeds 10 --timesteps 150000  # real-data multi-seed test (§5)
 python tools/surrogate_test.py --mode synthetic --seeds 5 --timesteps 60000  # surrogate test (§6)
 python tools/portfolio_experiment.py --market stock         # cross-sectional allocation (§7)
 pytest -q                                                   # the test suite
