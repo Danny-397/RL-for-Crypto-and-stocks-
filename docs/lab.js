@@ -1628,7 +1628,7 @@
       }
     }
 
-    /* One run beside five, at the same scale, in the same units. */
+    /* One run beside the multi-seed study, at the same scale, in the same units. */
     function renderPair(body) {
       const one = headline[market];
       const ms = body.multi_seed;
@@ -1659,13 +1659,13 @@
       const best = body.single_seed.best;
       $("sd-verdict").innerHTML = one
         ? "The headline number is <b>" + fmt.pct(one.total_return, 1) + "</b> from a single seed. " +
-          "Retrain the same recipe five times and the mean is <b>" + fmt.pct(ms.mean, 1) +
+          "Retrain the same recipe " + body.n_seeds + " times and the mean is <b>" + fmt.pct(ms.mean, 1) +
           "</b>, with a " + Math.round(body.confidence * 100) + "% interval of <b>[" +
           fmt.pct(ms.ci_low, 1) + ", " + fmt.pct(ms.ci_high, 1) + "]</b>" +
           (spansZero
             ? " — which contains zero. The apparent edge does not survive reseeding."
             : " — which excludes zero.") +
-          " The luckiest of those five returned <b>" + fmt.pct(best, 1) +
+          " The luckiest of those " + body.n_seeds + " returned <b>" + fmt.pct(best, 1) +
           "</b>; reporting that one alone would have been the same mistake."
         : "Across " + body.n_seeds + " seeds the mean is <b>" + fmt.pct(ms.mean, 1) + "</b>.";
     }

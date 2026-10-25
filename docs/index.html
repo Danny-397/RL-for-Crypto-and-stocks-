@@ -255,7 +255,7 @@
           <div class="tl-n">05</div>
           <div class="tl-body">
             <h3>Reseeding dissolved it.</h3>
-            <p>Retraining the identical recipe under 5 independent seeds gave
+            <p>Retraining the identical recipe under 10 independent seeds gave
                returns spanning <b class="tl-fig" id="tl-5a">&hellip;</b> — one seed
                more than tripling capital, another losing money. Against
                buy-and-hold across the held-out pairs the paired test gives
@@ -283,7 +283,7 @@
           <div class="tl-n">07</div>
           <div class="tl-body">
             <h3>The honest answer is a negative result.</h3>
-            <p>On stocks the agent is not merely tied with buy-and-hold — across 5
+            <p>On stocks the agent is not merely tied with buy-and-hold — across 10
                seeds it averaged <b class="tl-fig neg" id="tl-7">&hellip;</b>, and
                the paired test against buy-and-hold over the 10 held-out tickers
                gives <b class="tl-fig" id="tl-7b">&hellip;</b>. It is significantly
@@ -429,7 +429,7 @@
         <a class="lab-card" href="#lab/seeds" data-view="lab" data-panel="seeds">
           <span class="lab-card-n">07</span>
           <h3>Real or Luck?</h3>
-          <p>A single-seed headline beside what five seeds actually say.
+          <p>A single-seed headline beside what ten seeds actually say.
              Re-run the bootstrap and the permutation test yourself.</p>
           <span class="lab-card-tag tag-mixed">Real data · live stats</span>
         </a>
@@ -534,8 +534,8 @@
               <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/ablation_multiseed.py">source&nbsp;→</a></span>
           </li>
           <li>
-            <code>python tools/real_significance.py --seeds 5</code>
-            <span>Retrains under 5 seeds and runs the paired permutation test behind
+            <code>python tools/real_significance.py --seeds 10 --timesteps 150000</code>
+            <span>Retrains under 10 seeds and runs the paired permutation test behind
               steps 05 and 07 above.
               <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/evaluation/statistics.py">statistics.py&nbsp;→</a></span>
           </li>
@@ -705,7 +705,7 @@
         <div class="step"><div class="step-n">01</div><h3>Ingest &amp; engineer</h3><p>Load real OHLCV (or generate synthetic data) and build the 28 features — returns, RSI, MACD, MA ratios, volatility, and cross-asset context.</p></div>
         <div class="step"><div class="step-n">02</div><h3>Split without leakage</h3><p>Chronological train / validation / test splits, with scalers fit on the training slice only — so the agent is scored purely on data it has never seen.</p></div>
         <div class="step"><div class="step-n">03</div><h3>Train with PPO</h3><p>Run the loop above over millions of steps, with domain randomization across tickers so the policy can't memorise one asset's path.</p></div>
-        <div class="step"><div class="step-n">04</div><h3>Evaluate honestly</h3><p>Backtest deterministically on the held-out split, then repeat across 5 seeds and run a permutation test to see whether the edge is real.</p></div>
+        <div class="step"><div class="step-n">04</div><h3>Evaluate honestly</h3><p>Backtest deterministically on the held-out split, then repeat across 10 seeds and run a permutation test to see whether the edge is real.</p></div>
       </div>
     </section>
 
@@ -738,7 +738,7 @@
       <div class="section-head">
         <div class="kicker">THE HONEST PART</div>
         <h2>And then: does it actually work?</h2>
-        <p>A single training run can look brilliant by luck. So every result is held to a <strong>multi-seed permutation test</strong> — the whole thing is retrained under 5 independent random seeds, and the edge only counts if it survives. Watch it play out per market on the <a href="#crypto" class="navtab" data-view="crypto">Crypto</a> and <a href="#stocks" class="navtab" data-view="stocks">Stocks</a> tabs, or read the full methodology in <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>.</p>
+        <p>A single training run can look brilliant by luck. So every result is held to a <strong>multi-seed permutation test</strong> — the whole thing is retrained under 10 independent random seeds, and the edge only counts if it survives. Watch it play out per market on the <a href="#crypto" class="navtab" data-view="crypto">Crypto</a> and <a href="#stocks" class="navtab" data-view="stocks">Stocks</a> tabs, or read the full methodology in <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>.</p>
       </div>
     </section>
     </div><!-- /view-method -->
@@ -840,7 +840,7 @@
       <!-- multi-seed return distribution: is the edge real, or seed luck? -->
       <div class="panel" id="seedDistPanel" hidden>
         <div class="panel-head">
-          <h3>Is the edge real? <span class="muted-sub">return across 5 independent training seeds</span></h3>
+          <h3>Is the edge real? <span class="muted-sub">return across 10 independent training seeds</span></h3>
           <span class="chart-legend"><span class="lg lg-agent">per seed</span><span class="lg lg-bench">buy &amp; hold</span></span>
         </div>
         <canvas id="seedDist" width="980" height="180"></canvas>
@@ -1511,7 +1511,7 @@
           <div class="gen-intro">
             <h2 class="gen-title">Is the result real &mdash; or luck?</h2>
             <p>A single training run is one draw from a distribution. Below is the number this
-               project headlines from one seed, next to what the same recipe produces across five.</p>
+               project headlines from one seed, next to what the same recipe produces across ten.</p>
           </div>
 
           <div class="panel-card">
@@ -1771,6 +1771,7 @@ python -m rl_trader.scripts.compare_markets --plot</code></pre>
     <div class="foot-brand">RL<span class="dot">·</span>TRADER</div>
     <div class="foot-meta">A deep-RL study of generalization &amp; evaluation rigor · PyTorch &amp; Gymnasium · <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">methodology &amp; results</a></div>
     <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">github.com/Danny-397</a>
+    <a href="https://danny-397.github.io/">Built by Dan Lichtenberger · more projects →</a>
   </footer>
 
   <script src="config.js"></script>
