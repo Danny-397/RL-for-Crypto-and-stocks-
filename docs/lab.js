@@ -138,7 +138,7 @@
       // horizontal gridlines + value labels
       // A sparkline (grid:false) deliberately shows no axis: in the signal-or-noise
       // test a y-axis would hand over scale information the design works to remove.
-      ctx.font = "10px ui-monospace, monospace";
+      ctx.font = "11px -apple-system, BlinkMacSystemFont, Inter, Segoe UI, system-ui, sans-serif";
       ctx.fillStyle = COLORS.text;
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
@@ -1278,7 +1278,7 @@
       });
 
       ctx.fillStyle = COLORS.text;
-      ctx.font = "9px ui-monospace, monospace";
+      ctx.font = "11px -apple-system, BlinkMacSystemFont, Inter, Segoe UI, system-ui, sans-serif";
       ctx.textAlign = "left";
       ctx.fillText("oldest bar", padL, h - 4);
       ctx.textAlign = "right";
@@ -1730,7 +1730,7 @@
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = color;
-        ctx.font = "10px ui-monospace, monospace";
+        ctx.font = "11px -apple-system, BlinkMacSystemFont, Inter, Segoe UI, system-ui, sans-serif";
         ctx.textAlign = x > w - 60 ? "right" : "left";
         ctx.fillText(label, x + (x > w - 60 ? -4 : 4), padT + 9);
       }
@@ -1738,7 +1738,7 @@
       rule(body.multi_seed.mean, COLORS.agent, "mean " + fmt.pct(body.multi_seed.mean, 1));
 
       ctx.fillStyle = COLORS.text;
-      ctx.font = "10px ui-monospace, monospace";
+      ctx.font = "11px -apple-system, BlinkMacSystemFont, Inter, Segoe UI, system-ui, sans-serif";
       ctx.textAlign = "left";
       ctx.fillText(fmt.pct(lo, 0), padL, h - 6);
       ctx.textAlign = "right";

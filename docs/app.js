@@ -144,7 +144,7 @@
     ctx.strokeStyle = "rgba(255,255,255,0.2)"; ctx.setLineDash([3, 3]);
     ctx.beginPath(); ctx.moveTo(zx, pad.t); ctx.lineTo(zx, H - pad.b); ctx.stroke(); ctx.setLineDash([]);
 
-    ctx.fillStyle = "rgba(255,255,255,0.42)"; ctx.font = "10px JetBrains Mono, monospace";
+    ctx.fillStyle = "rgba(255,255,255,0.42)"; ctx.font = "11px -apple-system, BlinkMacSystemFont, Inter, Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("short", pad.l + bw * 2.2, H - 5);
     ctx.fillText("flat", zx, H - 5);
@@ -295,7 +295,7 @@
     if (!sel || !sel.price || !sel.actions_t) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "rgba(231,237,245,0.45)";
-      ctx.font = "15px Inter, system-ui, sans-serif"; ctx.textAlign = "center";
+      ctx.font = "15px -apple-system, BlinkMacSystemFont, Inter, Segoe UI, system-ui, sans-serif"; ctx.textAlign = "center";
       ctx.fillText("Pick a single ticker above to watch the agent's positions play out.",
         canvas.width / 2, canvas.height / 2);
       if (range) range.style.display = "none";
@@ -370,8 +370,8 @@
     const badge = document.getElementById("hero-badge");
     const sub = document.getElementById("hero-sub");
     const m = DATA && DATA.markets[HERO_MARKET];
-    const label = HERO_MARKET === "crypto" ? "CRYPTO" : "STOCKS";
-    if (badge) badge.textContent = `${label} · HELD-OUT BACKTEST`;
+    const label = HERO_MARKET === "crypto" ? "Crypto" : "Stocks";
+    if (badge) badge.textContent = `${label} · held-out backtest`;
     if (sub && m) {
       sub.textContent = m.start_date
         ? `daily bars · ${fmtMon(m.start_date)}–${fmtMon(m.end_date)}`
@@ -592,14 +592,14 @@
       const zx = X(0);
       ctx.strokeStyle = "rgba(255,255,255,0.22)"; ctx.setLineDash([3, 3]);
       ctx.beginPath(); ctx.moveTo(zx, axisY - 44); ctx.lineTo(zx, axisY + 44); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.font = "11px JetBrains Mono, monospace"; ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.font = "11px -apple-system, BlinkMacSystemFont, Inter, Segoe UI, system-ui, sans-serif"; ctx.textAlign = "center";
       ctx.fillText("0%", zx, axisY + 58);
     }
     // buy & hold marker
     const bx = X(d.bh);
     ctx.strokeStyle = BENCH; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(bx, axisY - 40); ctx.lineTo(bx, axisY + 40); ctx.stroke();
-    ctx.fillStyle = BENCH; ctx.font = "11px JetBrains Mono, monospace"; ctx.textAlign = "center";
+    ctx.fillStyle = BENCH; ctx.font = "11px -apple-system, BlinkMacSystemFont, Inter, Segoe UI, system-ui, sans-serif"; ctx.textAlign = "center";
     ctx.fillText("buy & hold " + sgn(d.bh), bx, axisY - 48);
 
     // one dot per seed, spread vertically so the scatter is visible
@@ -643,7 +643,7 @@
     const Y = (m) => pad.t + (1 - (Math.log10(m) - lo) / (hi - lo)) * (H - pad.t - pad.b);
 
     // decade gridlines + axis labels (1×, 10×, 100× …) with a break-even line at 1×
-    ctx.font = "10px JetBrains Mono, monospace"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.font = "11px -apple-system, BlinkMacSystemFont, Inter, Segoe UI, system-ui, sans-serif"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
     for (let e = lo; e <= hi; e++) {
       const y = Y(Math.pow(10, e)), zero = e === 0;
       ctx.strokeStyle = zero ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.07)";
@@ -699,7 +699,7 @@
     const n = m && m.per_ticker ? m.per_ticker.length : (m && m.assets ? m.assets.length : 0);
     const kick = document.getElementById("market-kicker");
     const title = document.getElementById("market-title");
-    if (kick) kick.textContent = (isStock ? "STOCKS" : "CRYPTO") + " · REAL · WALK-FORWARD · OUT-OF-SAMPLE";
+    if (kick) kick.textContent = (isStock ? "Stocks" : "Crypto") + " · real markets · walk-forward · out of sample";
     if (title) title.textContent = isStock
       ? `Explore the agent on ${n} real stocks.`
       : `Explore the agent on ${n} real crypto pairs.`;
