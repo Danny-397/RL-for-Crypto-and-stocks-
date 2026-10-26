@@ -24,7 +24,7 @@ import os
 import numpy as np
 
 from rl_trader.config.training_config import crypto_config, stock_config
-from rl_trader.data.data_loader import synthetic_market_data
+from rl_trader.data.data_loader import seeded_path_factory, synthetic_market_data
 from rl_trader.envs import make_env
 from rl_trader.evaluation.evaluate_agent import backtest
 from rl_trader.training.utils import run_ppo_training
@@ -46,7 +46,7 @@ def _train(market: str, cfg, timesteps: int, seed: int, domain_random: bool):
     cfg.train.checkpoint_dir = os.path.join("checkpoints", "_ablation")
 
     if domain_random:
-        factory = lambda: synthetic_market_data(market)  # noqa: E731
+        factory = seeded_path_factory(market, seed)
         fixed = None
     else:
         fixed = synthetic_market_data(market, seed=seed)  # ONE fixed path

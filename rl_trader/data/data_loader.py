@@ -17,7 +17,7 @@ yfinance) by passing a DataFrame to :func:`prepare_market_data`.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -384,6 +384,22 @@ def synthetic_market_data(
         n_steps=n_steps, annual_vol=vol, annual_drift=drift, momentum=mom, seed=seed
     )
     return market_data_from_df(df)
+
+
+def seeded_path_factory(market: str, seed: int) -> Callable[[], MarketData]:
+    """A domain-randomization factory whose stream of paths is fixed by ``seed``.
+
+    Each call still returns a fresh, independent path, so training sees new noise
+    every episode; but the *sequence* of paths is determined by ``seed``, so a
+    domain-randomized run is reproducible. Calling ``synthetic_market_data`` with
+    ``seed=None`` instead draws from OS entropy, which made no two DR runs alike
+    even with the same training seed. Path seeds start at 1,000,000, clear of the
+    small seeds the fixed training paths and held-out evaluation sets use.
+    """
+    rng = np.random.default_rng([seed, 0xD0])
+    return lambda: synthetic_market_data(
+        market, seed=int(rng.integers(1_000_000, 2**31 - 1))
+    )
 
 
 def market_data_from_df(df: pd.DataFrame) -> MarketData:

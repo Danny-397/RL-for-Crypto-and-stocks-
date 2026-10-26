@@ -44,12 +44,12 @@ Training on a *single* price series is a trap: the agent memorizes it. We train 
 
 <div id="tab:ablation">
 
-| Market | Train  |           In-sample |              Held-out \[95% CI\] |
-|:-------|:-------|--------------------:|---------------------------------:|
-| Stock  | single |   `+17k`–`+30k` |             `-26` `[-37,-9]` |
-| Stock  | domain |     `-1`–`+128` |   `+47` `[+31,+64]` |
-| Crypto | single | `+322k`–`+4.0M` |            `-51` `[-62,-39]` |
-| Crypto | domain |     `+5`–`+154` | `+129` `[+82,+185]` |
+| Market | Train  |           In-sample |               Held-out \[95% CI\] |
+|:-------|:-------|--------------------:|----------------------------------:|
+| Stock  | single |   `+17k`–`+30k` |              `-26` `[-37,-9]` |
+| Stock  | domain |     `-22`–`+59` |    `+38` `[+21,+60]` |
+| Crypto | single | `+322k`–`+4.0M` |             `-51` `[-62,-39]` |
+| Crypto | domain |    `+87`–`+460` | `+204` `[+160,+248]` |
 
 Domain-randomization ablation, 5 seeds `×` 60k steps; all cells are percent returns. Held-out is the mean over 30 unseen paths — identical for every arm and seed — with a bootstrap 95% CI across seeds. In-sample is a *range* over seeds, not a mean: it is one leveraged compounding return on a memorized path and spans orders of magnitude. The domain-randomized arm’s in-sample figure is its return on the very path the single-path agent memorized.
 

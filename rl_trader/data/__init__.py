@@ -7,6 +7,7 @@ from .data_loader import (
     load_ohlcv_csv,
     market_data_from_df,
     prepare_market_data,
+    seeded_path_factory,
     synthetic_market_data,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     "load_ohlcv_csv",
     "market_data_from_df",
     "prepare_market_data",
+    "seeded_path_factory",
     "synthetic_market_data",
 ]

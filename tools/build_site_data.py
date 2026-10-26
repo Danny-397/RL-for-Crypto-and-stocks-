@@ -29,6 +29,7 @@ from rl_trader.data.data_loader import (
     attach_market_index,
     load_ohlcv_csv,
     prepare_market_data,
+    seeded_path_factory,
     synthetic_market_data,
 )
 from rl_trader.envs import make_env
@@ -108,7 +109,7 @@ def run_market(market: str, cfg, timesteps: int, seed: int, n_eval: int = 40) ->
 
     # Domain-randomized training: a fresh synthetic path every episode forces a
     # generalizable policy. None of the evaluation paths below are ever trained on.
-    factory = lambda: synthetic_market_data(market)  # noqa: E731
+    factory = seeded_path_factory(market, seed)
     agent, history = run_ppo_training(cfg, train_series_factory=factory)
 
     periods = ANNUALISATION.get(market, 252)
