@@ -3014,9 +3014,57 @@
     });
   }
 
+  /* ── guided tour ────────────────────────────────────────── */
+  /* Nine tabs is a lot to face cold. The tour walks the three that carry the
+   * project's argument, in order: can you see the signal, does the agent
+   * learn or memorise, and is the headline result luck. Clicking any other
+   * tab ends it. #lab/tour starts it from a link. */
+  const TOUR = [
+    { panel: "perception", title: "Can you spot the pattern?",
+      text: "Half of these charts hide the pattern the agent was trained to find; the rest are pure noise. Make your guesses, then score yourself. If it feels hard, that is the point: the signal is faint." },
+    { panel: "generalization", title: "Did the agent learn, or memorise?",
+      text: "The same agent is trained on one price path and on many. Watch what happens to the one-path agent on data it has never seen." },
+    { panel: "seeds", title: "Is the headline number luck?",
+      text: "One training run is one roll of the dice. Compare the single-seed result with the spread across ten seeds, and see which claim survives." },
+  ];
+  let tourAt = -1;
+
+  function tourShow(i) {
+    tourAt = i;
+    const step = TOUR[i];
+    $("tour-step").textContent = "Step " + (i + 1) + " of " + TOUR.length;
+    $("tour-title").textContent = step.title;
+    $("tour-text").textContent = step.text;
+    $("tour-back").disabled = i === 0;
+    $("tour-next").textContent = i === TOUR.length - 1 ? "Finish" : "Next";
+    $("tour-bar").hidden = false;
+    showPanel(step.panel, true);
+    $("tour-bar").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function tourEnd() {
+    tourAt = -1;
+    $("tour-bar").hidden = true;
+  }
+
+  function initTour() {
+    if (!$("tour-bar")) return;
+    $("tour-start").addEventListener("click", function () { tourShow(0); });
+    $("tour-back").addEventListener("click", function () { if (tourAt > 0) tourShow(tourAt - 1); });
+    $("tour-next").addEventListener("click", function () {
+      if (tourAt < TOUR.length - 1) tourShow(tourAt + 1); else tourEnd();
+    });
+    $("tour-exit").addEventListener("click", tourEnd);
+    window.addEventListener("lab:panel", function (e) {
+      if (tourAt !== -1 && e.detail.panel !== TOUR[tourAt].panel) tourEnd();
+    });
+    if (/^#lab\/tour\b/.test(location.hash || "")) tourShow(0);
+  }
+
   function boot() {
     if (!$("view-lab")) return;
     initTabs();
+    initTour();
     initStatus();
     Perception.init();
     Human.init();
