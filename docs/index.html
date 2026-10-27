@@ -893,6 +893,7 @@
           <div>
             <h1>RL&#183;Trader Lab</h1>
             <p class="lab-sub">Can an RL agent actually learn a generalizable strategy &mdash; or is it exploiting its training data and getting lucky? Run the experiments yourself.</p>
+            <button type="button" class="tour-start" id="tour-start">New here? Take the 3-step tour <span aria-hidden="true">&rarr;</span></button>
           </div>
           <div class="api-pill" id="lab-api-status"><i class="dot-led"></i> connecting&hellip;</div>
         </header>
@@ -927,6 +928,19 @@
         </div>
 
         <!-- SIGNAL OR NOISE -->
+        <div class="tour-bar" id="tour-bar" role="region" aria-label="Guided tour" aria-live="polite" hidden>
+          <div class="tour-copy">
+            <span class="tour-step" id="tour-step"></span>
+            <strong class="tour-title" id="tour-title"></strong>
+            <p class="tour-text" id="tour-text"></p>
+          </div>
+          <div class="tour-actions">
+            <button type="button" class="tour-btn" id="tour-back">Back</button>
+            <button type="button" class="tour-btn tour-next" id="tour-next">Next</button>
+            <button type="button" class="tour-close" id="tour-exit" aria-label="Exit tour">&times;</button>
+          </div>
+        </div>
+
         <section class="lab-panel active" id="panel-perception" role="tabpanel" aria-labelledby="tab-perception" tabindex="0">
 
           <div class="gen-intro">
