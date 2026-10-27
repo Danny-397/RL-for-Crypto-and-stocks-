@@ -63,26 +63,19 @@
     <div class="view active" id="view-home">
     <section class="hero">
       <div class="hero-copy">
-        <div class="eyebrow">Deep reinforcement learning &middot; research study and interactive lab</div>
-        <h1>How do deep-RL agents <span class="grad">generalize</span> — and how do you tell a real result from luck?</h1>
+        <div class="eyebrow">Deep reinforcement learning research</div>
+        <h1>Is the agent <span class="grad">learning</span>, or just lucky?</h1>
         <p class="lede">
-          A from-scratch study of the two ways RL fools you: <strong>memorising the
-          training path</strong> and <strong>a single lucky seed</strong>. PPO built
-          from the algorithm up, domain randomization against the first failure,
-          multi-seed significance tests against the second — on crypto and equities,
-          chosen as a testbed because they are hard: non-stationary, noisy,
-          near-random-walk.
+          A from-scratch study of the two ways deep-RL trading agents fool you:
+          memorising the training path, and one lucky seed. Tested on crypto and
+          stocks, where markets are noisy enough to make both easy.
         </p>
         <p class="lede lede-sub">
-          Every experiment below runs in your browser. It is a research project, not
-          a trading product: nothing here places an order or predicts a price.
+          Every experiment runs in your browser. Research, not a trading product.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="#result">See the result &darr;</a>
           <a class="btn btn-ghost navtab" data-view="lab" href="#lab">Run an experiment &rarr;</a>
-        </div>
-        <div class="hero-tags">
-          <span>PPO from scratch</span><span>Domain randomization</span><span>Multi-seed significance</span>
         </div>
       </div>
 
@@ -119,35 +112,29 @@
         <article class="purpose-card">
           <h3><span class="purpose-icon" aria-hidden="true">◆</span> What this is</h3>
           <p>
-            A <b>reinforcement-learning research study</b> — does one PPO recipe
-            generalize across market regimes, and does an apparent edge survive
-            being tested properly — published together with the experiments that
-            produced it, so you can re-run them rather than trust them.
+            A research study: does one PPO recipe generalize across market
+            regimes, and does an apparent edge survive proper testing? The
+            experiments ship with it, so you can re-run them.
           </p>
         </article>
         <article class="purpose-card purpose-not">
           <h3><span class="purpose-icon" aria-hidden="true">✕</span> What it is not</h3>
           <p>
-            Not a trading bot, a signal service, or investment advice. It places
-            <b>no orders</b>, connects to <b>no broker or exchange</b>, and holds
-            no money. The agent's headline finding is <em>negative</em> — no
-            seed-robust edge over buy-and-hold — which is the result, not a
-            disclaimer.
+            Not a trading bot or investment advice. It places no orders and
+            connects to no broker. The headline finding is negative: no
+            seed-robust edge over buy-and-hold.
           </p>
         </article>
         <article class="purpose-card purpose-data">
           <h3><span class="purpose-icon" aria-hidden="true">↻</span> Real-time? No.</h3>
           <p>
-            <b>Daily closing bars</b> — one price per day, never intraday and
-            never streaming. The figures on this page are a fixed snapshot: they
-            change only when the pipeline is re-run and committed, and the agent
-            never retrains while you use it.
+            Daily closing bars, not streaming prices. The figures here are a
+            fixed snapshot that changes only when the pipeline is re-run.
             <span id="purpose-freshness"></span>
           </p>
           <p class="purpose-foot">
-            The one live path is the lab's out-of-distribution test, which
-            downloads fresh daily bars for a ticker you type and runs the same
-            frozen policy over them.
+            The one live path is the lab's out-of-distribution test, which runs
+            the frozen policy on fresh bars for any ticker you type.
           </p>
         </article>
       </div>
@@ -159,12 +146,10 @@
         <div class="kicker">The result</div>
         <h2>The most impressive number was the&nbsp;least trustworthy.</h2>
         <p>
-          Train the agent on a <b>single</b> asset and it posts returns that look
-          like a bug. Show it data it has never seen and it loses money. Train the
-          same agent across a <b>basket</b> of tickers and the headline collapses to
-          something modest — which then survives contact with held-out data. Both
-          arms below were trained identically and scored on the same held-out paths;
-          the only difference is how many assets they saw.
+          Trained on one asset, the agent posts returns that look like a bug, then
+          loses money on data it has never seen. Trained across a basket, the
+          headline shrinks to something modest that holds up. The only difference
+          between the two is how many assets they saw.
         </p>
       </div>
 
