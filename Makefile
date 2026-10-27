@@ -64,7 +64,7 @@ build-synth:
 # The 5-seed sweep is the canonical one: the domain-randomized arm draws fresh
 # unseeded data every episode, so a single run of it is not reproducible.
 ablation:
-	$(PY) tools/ablation_multiseed.py --seeds 42 43 44 45 46 --timesteps 60000
+	$(PY) tools/ablation_multiseed.py --seeds 42 43 44 45 46 47 48 49 50 51 --timesteps 60000
 
 ablation1:
 	$(PY) tools/ablation.py --timesteps 60000

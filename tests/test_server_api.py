@@ -425,8 +425,11 @@ def test_statistics_supports_paired_arms(client):
     assert body["mean_a"] > body["mean_b"]
     assert body["mean_difference"] > 0
     assert body["a_wins"] == len(a)
-    # At n=5 the sign-flip test bottoms out at 0.0625 and must say so.
-    assert body["resolution"]["can_reach_05"] is False
+    # A sign-flip test over n pairs bottoms out at 2 / 2**n: 0.0625 at n=5, so it
+    # could not reach 0.05 then; at the current 10 seeds it can. Derive it from n
+    # rather than hard-code the seed count, which has already changed twice.
+    floor = 2 / 2 ** len(a)
+    assert body["resolution"]["can_reach_05"] is (floor <= 0.05)
     assert body["p_value"] >= body["resolution"]["min_attainable_p"]
 
 

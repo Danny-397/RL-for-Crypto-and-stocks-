@@ -425,7 +425,7 @@ def run(api: str, port: int, shot: str | None) -> None:
         check("both agents rendered",
               page.eval_on_selector_all(".ab-card", "els => els.length") == 2)
         dots = page.eval_on_selector_all(".seed-dot", "els => els.length")
-        check("per-seed points shown", dots == 20, f"{dots} dots (2 arms x 2 splits x 5 seeds)")
+        check("per-seed points shown", dots == 40, f"{dots} dots (2 arms x 2 splits x 10 seeds)")
         check("verdict names the failure",
               "lies" in page.inner_text("#gen-verdict").lower(),
               page.inner_text("#gen-verdict")[:70].strip())

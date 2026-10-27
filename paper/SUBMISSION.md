@@ -92,10 +92,10 @@ surrogate-data falsification test that separates "the agent is weak" from "there
 is no signal to find," and validate it with a positive control on synthetic data
 with known structure. In doing so the project reproduces, in a new domain, the
 central methodological finding of Henderson et al. (2018) — that single-run RL
-evaluation is unreliable. We then apply that finding to our own ablation, whose
-domain-randomized arm is unseeded by construction and so cannot be reproduced
-from a single run: we report both arms as distributions over five seeds, where
-all four confidence intervals exclude zero.
+evaluation is unreliable. We then apply that finding to our own ablation: we
+report both arms as distributions over ten seeds, where all four confidence
+intervals exclude zero, after finding and fixing a seeding bug that had left
+the domain-randomized arm unreproducible.
 
 ---
 

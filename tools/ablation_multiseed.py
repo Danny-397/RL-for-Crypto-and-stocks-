@@ -13,7 +13,7 @@ This driver reuses ablation.run() unmodified, sweeps seeds, and reports
 mean and bootstrap CI so Table 1 can be held to the same standard as Table 2.
 
 Run from the repo root:
-    python tools/ablation_multiseed.py --seeds 42 43 44 45 46 --timesteps 60000
+    python tools/ablation_multiseed.py --seeds 42 43 44 45 46 47 48 49 50 51 --timesteps 60000
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ def boot_ci(vals: np.ndarray, n: int = 10_000, seed: int = 0) -> tuple:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--seeds", type=int, nargs="+", default=[42, 43, 44, 45, 46])
+    ap.add_argument("--seeds", type=int, nargs="+", default=list(range(42, 52)))
     ap.add_argument("--timesteps", type=int, default=60_000)
     ap.add_argument("--n-eval", type=int, default=30)
     ap.add_argument("--markets", nargs="+", default=["stock", "crypto"])
@@ -50,10 +50,24 @@ def main() -> None:
         help="Skip training; summarize the existing *_raw.json checkpoint. Lets a "
              "partially-complete sweep be written up at whatever n it reached.",
     )
+    ap.add_argument(
+        "--resume", action="store_true",
+        help="Keep the (market, seed) results already in the *_raw.json checkpoint "
+             "and run only the missing ones -- e.g. extend 5 seeds to 10 without "
+             "redoing the first 5. Sound because a run is a pure function of its "
+             "seed (see rl_trader.data.seeded_path_factory).",
+    )
     args = ap.parse_args()
 
     per_seed: dict = {m: [] for m in args.markets}
     raw_path = args.out.replace(".json", "_raw.json")
+    if args.resume and os.path.exists(raw_path):
+        with open(raw_path, encoding="utf-8") as fh:
+            saved = json.load(fh)
+        wanted = set(args.seeds)
+        per_seed = {m: [r for r in saved.get(m, []) if r["seed"] in wanted]
+                    for m in args.markets}
+        print("Resuming: already have", {m: [r["seed"] for r in v] for m, v in per_seed.items()})
 
     if args.from_raw:
         with open(raw_path, encoding="utf-8") as fh:
@@ -70,6 +84,8 @@ def main() -> None:
 
     for seed in ([] if args.from_raw else args.seeds):
         for market in args.markets:
+            if any(r["seed"] == seed for r in per_seed[market]):
+                continue  # --resume: already in the checkpoint
             print(f"\n===== market={market} seed={seed} =====", flush=True)
             res = run(market, args.timesteps, seed, args.n_eval)
             res["seed"] = seed

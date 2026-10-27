@@ -764,8 +764,8 @@ decisive and the p-value still cannot clear the floor, because five pairs
 cannot resolve further:
 
 <!-- BEGIN GENERATED: ablation-resolution -->
-- **Stock** — held-out difference **+64.2%**, 95% CI `[+35%, +97%]`, yet **p = 0.0630** against a floor of 0.0625 at 5 pairs.
-- **Crypto** — held-out difference **+255.6%**, 95% CI `[+206%, +302%]`, yet **p = 0.0630** against a floor of 0.0625 at 5 pairs.
+- **Stock** — held-out difference **+56.1%**, 95% CI `[+40%, +74%]`, yet **p = 0.0021** against a floor of 0.0020 at 10 pairs.
+- **Crypto** — held-out difference **+230.4%**, 95% CI `[+186%, +277%]`, yet **p = 0.0021** against a floor of 0.0020 at 10 pairs.
 <!-- END GENERATED: ablation-resolution -->
 
 ## API

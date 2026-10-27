@@ -129,7 +129,7 @@ def seed_datasets() -> Dict[str, dict]:
                         "source": "docs/assets/ablation_multiseed.json",
                         "generated_by": (
                             "python tools/ablation_multiseed.py "
-                            "--seeds 42 43 44 45 46 --timesteps 60000"
+                            "--seeds 42 43 44 45 46 47 48 49 50 51 --timesteps 60000"
                         ),
                         "published": {
                             "mean": blob.get(f"{split}_mean"),
@@ -263,7 +263,7 @@ def generalization_results() -> Optional[dict]:
         "units": "total return (fraction); 1.0 = +100%",
         "source": "docs/assets/ablation_multiseed.json",
         "generated_by": (
-            "python tools/ablation_multiseed.py --seeds 42 43 44 45 46 --timesteps 60000"
+            "python tools/ablation_multiseed.py --seeds 42 43 44 45 46 47 48 49 50 51 --timesteps 60000"
         ),
         "live": False,
         "why_not_live": (

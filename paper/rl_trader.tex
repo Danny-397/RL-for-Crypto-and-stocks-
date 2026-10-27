@@ -50,9 +50,9 @@ is weak'' from ``there is no signal to find,'' and validate it with a positive
 control on synthetic data with known structure. In doing so the project
 reproduces, in a new domain, the central methodological finding of
 Henderson~et~al.\ (2018) --- that single-run RL evaluation is unreliable. We then
-apply that finding to our own ablation, whose domain-randomized arm is unseeded by
-construction and so cannot be reproduced from a single run: we report both arms as
-distributions over five seeds, where all four confidence intervals exclude zero.
+apply that finding to our own ablation: we report both arms as distributions over
+ten seeds, where all four confidence intervals exclude zero, after finding and fixing
+a seeding bug that had left the domain-randomized arm unreproducible.
 \end{abstract}
 
 \section{Introduction}
@@ -73,7 +73,7 @@ be instrumented and trusted. Our contributions are:
   \item A controlled study showing an RL agent memorizes a single price path
   catastrophically, and that \textbf{domain randomization}
   \cite{tobin2017,cobbe2019} is the single change that flips held-out return from
-  reliably negative to reliably positive --- across five seeds all four confidence
+  reliably negative to reliably positive --- across ten seeds all four confidence
   intervals exclude zero, in both markets (\S\ref{sec:ablation}).
   \item A \textbf{multi-seed significance protocol} (bootstrap CIs + paired
   permutation tests) that reproduces the Henderson~et~al.\ \cite{henderson2018} finding in a new
@@ -131,7 +131,7 @@ a fresh path every episode (domain randomization) --- and measure in-sample vs.\
 out-of-sample (30 unseen paths) return (Table~\ref{tab:ablation}).
 
 \begin{table}[t]\centering\footnotesize
-\caption{Domain-randomization ablation, 5 seeds $\times$ 60k steps; all cells are
+\caption{Domain-randomization ablation, 10 seeds $\times$ 60k steps; all cells are
 percent returns. Held-out is the mean over 30 unseen paths --- identical for every
 arm and seed --- with a bootstrap 95\pc\ CI across seeds. In-sample is a
 \emph{range} over seeds, not a mean: it is one leveraged compounding return on a
@@ -144,10 +144,10 @@ figure is its return on the very path the single-path agent memorized.}
 Market & Train & In-sample & Held-out [95\pc\ CI]\\
 \midrule
 % BEGIN GENERATED: tex-ablation
-Stock  & single & $+17k$--$+30k$ & $-26$ {\scriptsize$[-37,-9]$}\\
-Stock  & domain & $-22$--$+59$ & $\mathbf{+38}$ {\scriptsize$[+21,+60]$}\\
-Crypto & single & $+322k$--$+4.0M$ & $-51$ {\scriptsize$[-62,-39]$}\\
-Crypto & domain & $+87$--$+460$ & $\mathbf{+204}$ {\scriptsize$[+160,+248]$}\\
+Stock  & single & $+6k$--$+31k$ & $-25$ {\scriptsize$[-33,-15]$}\\
+Stock  & domain & $-22$--$+59$ & $\mathbf{+31}$ {\scriptsize$[+21,+44]$}\\
+Crypto & single & $+87k$--$+4.0M$ & $-44$ {\scriptsize$[-59,-21]$}\\
+Crypto & domain & $+24$--$+460$ & $\mathbf{+187}$ {\scriptsize$[+147,+229]$}\\
 % END GENERATED: tex-ablation
 \bottomrule
 \end{tabular}
@@ -168,7 +168,7 @@ signature. Domain randomization is the single change that turns a memorizer into
 generalizer, echoing sim-to-real transfer \cite{tobin2017} and RL generalization
 benchmarks \cite{cobbe2019}.
 
-Across five seeds all four intervals exclude zero: single-path training is
+Across ten seeds all four intervals exclude zero: single-path training is
 reliably unprofitable out-of-sample and domain randomization is reliably
 profitable, in both markets. The effect is therefore robust to seed choice, which
 is the property the rest of this paper spends its time showing that real-market

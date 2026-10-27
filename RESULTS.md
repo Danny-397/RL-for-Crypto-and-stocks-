@@ -17,7 +17,7 @@ respectively.
 1. **The method is sound where signal exists (RQ1/RQ2).** On controlled synthetic
    markets with known structure, the agent learns a profitable, *generalizing*
    policy — and an ablation proves that **domain randomization is what makes it
-   generalize**: across 5 seeds it flips held-out return from reliably negative to
+   generalize**: across 10 seeds it flips held-out return from reliably negative to
    reliably positive — **all four bootstrap CIs exclude zero**, in both markets.
    This is the same lesson as Tobin et al. (2017) and Cobbe et al. (2019),
    reproduced from scratch.
@@ -66,7 +66,7 @@ one path. To show this concretely, we train two otherwise-identical agents on
 synthetic data (where a real, known signal exists) and measure performance on
 the training path ("in-sample") vs. 30 unseen paths ("out-of-sample").
 
-`python tools/ablation_multiseed.py --seeds 42 43 44 45 46 --timesteps 60000`
+`python tools/ablation_multiseed.py --seeds 42 43 44 45 46 47 48 49 50 51 --timesteps 60000`
 
 5 seeds, 60k steps. Out-of-sample is the mean over 30 held-out paths (identical for
 every arm and seed) with a bootstrap 95% CI across seeds. In-sample is given as a
@@ -76,12 +76,12 @@ memorized path and spans orders of magnitude.
 <!-- BEGIN GENERATED: ablation-table -->
 | Training setup | In-sample (range over seeds) | Held-out return (mean, 95% CI) |
 |---|---:|---:|
-| Stocks · single asset | +17k% to +30k% | **−26%** `[−37%, −9%]` |
-| Stocks · across tickers | −22% to +59% | **+38%** `[+21%, +60%]` |
-| Crypto · single asset | +322k% to +4.0M% | **−51%** `[−62%, −39%]` |
-| Crypto · across tickers | +87% to +460% | **+204%** `[+160%, +248%]` |
+| Stocks · single asset | +6k% to +31k% | **−25%** `[−33%, −15%]` |
+| Stocks · across tickers | −22% to +59% | **+31%** `[+21%, +44%]` |
+| Crypto · single asset | +87k% to +4.0M% | **−44%** `[−59%, −21%]` |
+| Crypto · across tickers | +24% to +460% | **+187%** `[+147%, +229%]` |
 
-*5 seeds × 60k steps, bootstrap 95% CI, held-out paths held identical across arms. In-sample is a range rather than a mean because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that is not there.*
+*10 seeds × 60k steps, bootstrap 95% CI, held-out paths held identical across arms. In-sample is a range rather than a mean because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that is not there.*
 <!-- END GENERATED: ablation-table -->
 
 ![Domain randomization ablation](docs/assets/fig_ablation.png)
@@ -89,7 +89,7 @@ memorized path and spans orders of magnitude.
 **Reading it:** the single-path agents post absurd in-sample returns by memorising
 their training sequence, then **lose money** on unseen data. Domain randomization
 (a fresh path every episode) is the single change that flips held-out return
-positive — and across five seeds every one of these four intervals excludes zero.
+positive — and across ten seeds every one of these four intervals excludes zero.
 
 All four intervals exclude zero, so the effect is robust to seed choice — which is
 precisely the property §5 shows real-market edges *lack*. Two caveats the
