@@ -24,8 +24,8 @@ keywords:
   - reproducibility
   - quantitative-finance
 license: MIT
-version: "2.1.0"
-date-released: "2026-10-26"
+version: "2.2.0"
+date-released: "2026-10-27"
 references:
   - type: conference-paper
     title: "Deep Reinforcement Learning that Matters"
