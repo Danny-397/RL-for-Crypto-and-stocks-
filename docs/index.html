@@ -893,23 +893,54 @@
           <div>
             <h1>RL&#183;Trader Lab</h1>
             <p class="lab-sub">Can an RL agent actually learn a generalizable strategy &mdash; or is it exploiting its training data and getting lucky? Run the experiments yourself.</p>
+            <button type="button" class="tour-start" id="tour-start">New here? Take the 3-step tour <span aria-hidden="true">&rarr;</span></button>
           </div>
           <div class="api-pill" id="lab-api-status"><i class="dot-led"></i> connecting&hellip;</div>
         </header>
 
+        <!-- Tabs are grouped for scanning only: the groups are presentational,
+             so the tablist still holds nine tabs and the arrow keys walk all of them. -->
         <div class="lab-tabs" role="tablist" aria-label="Laboratory sections">
-          <button class="lab-tab" role="tab" id="tab-perception" data-panel="perception" aria-controls="panel-perception" aria-selected="true" tabindex="0">Signal or Noise?</button>
-          <button class="lab-tab" role="tab" id="tab-human" data-panel="human" aria-controls="panel-human" aria-selected="false" tabindex="-1">Your Turn</button>
-          <button class="lab-tab" role="tab" id="tab-playground" data-panel="playground" aria-controls="panel-playground" aria-selected="false" tabindex="-1">Agent Playground</button>
-          <button class="lab-tab" role="tab" id="tab-xray" data-panel="xray" aria-controls="panel-xray" aria-selected="false" tabindex="-1">Agent X-Ray</button>
-          <button class="lab-tab" role="tab" id="tab-generalization" data-panel="generalization" aria-controls="panel-generalization" aria-selected="false" tabindex="-1">Can You Break It?</button>
-          <button class="lab-tab" role="tab" id="tab-walkforward" data-panel="walkforward" aria-controls="panel-walkforward" aria-selected="false" tabindex="-1">Walk-Forward</button>
-          <button class="lab-tab" role="tab" id="tab-seeds" data-panel="seeds" aria-controls="panel-seeds" aria-selected="false" tabindex="-1">Real or Luck?</button>
-          <button class="lab-tab" role="tab" id="tab-surrogate" data-panel="surrogate" aria-controls="panel-surrogate" aria-selected="false" tabindex="-1">Anything There?</button>
-          <button class="lab-tab" role="tab" id="tab-notebook" data-panel="notebook" aria-controls="panel-notebook" aria-selected="false" tabindex="-1">Notebook</button>
+          <div class="lab-tab-group" role="presentation">
+            <span class="lab-tab-group-label" aria-hidden="true">Try it yourself</span>
+            <div class="lab-tab-row" role="presentation">
+              <button class="lab-tab" role="tab" id="tab-perception" data-panel="perception" aria-controls="panel-perception" aria-selected="true" tabindex="0">Signal or Noise?</button>
+              <button class="lab-tab" role="tab" id="tab-human" data-panel="human" aria-controls="panel-human" aria-selected="false" tabindex="-1">Your Turn</button>
+              <button class="lab-tab" role="tab" id="tab-playground" data-panel="playground" aria-controls="panel-playground" aria-selected="false" tabindex="-1">Agent Playground</button>
+            </div>
+          </div>
+          <div class="lab-tab-group" role="presentation">
+            <span class="lab-tab-group-label" aria-hidden="true">Inspect the agent</span>
+            <div class="lab-tab-row" role="presentation">
+              <button class="lab-tab" role="tab" id="tab-xray" data-panel="xray" aria-controls="panel-xray" aria-selected="false" tabindex="-1">Agent X-Ray</button>
+              <button class="lab-tab" role="tab" id="tab-generalization" data-panel="generalization" aria-controls="panel-generalization" aria-selected="false" tabindex="-1">Can You Break It?</button>
+              <button class="lab-tab" role="tab" id="tab-walkforward" data-panel="walkforward" aria-controls="panel-walkforward" aria-selected="false" tabindex="-1">Walk-Forward</button>
+            </div>
+          </div>
+          <div class="lab-tab-group" role="presentation">
+            <span class="lab-tab-group-label" aria-hidden="true">Test the result</span>
+            <div class="lab-tab-row" role="presentation">
+              <button class="lab-tab" role="tab" id="tab-seeds" data-panel="seeds" aria-controls="panel-seeds" aria-selected="false" tabindex="-1">Real or Luck?</button>
+              <button class="lab-tab" role="tab" id="tab-surrogate" data-panel="surrogate" aria-controls="panel-surrogate" aria-selected="false" tabindex="-1">Anything There?</button>
+              <button class="lab-tab" role="tab" id="tab-notebook" data-panel="notebook" aria-controls="panel-notebook" aria-selected="false" tabindex="-1">Notebook</button>
+            </div>
+          </div>
         </div>
 
         <!-- SIGNAL OR NOISE -->
+        <div class="tour-bar" id="tour-bar" role="region" aria-label="Guided tour" aria-live="polite" hidden>
+          <div class="tour-copy">
+            <span class="tour-step" id="tour-step"></span>
+            <strong class="tour-title" id="tour-title"></strong>
+            <p class="tour-text" id="tour-text"></p>
+          </div>
+          <div class="tour-actions">
+            <button type="button" class="tour-btn" id="tour-back">Back</button>
+            <button type="button" class="tour-btn tour-next" id="tour-next">Next</button>
+            <button type="button" class="tour-close" id="tour-exit" aria-label="Exit tour">&times;</button>
+          </div>
+        </div>
+
         <section class="lab-panel active" id="panel-perception" role="tabpanel" aria-labelledby="tab-perception" tabindex="0">
 
           <div class="gen-intro">

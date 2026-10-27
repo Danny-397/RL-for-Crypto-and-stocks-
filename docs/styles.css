@@ -573,8 +573,8 @@ h2 {
 
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 900px) {
+  /* Stacked: the question comes first, then the chart that answers it. */
   .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 40px; }
-  .hero-visual { order: -1; }
   /* nav-links are the primary Home/Stocks/Crypto tabs — keep them visible,
      just tighten spacing and drop the secondary GitHub button to make room. */
   .nav { gap: 14px; flex-wrap: wrap; }
