@@ -2960,6 +2960,15 @@
       const on = t.dataset.panel === name;
       t.setAttribute("aria-selected", String(on));
       t.tabIndex = on ? 0 : -1;
+      // On a phone the bar scrolls sideways; keep the chosen tab in view
+      // without scrolling the page itself.
+      const bar = t.closest(".lab-tabs");
+      if (on && bar && bar.scrollWidth > bar.clientWidth) {
+        const left = t.offsetLeft - bar.offsetLeft;
+        if (left < bar.scrollLeft || left + t.offsetWidth > bar.scrollLeft + bar.clientWidth) {
+          bar.scrollLeft = left - 16;
+        }
+      }
     });
     document.querySelectorAll(".lab-panel").forEach(function (p) {
       p.classList.toggle("active", p.id === "panel-" + name);
