@@ -747,6 +747,18 @@
 }
 .api-pill.is-stale .dot-led { background: #ffcc66; box-shadow: 0 0 8px #ffcc66; }
 
+/* the backend is unreachable: one note up front, and no "Live" claims */
+.lab-offline-note {
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  color: var(--text);
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  border-radius: 12px;
+  line-height: 1.5;
+}
+.lab-offline .tag-real { display: none; }
+
 /* the backend is asleep and being woken -- in progress, not a failure */
 .api-pill.is-waking {
   color: var(--cyan);

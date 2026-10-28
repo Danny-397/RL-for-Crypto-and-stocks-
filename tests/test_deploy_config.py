@@ -104,7 +104,10 @@ def test_the_lab_retries_a_sleeping_backend_before_calling_it_unreachable():
     """One failed request against a free-tier service means very little."""
     lab = _read("docs", "lab.js")
     i = lab.index("async function initStatus()")
-    block = lab[i: i + 2600]
+    block = lab[i: i + 4000]
     assert "waking the backend" in block, "the pill no longer explains a cold start"
     assert "for (let attempt" in block, "the pill no longer retries"
-    assert "API unreachable" in block, "the give-up state has gone missing"
+    assert "Backend offline" in block, "the give-up state has gone missing"
+    # A suspended service fails fast and never wakes; it must not be retried
+    # for minutes as if it were a cold start.
+    assert "allFast && Date.now() - started >= 20000" in block, "fast failures are no longer cut short"
