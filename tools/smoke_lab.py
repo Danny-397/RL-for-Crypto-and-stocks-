@@ -732,16 +732,19 @@ def run(api: str, port: int, shot: str | None) -> None:
         # This is the honesty rule the whole offline phase exists to protect, so
         # it is waited out rather than skipped.
         off.wait_for_function(
-            "() => /unreachable/i.test("
+            "() => /offline/i.test("
             "document.getElementById('lab-api-status').textContent)",
             timeout=120000,
         )
-        check("status eventually shows unreachable",
-              "UNREACHABLE" in off.inner_text("#lab-api-status").upper(),
+        check("status eventually shows offline",
+              "OFFLINE" in off.inner_text("#lab-api-status").upper(),
               off.inner_text("#lab-api-status").strip())
         check("run button disabled", off.eval_on_selector("#pg-run", "el => el.disabled"))
         check("error is surfaced", off.eval_on_selector("#pg-error", "el => !el.hidden"))
         check("no results rendered", off.eval_on_selector("#pg-output", "el => el.hidden"))
+        check("one note explains the outage", off.is_visible("#lab-offline-note"))
+        check("no panel still claims to be Live",
+              off.eval_on_selector_all(".tag-real", "els => els.every(e => !e.offsetParent)"))
         check("no page errors offline", not off_errors, "; ".join(off_errors[:2]))
 
         # ── 3. home page + routing, with no backend at all ─────────────────
