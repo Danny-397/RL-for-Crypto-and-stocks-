@@ -44,3 +44,17 @@ crypto mean was itself partly seed luck. RESULTS §5 now says so and links here.
 Caveat: these runs used re-fetched data that is not byte-identical to §5's
 (Yahoo re-adjusted history after August; see the registration), so the
 difference could come from the data as well as the seeds.
+
+## The exact input data
+
+Yahoo revises its history, so re-fetching cannot reproduce these files later.
+The 16 CSVs this run used, plus their snapshot, are archived privately as
+`rl-trader-data-2026-10-28.zip` (17 files, 1.7 MB,
+SHA-256 `310291c2216523ed44b64b2e50b414887e5d8d4d4dbd9fdbd17f283095bc4dbd`).
+They are not committed or published here because Yahoo's terms restrict
+redistributing its data. To rerun on the identical inputs, unzip the archive
+into the repo root and check it before training:
+
+```bash
+python tools/fetch_data.py --verify --snapshot docs/preregistration/2026-10-28-fresh-seeds.SNAPSHOT.json
+```
