@@ -108,6 +108,7 @@
          are the numbers. The freshness card is rendered from the results
          artifact rather than typed, so it cannot drift from the last rebuild. -->
     <section class="section purpose-section" id="what-this-is">
+      <h2 class="sr-only">What this project is</h2>
       <div class="purpose-grid">
         <article class="purpose-card">
           <h3><span class="purpose-icon" aria-hidden="true">◆</span> What this is</h3>
@@ -548,7 +549,7 @@
           </li>
         </ol>
 
-        <aside class="repro-side">
+        <div class="repro-side">
           <h3>What is actually pinned</h3>
           <ul class="repro-check">
             <li><b>Data</b><span>A dated snapshot manifest rather than a live feed,
@@ -569,7 +570,7 @@
               <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/sync_docs.py">sync_docs.py&nbsp;&rarr;</a></span></li>
           </ul>
           <p class="repro-warn" id="repro-warn"></p>
-        </aside>
+        </div>
       </div>
     </section>
 
@@ -577,6 +578,7 @@
 
     <!-- ═══════════════════════ HOW IT WORKS VIEW ═══════════════════════ -->
     <div class="view" id="view-method">
+    <h1 class="sr-only">How RL·Trader works</h1>
     <section class="section">
       <div class="section-head">
         <div class="kicker">How it works</div>
@@ -728,6 +730,7 @@
 
     <!-- ═══════════════════════ MARKET VIEW (Stocks / Crypto) ═══════════════════════ -->
     <div class="view" id="view-market">
+    <h1 class="sr-only">RL·Trader markets explorer</h1>
     <!-- ─────────────────────── MARKETS EXPLORER ─────────────────────── -->
     <section id="markets" class="section">
       <div class="section-head">
@@ -851,7 +854,7 @@
           <span class="muted-sub">the frozen policy on an asset it was never trained on &middot; no retraining, no fine-tuning</span>
         </div>
         <div class="live-controls">
-          <select id="live-market" class="live-select">
+          <select id="live-market" class="live-select" aria-label="Market">
             <option value="crypto">Crypto</option>
             <option value="stock">Stock</option>
           </select>
@@ -1070,6 +1073,7 @@
 
         <!-- PLAYGROUND -->
         <section class="lab-panel" id="panel-playground" role="tabpanel" aria-labelledby="tab-playground" tabindex="0">
+          <h2 class="sr-only">Agent playground</h2>
           <div class="lab-grid">
 
             <form class="panel-card" id="pg-form" onsubmit="return false">
