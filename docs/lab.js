@@ -30,18 +30,31 @@
   };
 
   /* ── API ────────────────────────────────────────────────── */
+  // fetch() throws a TypeError when the request gets no readable answer: the
+  // network is down, or the server replied without CORS headers, which is
+  // what Render's "Service Suspended" page does. Say that in words a visitor
+  // understands instead of the browser's "Failed to fetch".
+  const OFFLINE = "the lab's backend is offline right now";
+  async function request(url, opts) {
+    try {
+      return await fetch(url, opts);
+    } catch (err) {
+      throw err instanceof TypeError ? new Error(OFFLINE) : err;
+    }
+  }
+
   const api = {
     ok: Boolean(API),
 
     async get(path) {
-      const r = await fetch(API + path);
+      const r = await request(API + path);
       const body = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
       return body;
     },
 
     async post(path, payload) {
-      const r = await fetch(API + path, {
+      const r = await request(API + path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -2894,14 +2907,20 @@
     // The backend sleeps on Render's free plan and takes ~50s to wake, so a
     // single failed request means very little. Retrying while saying WHY keeps
     // the pill honest: a visitor is told the backend is waking, not that the
-    // lab is broken. Attempts are spaced to cover a cold start without
-    // hammering a service that is genuinely gone.
+    // lab is broken. While it wakes, Render holds the request open, so a slow
+    // failure is worth more retries; a request that fails within seconds got
+    // an answer without CORS headers (a restart, or Render's "Service
+    // Suspended" page), and 20 s of nothing else means it is not coming back.
     const health = await (async () => {
       const started = Date.now();
+      let allFast = true;
       for (let attempt = 0; attempt < 8; attempt++) {
+        const tried = Date.now();
         try {
           return await api.get("/health");
         } catch (err) {
+          if (Date.now() - tried > 5000) allFast = false;
+          if (allFast && Date.now() - started >= 20000) return null;
           if (attempt === 0) pill.className = "api-pill is-waking";
           const secs = Math.round((Date.now() - started) / 1000);
           pill.innerHTML =
@@ -2909,7 +2928,7 @@
           pill.title =
             "The API is hosted on a free plan that sleeps when idle. First " +
             "request after a quiet spell takes about a minute.";
-          await new Promise((r) => setTimeout(r, 8000));
+          await new Promise((r) => setTimeout(r, allFast ? 4000 : 8000));
         }
       }
       return null;
@@ -2917,10 +2936,22 @@
 
     if (!health) {
       pill.className = "api-pill is-down";
-      pill.innerHTML = '<i class="dot-led"></i> API unreachable';
-      pill.title =
-        "No response after ~a minute. Everything on this page that is marked " +
-        "precomputed still works; the live experiments do not.";
+      pill.innerHTML = '<i class="dot-led"></i> Backend offline';
+      pill.title = "";
+      // Every Live panel below needs the backend; say so once, up front.
+      document.body.classList.add("lab-offline");
+      const head = pill.closest(".lab-head");
+      if (head && !$("lab-offline-note")) {
+        const note = document.createElement("p");
+        note.id = "lab-offline-note";
+        note.className = "lab-offline-note";
+        note.setAttribute("role", "status");
+        note.textContent =
+          "The lab's backend is offline right now, so the experiments on this " +
+          "page can't run. Please check back later. Everything outside the " +
+          "Lab, including the published results, is precomputed and still works.";
+        head.insertAdjacentElement("afterend", note);
+      }
       return;
     }
 

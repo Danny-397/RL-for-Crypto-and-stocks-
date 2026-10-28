@@ -933,7 +933,9 @@
         liveScorecard(d);
         statusEl.textContent = `${d.ticker} · ${d.n_days} trading days · held-out 2y`;
       } catch (e) {
-        statusEl.textContent = "Error: " + (e && e.message ? e.message : "request failed");
+        statusEl.textContent = e instanceof TypeError
+          ? "The live backend is offline right now. Please check back later."
+          : "Error: " + (e && e.message ? e.message : "request failed");
       } finally {
         runBtn.disabled = false;
         if (spinEl) spinEl.hidden = true;
