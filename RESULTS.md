@@ -366,6 +366,17 @@ ability of the test to have detected a change is what improved.
 relative-strength and market-regime features. A naive project would have shipped the
 §3 table as a win; the multi-seed test is what catches it.
 
+**Pre-registered replication (2026-10-28).** Ten never-run seeds (200–209), same
+recipe and budget, with the predictions committed before the run
+([registration](docs/preregistration/2026-10-28-fresh-seeds.md),
+[results](docs/preregistration/2026-10-28-fresh-seeds.results.md)). All four
+predictions held: stock −19.8% vs +239.5% buy-and-hold, p = 0.0021; crypto
+indistinguishable from buy-and-hold, p = 0.88. One detail above did **not**
+replicate: the crypto mean fell to +26.7% and its interval, [−13.8%, +70.4%], now
+includes zero, so "the agent made money on average across seeds" was itself
+partly seed luck. (The replication used re-fetched data that Yahoo has since
+re-adjusted, so data drift may contribute.)
+
 This mirrors §2 exactly: on synthetic markets where a signal provably exists the
 agent is repeatably profitable but still statistically indistinguishable from
 buy-&-hold; on real markets, even the apparent edge evaporates under resampling.
