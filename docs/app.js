@@ -410,9 +410,10 @@
       if (done || !DATA) return;
       done = true;
       const m = DATA.markets[HERO_MARKET].metrics;
+      document.getElementById("m-return").classList.toggle("is-neg", m.total_return < 0);
       countTo("m-return", 0, m.total_return * 100, 800, (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + "%");
       countTo("m-sharpe", 0, m.sharpe, 800, (v) => v.toFixed(2));
-      countTo("m-dd", 0, m.max_drawdown * 100, 800, (v) => v.toFixed(1) + "%");
+      countTo("m-dd", 0, m.max_drawdown * 100, 800, (v) => "−" + Math.abs(v).toFixed(1) + "%");
     }
 
     if ("IntersectionObserver" in window) {
