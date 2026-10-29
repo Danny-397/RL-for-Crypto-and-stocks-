@@ -226,6 +226,9 @@ h2 {
 .chart-foot .stat { display: flex; flex-direction: column; }
 .chart-foot .k { font-size: 11px; color: var(--faint); font-family: var(--font-data); font-variant-numeric: tabular-nums; }
 .chart-foot .v { font-size: 18px; font-weight: 700; font-family: var(--font-display); color: var(--volt); }
+/* Only a gain gets the agent's volt; a drawdown is a loss and reads as one. */
+.chart-foot .v.is-neutral { color: var(--text); }
+.chart-foot .v.is-neg { color: var(--neg); }
 
 /* ── "What this is" band ────────────────────────────────── */
 .purpose-section { padding-top: 8px; padding-bottom: 8px; }
