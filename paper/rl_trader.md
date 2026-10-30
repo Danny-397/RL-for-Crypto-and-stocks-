@@ -16,19 +16,19 @@ We build the entire stack from the algorithm up — PPO \[2\] with Generalized A
 
 ## Method
 
-##### Algorithm.
+### Algorithm.
 
 A single `PPOAgent` (shared-trunk actor–critic) implements the clipped surrogate objective, GAE advantages, entropy regularization, orthogonal initialization, gradient clipping, and a Welford \[9\] running observation normalizer that is exported and reused at serving time. A recurrent (LSTM) actor–critic trains through the same machinery with truncated backpropagation through time.
 
-##### Environments.
+### Environments.
 
 `StockTradingEnv` and `CryptoTradingEnv` subclass one `BaseTradingEnv` so accounting, transaction costs, slippage, and reward can never silently diverge. The action is a continuous target position in `[-1,1]` (fraction of equity; negative `=` short). The observation is a rolling window of 28 stationary features spanning multi-horizon momentum, moving-average ratios, RSI/MACD, Bollinger %B, Donchian position, ATR and volatility-regime signals, drawdown-from-high, volume microstructure, and cross-asset context (relative strength vs. SPY/BTC and the index’s own trend).
 
-##### Reward.
+### Reward.
 
 Two selectable forms: a risk-aware return net of transaction costs with drawdown and turnover penalties, or the Differential Sharpe Ratio \[6\], an online per-step approximation to the change in the Sharpe ratio.
 
-##### Evaluation protocol.
+### Evaluation protocol.
 
 Data are split chronologically; feature scalers are fit on the training slice only. Agents are scored on an untouched test split by total return, annualized Sharpe, and maximum drawdown, against buy-and-hold, random, and moving-average-crossover baselines run through the identical cost model. Every headline claim is repeated across independent seeds and reported as a bootstrap 95% confidence interval, with a paired permutation test against buy-and-hold.
 
@@ -56,7 +56,7 @@ Domain-randomization ablation, 10 seeds `×` 60k steps; all cells are percent re
 </div>
 
 <figure id="fig:ablation" data-latex-placement="t">
-<img src="figures/fig_ablation.png" />
+<img src="figures/fig_ablation.png" alt="Held-out return by training regime." />
 <figcaption>Held-out return by training regime. Bars are the mean over seeds, whiskers the bootstrap 95% CI, and dots the individual seeds — so the reader sees <span class="math inline"><em>n</em></span> and the spread rather than a bar alone. The in-sample range is annotated rather than plotted: it spans several orders of magnitude and would flatten everything else to a line.</figcaption>
 </figure>
 
