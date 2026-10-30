@@ -192,6 +192,45 @@ MATH_REPLACEMENTS = [
 ]
 
 
+def nest_headings(md: str) -> str:
+    """Never let a heading skip a level.
+
+    \\paragraph comes out of pandoc at level 5 even directly under a \\section
+    (level 2 after the shift), so the page jumped h2 -> h5. Screen-reader users
+    navigate by heading level and read that as missing structure. Each heading
+    is clamped to one level below its parent (the nearest earlier heading that
+    pandoc put at a higher level), so sibling paragraphs stay siblings.
+    """
+    out, seen = [], []          # seen: (pandoc level, output level)
+    for line in md.split("\n"):
+        m = re.match(r"(#{1,6}) ", line)
+        if m:
+            orig = len(m.group(1))
+            parent = next((new for o, new in reversed(seen) if o < orig), 1)
+            level = min(orig, parent + 1)
+            line = "#" * level + line[len(m.group(1)):]
+            seen.append((orig, level))
+        out.append(line)
+    return "\n".join(out)
+
+
+def alt_from_captions(md: str) -> str:
+    """Give each figure's <img> alt text: the first sentence of its caption.
+
+    Pandoc writes `<img src=... />` with no alt attribute, so a screen reader
+    announces the file name. The caption already says what the figure shows.
+    """
+    def one(m: re.Match) -> str:
+        head, src, between, caption = m.groups()
+        text = re.sub(r"<[^>]+>", "", caption).strip()
+        alt = re.split(r"(?<=\.)\s", text, maxsplit=1)[0].replace('"', "&quot;")
+        return f'{head}<img src="{src}" alt="{alt}" />{between}{caption}'
+
+    return re.sub(
+        r'(<figure[^>]*>\s*)<img src="([^"]+)" />(\s*<figcaption>)(.*?)(?=</figcaption>)',
+        one, md, flags=re.S)
+
+
 def flatten_math(md: str) -> tuple[str, set[str]]:
     """Turn pandoc's $`...`$ inline math into plain inline code.
 
@@ -250,6 +289,8 @@ def main() -> int:
 
     # Pandoc leaves the odd empty bracket where a dropped command used to be.
     md = re.sub(r" +([.,;])", r"\1", md)
+    md = nest_headings(md)
+    md = alt_from_captions(md)
 
     # Pandoc emits inline math as GFM's $`...`$, which the site's CommonMark
     # renderer does not understand -- it would print the delimiters literally.
