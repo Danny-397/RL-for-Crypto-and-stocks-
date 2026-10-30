@@ -91,8 +91,20 @@ def test_the_result_section_reads_the_ablation_global(app_js: str):
 
 
 def test_the_page_loads_every_generated_data_file(index: str):
+    """Each data shim is loaded, and before app.js, which reads their globals.
+
+    The tags may carry `defer` (they all do, so first paint isn't blocked);
+    deferred scripts run in document order, so position is what matters.
+    """
+    srcs = re.findall(r'<script\b[^>]*\bsrc="([^"]+)"', index)
+    assert "app.js" in srcs, "index.html no longer loads app.js"
     for shim in ("results.js", "significance.js", "learning.js", "ablation.js"):
-        assert f'<script src="{shim}"></script>' in index, shim
+        assert shim in srcs, shim
+        assert srcs.index(shim) < srcs.index("app.js"), f"{shim} must load before app.js"
+    deferred = set(re.findall(r'<script\b[^>]*\bsrc="([^"]+)"[^>]*\bdefer\b', index))
+    if "app.js" not in deferred:
+        # A synchronous app.js would run before any deferred shim.
+        assert not deferred & {"results.js", "significance.js", "learning.js", "ablation.js"}
 
 
 # --------------------------------------------------------------------------- #
