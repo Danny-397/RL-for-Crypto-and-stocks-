@@ -867,8 +867,28 @@
     const canvas = document.getElementById("live-chart");
     const spinEl = document.getElementById("live-spin");
 
-    // pre-warm the free-tier backend so the first real run isn't a cold start
-    fetch(`${API}/health`).catch(() => {});
+    // Wake the free-tier backend once the visitor reaches this card, so the
+    // first real run isn't a cold start. Not on page load: Render's 750 free
+    // instance-hours are shared by every backend on the account, each wake
+    // costs at least 15 minutes, and most visits never open a market tab.
+    // The card sits in a view that is display:none until opened, so the
+    // observer cannot fire for a visitor who stays on Home.
+    let woke = false;
+    function wake() {
+      if (woke) return;
+      woke = true;
+      fetch(`${API}/health`).catch(() => {});
+      fetch(`${API}/api/tickers`).then((r) => r.json())
+        .then((m) => { tickerMap = m; fillTickers(!tickerSel.value); }).catch(() => {});
+    }
+    section.addEventListener("pointerenter", wake, { once: true });
+    section.addEventListener("focusin", wake, { once: true });
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) { io.disconnect(); wake(); }
+      });
+      io.observe(section);
+    }
 
     const FALLBACK = {
       stock: ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "SPY", "QQQ"],
@@ -885,8 +905,6 @@
     fillTickers(true);
     // changing market just refreshes suggestions + the default symbol
     marketSel.addEventListener("change", () => fillTickers(true));
-    fetch(`${API}/api/tickers`).then((r) => r.json())
-      .then((m) => { tickerMap = m; fillTickers(!tickerSel.value); }).catch(() => {});
 
     // accept ANY symbol the user types; normalise crypto to yfinance's FOO-USD form
     function normalizedTicker() {

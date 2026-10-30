@@ -3112,8 +3112,23 @@
     Notebook.init();
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
+  // Boot the first time the Lab view opens, not on page load. Several panels
+  // ask the backend for data as they initialise, and every wake costs Render
+  // free instance-hours that all the project backends share; a visitor who
+  // never opens the Lab should not spend any. app.js's router opens a view by
+  // adding .active, which also covers a #lab deep link on arrival.
+  function bootWhenOpened() {
+    const lab = $("view-lab");
+    if (!lab || lab.classList.contains("active")) { boot(); return; }
+    const mo = new MutationObserver(function () {
+      if (!lab.classList.contains("active")) return;
+      mo.disconnect();
+      boot();
+    });
+    mo.observe(lab, { attributes: true, attributeFilter: ["class"] });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootWhenOpened);
+  else bootWhenOpened();
 
   // Shared with the other lab panels (X-Ray, generalization, multi-seed).
   window.RLLab = { api, fmt, Chart, COLORS, pick, setStatus, showError, metric, showPanel,
