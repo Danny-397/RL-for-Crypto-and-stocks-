@@ -1,6 +1,6 @@
 # Pinned to exact versions (2026-10-30) so every deploy installs the same
-# packages CI tested. Dependabot security updates open a PR when one of
-# these has a known vulnerability; bump deliberately otherwise.
+# packages CI tested. Bump deliberately; with Dependabot security updates
+# on (Settings > Code security), a known vulnerability in a pin opens a PR.
 # Backend API dependencies — deliberately lightweight (NO torch / onnx).
 # The trained policy is served with plain NumPy matmuls.
 flask==3.1.3
