@@ -24,6 +24,7 @@ keywords:
   - reproducibility
   - quantitative-finance
 license: MIT
+doi: 10.5281/zenodo.23843503
 version: "2.2.0"
 date-released: "2026-10-27"
 references:

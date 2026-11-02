@@ -8,6 +8,7 @@ measured — with financial markets as a hard, non-stationary testbed.*
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-d4ff3f.svg)](LICENSE)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23843503-1682D4)](https://doi.org/10.5281/zenodo.23843503)
 
 ### 🔗 Interactive research lab → **[rl-for-crypto-and-stocks.vercel.app](https://rl-for-crypto-and-stocks.vercel.app/)**
 
@@ -886,6 +887,15 @@ for the click-by-click guide:
 Set `window.RL_API` in `docs/config.js` to the Render URL and the dashboard's
 "Run live" widget lights up — pulling real prices and running the agent on
 demand. Leave it empty and the site is fully static.
+
+## Citing
+
+The code and paper are archived on Zenodo. Cite
+[10.5281/zenodo.23843503](https://doi.org/10.5281/zenodo.23843503), which always
+resolves to the newest version; v2.2.0 on its own is
+[10.5281/zenodo.23843504](https://doi.org/10.5281/zenodo.23843504). GitHub's
+"Cite this repository" button reads the same details from
+[CITATION.cff](CITATION.cff).
 
 ## License
 
