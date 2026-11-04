@@ -27,7 +27,7 @@ pdflatex rl_trader.tex   # run twice so cross-references resolve
 
 | Table | Source file | Command |
 |---|---|---|
-| 1 — ablation | `docs/assets/ablation_multiseed.json` | `python tools/ablation_multiseed.py --seeds 42 43 44 45 46 --timesteps 60000` |
+| 1 — ablation | `docs/assets/ablation_multiseed.json` | `python tools/ablation_multiseed.py --seeds 42 43 44 45 46 47 48 49 50 51 --timesteps 60000` |
 | 2 — seed robustness | `RESULTS.md` | `python tools/eval_seeds.py` |
 | 3 — significance | `RESULTS.md` | `python tools/significance.py` |
 | 4 — surrogate (synthetic) | `docs/assets/surrogate_synthetic.json` | `python tools/surrogate_test.py --mode synthetic --seeds 5 --timesteps 60000` |
@@ -40,30 +40,15 @@ p ≈ 0.0032 — the control now passes in both markets rather than one.
 
 ## A caveat that is in the paper, and belongs here too
 
-**The two ablation arms are not equally reproducible, and one of them cannot be.**
+**The domain-randomized ablation arm used to be unreproducible. It is now seeded.**
 
-In `tools/ablation.py`:
-
-```python
-if domain_random:
-    factory = lambda: synthetic_market_data(market)          # no seed
-else:
-    fixed = synthetic_market_data(market, seed=seed)         # seeded
-```
-
-The single-path arm reproduces exactly — two runs at seed 42 / 60k agree to 0.1%
-in both markets. The domain-randomized arm draws a fresh **unseeded** series every
-episode, which is what domain randomization *is*, but it means `--seed` does not
-determine its data stream and no single run of it is reproducible even in
-principle. Comparing one run of each arm is therefore not a controlled comparison,
-which is why Table 1 reports distributions over seeds with bootstrap intervals.
-
-**Known issue, not yet fixed.** The right fix is to derive each episode's path
-seed from a seeded generator — `rng = np.random.default_rng(seed)` then
-`synthetic_market_data(market, seed=int(rng.integers(2**31)))` — which keeps the
-variety that makes domain randomization work while making the arm reproducible.
-This is deliberately left undone here because changing it would invalidate the
-numbers currently in the table.
+Domain randomization draws a fresh path every episode. In earlier builds that
+stream came from `synthetic_market_data(market)` with no seed, so `--seed` did not
+determine the arm's data and no single run of it could be reproduced. Since v2.1
+`tools/ablation.py` builds the stream with `seeded_path_factory(market, seed)`, which
+keeps the per-episode variety while making each seed reproduce its run exactly.
+Table 1 was regenerated with the seeded stream (10 seeds), and still reports
+distributions with bootstrap intervals rather than single runs.
 
 **Separately: an earlier version of Table 1 was stale.** Its numbers were
 generated before commit `d4c0ef9` took the observation feature set from 19 to 28,

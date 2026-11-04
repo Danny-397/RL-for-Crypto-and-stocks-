@@ -118,7 +118,6 @@ _SIGNED_PCT = re.compile(r"(?:\+|&minus;|−|-)\d[\d,]*(?:\.\d+)?%")
 
 # Each exemption needs a reason, and the reason has to be checkable on the page.
 _ALLOWED = {
-    "+0.0%": "hero chart placeholder, overwritten by initHero() on load",
     "+10%": "default position of the power-calculator effect-size slider",
     "+275.45%": "superseded v1 run, labelled and cited to commit d4c0ef9",
     "+19.57%": "superseded v1 benchmark, cited alongside it",
@@ -248,22 +247,24 @@ def test_the_hero_chart_is_not_presented_as_a_live_agent(index: str):
     assert 'id="hero-badge"' in index, "the hero chart lost its provenance badge"
 
 
-def test_the_hero_badge_names_the_market_the_hero_actually_plots(app_js: str):
-    """Badge and series are written from one constant, so they cannot disagree.
+def test_the_hero_shows_every_training_run_not_one(app_js: str, index: str):
+    """The first chart answers the page's question with the multi-seed artifact.
 
-    The hero plotted stocks. Pointing it at crypto means touching the curve, the
-    three metrics under it and the label above it; miss one and the page shows a
-    crypto equity curve captioned as equities, which is precisely the class of
-    error the rest of this suite exists to catch.
+    The hero used to animate one seed's equity curve on one coin and caption it
+    with the basket mean of that same seed: a single lucky-looking run, on the
+    page whose headline asks whether the agent is learning or just lucky. It now
+    draws every training run from significance.js, both markets, and reads none
+    of the single-seed metrics.
     """
-    assert 'const HERO_MARKET = "crypto";' in app_js
+    assert 'id="heroSeeds"' in index and 'id="equityChart"' not in index
     i = app_js.index("function initHero()")
-    hero = app_js[i: i + 1200]
-    assert "DATA.markets.stock" not in hero, (
-        "the hero still reads a hard-coded market instead of HERO_MARKET")
-    assert "DATA.markets[HERO_MARKET]" in hero
-    label = app_js[app_js.index("function labelHero()"):][:600]
-    assert "HERO_MARKET" in label, "the badge text is not derived from HERO_MARKET"
+    hero = app_js[i: i + 2400]
+    assert "window.RL_SIGNIFICANCE" in hero, "the hero no longer reads the seed study"
+    assert "metrics.total_return" not in hero, "the hero is quoting a single run again"
+    rows = app_js[app_js.index("const HERO_ROWS"):][:200]
+    assert '"crypto"' in rows and '"stock"' in rows, "the hero dropped a market"
+    label = app_js[app_js.index("function labelHero("):][:500]
+    assert "seeds" in label, "the badge's run count is not read from the artifact"
 
 
 def test_the_page_states_what_it_is_and_what_it_is_not(index: str):

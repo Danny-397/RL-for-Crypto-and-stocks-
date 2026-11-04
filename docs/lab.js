@@ -501,8 +501,9 @@
         `<p class="pc-tie">The smallest p-value ${out.n} charts can produce at all is ` +
         `<b>${pw.min_attainable_p.toFixed(4)}</b> — a hard floor set by the design, not by ` +
         `the data. The project's seed-level tests hit exactly this wall: with 5 seeds a ` +
-        `sign-flip test cannot go below p = 0.0625, so it can never reach significance ` +
-        `however large the effect.</p>`;
+        `sign-flip test cannot go below p = 0.0625, so it could never reach significance ` +
+        `however large the effect — which is why the study was rerun at 10 seeds ` +
+        `(floor 0.002).</p>`;
 
       const overlap = m.realised.classes_overlap
         ? "yes — at this length the classes are not cleanly separated"

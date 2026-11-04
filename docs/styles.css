@@ -218,7 +218,9 @@ h2 {
 .lg-agent::before { background: var(--volt); }
 .lg-bench::before { background: var(--faint); }
 .lg-insample::before { background: #ff6b6b; }
-#equityChart { width: 100%; height: auto; display: block; }
+#heroSeeds { width: 100%; height: auto; display: block; }
+.hero-note { margin: 14px 0 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.hero-note b { color: var(--text); font-family: var(--font-data); font-variant-numeric: tabular-nums; }
 .chart-foot {
   display: flex; justify-content: space-between; gap: 12px;
   margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
@@ -595,6 +597,7 @@ h2 {
   .foot-meta { margin-right: 0; width: 100%; }
   .chart-foot { gap: 6px; }
   .chart-foot .v { font-size: 15px; }
+  .chart-head { flex-direction: column; gap: 8px; }
   h1 { font-size: clamp(30px, 8vw, 40px); }
   .basket { gap: 6px; }
   .chip { padding: 6px 11px; font-size: 12px; }
@@ -916,3 +919,15 @@ h1, h2, h3 { color: var(--text); text-wrap: balance; }
 /* Links inside section prose had no styling and rendered as the browser's
    default dark blue on near-black (2.1:1). */
 .section-head p a { color: var(--cyan); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Card grids become swipeable rows on phones: the same content, a fraction of the
+   scrolling. Last in styles.css and one id/element more specific than the grids.
+   own rules (here and in lab.css), so their breakpoints cannot undo it. */
+@media (max-width: 560px) {
+  main #features .grid, main .learned-grid, main .lab-strip {
+    display: grid; grid-auto-flow: column; grid-template-columns: none;
+    grid-auto-columns: 82%; overflow-x: auto; scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain; padding-bottom: 10px;
+  }
+  main #features .grid > *, main .learned-grid > *, main .lab-strip > * { scroll-snap-align: start; }
+}
