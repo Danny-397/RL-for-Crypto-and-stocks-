@@ -357,66 +357,127 @@
     out.innerHTML = `<b>${when}</b> &middot; price <b>$${p.toFixed(2)}</b> &middot; agent held ${pos}`;
   }
 
-  // ── hero chart (animated reveal of a stored held-out backtest) ──
+  // ── hero: one dot per training run (from significance.js) ──
   //
-  // Crypto leads the site: it is the arm where the agent is not simply beaten by
-  // buy-&-hold, and the one the surrogate and seed studies have the most to say
-  // about. The badge is written from this constant rather than typed into the
-  // HTML, so switching the hero market cannot leave the label describing the
-  // other one -- the exact drift this project keeps finding in its own numbers.
-  const HERO_MARKET = "crypto";
+  // The page asks "learning, or just lucky?", so the first chart answers it: every
+  // complete training run of the same recipe on the same data, both markets on one
+  // axis, against buy-&-hold. A single run -- what v1 published -- is one dot here.
+  // Everything is read from window.RL_SIGNIFICANCE; no figure is typed by hand.
+  const HERO_ROWS = [
+    { key: "crypto", label: "Crypto" },
+    { key: "stock", label: "Stocks" },
+  ];
 
-  function labelHero() {
+  // p < 0.05 decides the word; otherwise the paired test cannot tell them apart.
+  function verdict(d) {
+    if (d.p >= 0.05) return "indistinguishable";
+    return d.mean > d.bh ? "better" : "worse";
+  }
+
+  function labelHero(sig) {
     const badge = document.getElementById("hero-badge");
     const sub = document.getElementById("hero-sub");
-    const m = DATA && DATA.markets[HERO_MARKET];
-    const label = HERO_MARKET === "crypto" ? "Crypto" : "Stocks";
-    if (badge) badge.textContent = `${label} · held-out backtest`;
-    if (sub && m) {
-      sub.textContent = m.start_date
-        ? `daily bars · ${fmtMon(m.start_date)}–${fmtMon(m.end_date)}`
-        : "daily bars";
+    const n = sig.crypto.seeds || sig.crypto.seed_returns.length;
+    if (badge) badge.textContent = `Crypto & stocks · held-out, ${n} training runs`;
+    const m = DATA && DATA.markets && DATA.markets.crypto;
+    if (sub) sub.textContent = m && m.end_date ? `daily bars · test window to ${fmtMon(m.end_date)}` : "daily bars";
+  }
+
+  function drawHeroSeeds(canvas, sig, shown) {
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width, H = canvas.height;
+    const FONT = "13px -apple-system, BlinkMacSystemFont, Inter, Segoe UI, system-ui, sans-serif";
+    ctx.clearRect(0, 0, W, H);
+
+    const all = [0];
+    HERO_ROWS.forEach((r) => { const d = sig[r.key]; all.push(...d.seed_returns, d.bh, d.ci_low, d.ci_high); });
+    let lo = Math.min(...all), hi = Math.max(...all);
+    const span = hi - lo || 1; lo -= span * 0.05; hi += span * 0.07;
+    const padL = 14, padR = 14;
+    const X = (v) => padL + ((v - lo) / (hi - lo)) * (W - padL - padR);
+    const rowY = [96, 216];
+
+    // zero line and one tick per +100%, shared by both rows
+    ctx.font = FONT; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    for (let t = 0; t <= hi; t += 1) {
+      const x = X(t);
+      ctx.strokeStyle = t === 0 ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.07)";
+      ctx.setLineDash(t === 0 ? [3, 3] : []);
+      ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H - 26); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.fillText(t === 0 ? "0%" : "+" + t * 100 + "%", x, H - 8);
     }
+
+    HERO_ROWS.forEach((r, ri) => {
+      const d = sig[r.key], y = rowY[ri];
+      ctx.textAlign = "left"; ctx.fillStyle = "rgba(255,255,255,0.78)";
+      ctx.fillText(r.label, padL, y - 44);
+
+      // 95% CI band and mean
+      ctx.fillStyle = "rgba(212,255,63,0.10)";
+      ctx.fillRect(X(d.ci_low), y - 26, X(d.ci_high) - X(d.ci_low), 52);
+      ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(X(d.mean), y - 26); ctx.lineTo(X(d.mean), y + 26); ctx.stroke();
+
+      // buy & hold
+      const bx = X(d.bh);
+      ctx.strokeStyle = BENCH; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(bx, y - 32); ctx.lineTo(bx, y + 32); ctx.stroke();
+      ctx.fillStyle = BENCH;
+      ctx.textAlign = bx > W - 90 ? "right" : "center";
+      ctx.fillText("buy & hold " + sgn(d.bh), bx > W - 90 ? bx - 6 : bx, y + 48);
+
+      // one dot per run, staggered vertically so overlapping runs stay visible
+      d.seed_returns.forEach((v, i) => {
+        if (i >= shown) return;
+        const dy = ((i % 5) - 2) * 9;
+        ctx.fillStyle = VOLT; ctx.shadowColor = VOLT; ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.arc(X(v), y + dy, 4.5, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+    });
   }
 
   function initHero() {
-    const canvas = document.getElementById("equityChart");
+    const canvas = document.getElementById("heroSeeds");
+    const sig = window.RL_SIGNIFICANCE;
     if (!canvas) return;
-    labelHero();
-
-    let agent, bench;
-    if (DATA && DATA.markets[HERO_MARKET]) {
-      agent = DATA.markets[HERO_MARKET].equity_agent;
-      bench = DATA.markets[HERO_MARKET].equity_bench;
-    } else {
-      // Fallback synthetic curve if results.js is absent.
-      agent = Array.from({ length: 80 }, (_, i) => 1 + i * 0.004 + Math.sin(i / 6) * 0.02);
-      bench = Array.from({ length: 80 }, (_, i) => 1 + i * 0.002 + Math.sin(i / 5) * 0.03);
+    if (!sig || !sig.crypto || !sig.stock) {
+      const card = canvas.closest(".hero-visual");
+      if (card) card.hidden = true;
+      return;
     }
-    const N = Math.max(agent.length, bench.length);
-    let count = reduceMotion ? N : 2;
+    labelHero(sig);
 
+    const c = sig.crypto, st = sig.stock;
+    const put = (id, txt, neg) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = txt;
+      if (neg !== undefined) el.classList.toggle("is-neg", neg);
+    };
+    put("m-crypto", sgn(c.mean), c.mean < 0);
+    put("m-crypto-verdict", `${verdict(c)} (p = ${c.p.toFixed(2)})`);
+    put("m-stock", sgn(st.mean), st.mean < 0);
+    const note = document.getElementById("hero-note");
+    if (note) {
+      const n = c.seeds || c.seed_returns.length;
+      note.innerHTML =
+        `Each dot is one complete training run: same code, same data, a different ` +
+        `random seed. Crypto runs ranged from <b>${sgn(Math.min(...c.seed_returns))}</b> ` +
+        `to <b>${sgn(Math.max(...c.seed_returns))}</b>. Across ${n} runs crypto is ` +
+        `${verdict(c)} from buy-&amp;-hold and stocks are ${verdict(st)} ` +
+        `(p = ${st.p.toFixed(3)}). Pick one dot and you can tell either story.`;
+    }
+
+    const total = Math.max(c.seed_returns.length, st.seed_returns.length);
+    let shown = reduceMotion ? total : 0;
     function frame() {
-      lineChart(canvas, [
-        { data: bench, color: BENCH, width: 2, count: count },
-        { data: agent, color: VOLT, width: 2.6, glow: true, fill: true, head: true, count: count },
-      ]);
-      if (count < N) { count += Math.max(1, Math.round(N / 90)); requestAnimationFrame(frame); }
-      else revealHeroMetrics();
+      drawHeroSeeds(canvas, sig, shown);
+      if (shown < total) { shown += 1; setTimeout(() => requestAnimationFrame(frame), 70); }
     }
-
-    let done = false;
-    function revealHeroMetrics() {
-      if (done || !DATA) return;
-      done = true;
-      const m = DATA.markets[HERO_MARKET].metrics;
-      document.getElementById("m-return").classList.toggle("is-neg", m.total_return < 0);
-      countTo("m-return", 0, m.total_return * 100, 800, (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + "%");
-      countTo("m-sharpe", 0, m.sharpe, 800, (v) => v.toFixed(2));
-      countTo("m-dd", 0, m.max_drawdown * 100, 800, (v) => "−" + Math.abs(v).toFixed(1) + "%");
-    }
-
-    if ("IntersectionObserver" in window) {
+    if (!reduceMotion && "IntersectionObserver" in window) {
       const io = new IntersectionObserver((e) => {
         if (e[0].isIntersecting) { frame(); io.disconnect(); }
       }, { threshold: 0.25 });

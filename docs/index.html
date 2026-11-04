@@ -71,7 +71,8 @@
           stocks, where markets are noisy enough to make both easy.
         </p>
         <p class="lede lede-sub">
-          Every experiment runs in your browser. Research, not a trading product.
+          Every experiment is runnable from this page (the backend can take ~40&nbsp;s
+          to wake). Research, not a trading product.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="#result">See the result &darr;</a>
@@ -79,25 +80,29 @@
         </div>
       </div>
 
-      <!-- live-agent chart card -->
+      <!-- The hero answers its own question: one dot per complete training run,
+           on identical code and data. Drawn by app.js from significance.js, so
+           no figure here is typed by hand. -->
       <div class="hero-visual">
         <div class="chart-card">
           <div class="chart-head">
             <div class="chart-title">
-              <span class="chart-badge" id="hero-badge">Held-out backtest</span>
+              <span class="chart-badge" id="hero-badge">Held-out return</span>
               <span class="chart-sub" id="hero-sub">daily bars</span>
             </div>
             <div class="chart-legend">
-              <span class="lg lg-agent">Agent</span>
+              <span class="lg lg-agent">One training run</span>
               <span class="lg lg-bench">Buy &amp; Hold</span>
             </div>
           </div>
-          <canvas id="equityChart" width="560" height="300"></canvas>
+          <canvas id="heroSeeds" width="560" height="300" role="img"
+                  aria-label="Held-out return of each training seed, crypto and stocks, against buy-and-hold"></canvas>
           <div class="chart-foot">
-            <div class="stat"><span class="k">Total return</span><span class="v" id="m-return">+0.0%</span></div>
-            <div class="stat"><span class="k">Sharpe</span><span class="v is-neutral" id="m-sharpe">0.00</span></div>
-            <div class="stat"><span class="k">Max DD</span><span class="v is-neg" id="m-dd">0.0%</span></div>
+            <div class="stat"><span class="k">Crypto, mean of runs</span><span class="v" id="m-crypto">&hellip;</span></div>
+            <div class="stat"><span class="k">vs buy &amp; hold</span><span class="v is-neutral" id="m-crypto-verdict">&hellip;</span></div>
+            <div class="stat"><span class="k">Stocks, mean of runs</span><span class="v" id="m-stock">&hellip;</span></div>
           </div>
+          <p class="hero-note" id="hero-note"></p>
         </div>
       </div>
     </section>
@@ -298,7 +303,7 @@
         </p>
       </div>
 
-      <div class="learned-grid">
+      <div class="learned-grid" tabindex="0" role="region" aria-label="What the project taught, one card per lesson">
         <article class="learned-card">
           <div class="learned-n">01</div>
           <h3>A huge training number is a symptom, not a result.</h3>
@@ -450,7 +455,7 @@
         <h2>Built from the algorithm up.</h2>
         <p>PPO, both environments, the data pipeline, and the evaluation are implemented here — no <code>stable-baselines</code>, no wrappers. Each layer is a separate, individually tested module.</p>
       </div>
-      <div class="grid">
+      <div class="grid" tabindex="0" role="region" aria-label="What the framework includes">
         <article class="card">
           <h3>PPO, from scratch</h3>
           <p>Clipped surrogate objective, GAE advantages, entropy bonus, orthogonal init and gradient clipping — implemented in PyTorch, not wrapped from a library.</p>
@@ -714,7 +719,7 @@
             <tbody id="abl-body"></tbody>
           </table>
         </div>
-        <p class="lab-caption">Those astronomical in-sample figures aren't a win — they're the <b>overfitting tell</b>: a single-asset agent memorises the exact training path, so it "earns" impossible returns there and then collapses out of sample. The honest column is <b>held-out</b>, and only domain randomization keeps it positive — across 5 seeds all four intervals exclude zero. In-sample is shown as a <b>range</b> rather than a number because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that isn't there. (<span id="abl-prov"></span>bootstrap 95% CI, 30 held-out paths held identical across arms; reproduced by <code>tools/ablation_multiseed.py</code>.)</p>
+        <p class="lab-caption">Those astronomical in-sample figures aren't a win — they're the <b>overfitting tell</b>: a single-asset agent memorises the exact training path, so it "earns" impossible returns there and then collapses out of sample. The honest column is <b>held-out</b>, and only domain randomization keeps it positive — across 10 seeds all four intervals exclude zero. In-sample is shown as a <b>range</b> rather than a number because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that isn't there. (<span id="abl-prov"></span>bootstrap 95% CI, 30 held-out paths held identical across arms; reproduced by <code>tools/ablation_multiseed.py</code>.)</p>
       </div>
     </section>
 

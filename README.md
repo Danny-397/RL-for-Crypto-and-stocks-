@@ -60,8 +60,8 @@ and that run survived neither reseeding nor a two-month extension of the evaluat
 window. In doing so the project independently reproduces, in
 a new domain, the central methodological finding of Henderson et al. (2018), *Deep
 Reinforcement Learning that Matters* — that single-run RL evaluations are unreliable —
-and quantifies the memorization-vs-generalization gap that domain randomization closes
-by **two-to-three orders of magnitude**.
+and shows that domain randomization turns held-out return from **reliably negative
+to reliably positive** in both markets, across ten seeds.
 
 > **Built from scratch in PyTorch:** the PPO algorithm, both environments, the data
 > pipeline, and the entire evaluation suite are implemented here — not wrapped from a
@@ -78,8 +78,8 @@ by **two-to-three orders of magnitude**.
 | **RQ4** | Do the same conclusions hold on the harder problem of **cross-sectional allocation** (long/short weights over a basket)? | [`tools/portfolio_experiment.py`](tools/portfolio_experiment.py), [RESULTS §6](RESULTS.md) |
 
 **Findings in one line:** the recipe transfers across regimes (RQ1); a single-path
-agent memorises catastrophically and domain randomization closes the gap by 100–1000×
-(RQ2); and no apparent real-market edge survives multi-seed testing (RQ3, RQ4) —
+agent memorises catastrophically and domain randomization flips its held-out return
+from reliably negative to reliably positive (RQ2); and no apparent real-market edge survives multi-seed testing (RQ3, RQ4) —
 consistent with weak-form market efficiency, and a clean live demonstration of *why
 you never trust a single RL run.*
 
@@ -122,7 +122,9 @@ project ships the lucky backtest; `tools/real_significance.py` is what catches i
 result, and the rule-based baselines cannot answer it. So two ordinary supervised
 models — ridge regression on the next bar's return, logistic regression on its
 direction, both written from scratch in NumPy — were fit on the *same* features and
-*same* training split and traded through the *same* environment at the *same* costs:
+*same* training split and traded through the *same* environment at the *same* costs.
+This comparison uses the single published training run (seed 42), which is why its
+PPO column differs from the ten-seed means above:
 
 <!-- BEGIN GENERATED: supervised-brief -->
 | Market | Ridge | Logistic | PPO agent | Buy & hold |
@@ -501,7 +503,7 @@ and its panels are the research questions made runnable.
 | **Can You Break It?** | The real domain-randomization ablation (Agent A vs Agent B) with per-seed points and CIs, plus a live shift test that drops the deployed policy onto controlled synthetic regimes. | mixed — see below |
 | **Walk-Forward** | Disjoint chronological folds from the research code's own splitter, each scaled on its training rows alone, with the deployed policy scored on every out-of-sample block — plus a second pass with the scaler fit on everything, measuring what that shortcut costs. | mixed — see below |
 | **Anything There?** | The surrogate-data falsification test: shuffle a series' returns and buy-&-hold is unchanged while every pattern is destroyed. Run with a positive control first, so the real arm's null actually means something. | precomputed — both arms are training runs |
-| **Real or Luck?** | The published single-seed headline beside the five-seed distribution, with the bootstrap and permutation machinery re-runnable at your own confidence level and resample count. | mixed — see below |
+| **Real or Luck?** | The published single-seed headline beside the ten-seed distribution, with the bootstrap and permutation machinery re-runnable at your own confidence level and resample count. | mixed — see below |
 | **Notebook** | Every experiment this session, with its config, receipt, pre-registered prediction, and a Reproduce button that replays it exactly. | ✅ live |
 
 ### What is live, and what is not — and why
@@ -756,13 +758,13 @@ the wrong one silently changes the claim:
 
 A two-sided sign-flip test over `n` pairs draws from only `2**n` sign
 assignments, so **p can never fall below `2 / 2**n`** — 0.0625 at n = 5, and
-0.002 at the n = 10 this study now runs. That
-design cannot reach significance at 0.05 whatever the effect size. The lab
-reports this resolution floor beside every test, because *"underpowered by
-construction"* and *"no effect"* are different statements. It shows up concretely
-in the ablation, where the held-out difference between the two agents is
-decisive and the p-value still cannot clear the floor, because five pairs
-cannot resolve further:
+0.002 at the n = 10 this study now runs. At n = 5 the design cannot reach
+significance at 0.05 whatever the effect size; at n = 10 it can, but never below
+0.002. The lab reports this resolution floor beside every test, because
+*"underpowered by construction"* and *"no effect"* are different statements. It
+shows up concretely in the ablation, where the held-out difference between the two
+agents is decisive and the p-value sits at the floor itself: ten pairs cannot
+resolve anything stronger.
 
 <!-- BEGIN GENERATED: ablation-resolution -->
 - **Stock** — held-out difference **+56.1%**, 95% CI `[+40%, +74%]`, yet **p = 0.0021** against a floor of 0.0020 at 10 pairs.
@@ -832,12 +834,11 @@ and reproduces the numbers, which the test suite asserts.
 ### Pin the dataset before you rebuild
 
 `tools/fetch_data.py` requests a *relative* window (`period="10y"` / `"max"`), so
-**what you get depends on when you run it**. This is not hypothetical: the figures
-in `docs/results.js` were built from data fetched 2026-06-22 and cannot be
-regenerated today, because a later fetch slides the whole train/val/test split.
-A rebuild on 2026-08-30 evaluated stocks on 2022-11-30→2026-08-28 instead of the
-published 2022-08-10→2026-06-17, moving crypto total return 2.75 → 1.96. Same
-recipe, different slice of history, different experiment.
+**what you get depends on when you run it**. This is not hypothetical: the v1
+figures were built from data fetched 2026-06-22, and a rebuild on 2026-08-30
+evaluated stocks on 2022-11-30→2026-08-28 instead of 2022-08-10→2026-06-17, moving
+crypto total return 2.75 → 1.96. Same recipe, different slice of history, different
+experiment. That is why the data is now pinned.
 
 Pin a snapshot, and verify against it before rebuilding:
 
@@ -849,10 +850,11 @@ make verify-data                                # fails loudly if the data has d
 `data/SNAPSHOT.json` is committed and records a SHA-256, row count and date range
 per ticker, so an experiment can be cited by dataset hash.
 
-> **Note on the published figures.** `docs/results.js` and the deployed policy
-> archives are deliberately left as they are, so the paper, the DOI and the live
-> site continue to describe exactly the same artifact. The pinning above applies
-> to experiments from here on.
+> **Note on the published figures.** The site (`docs/results.js`), the paper's
+> tables and `RESULTS.md` §3 and §5 are built from the snapshot pinned at 2026-08-28,
+> so the site, the paper and the DOI describe the same data. The one exception is the
+> multi-fold walk-forward (`RESULTS.md` §5c), which was run on data through
+> 2026-06-17 and says so.
 
 ## Web prototype internals
 
