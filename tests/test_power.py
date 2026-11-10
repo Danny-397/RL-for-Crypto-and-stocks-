@@ -174,3 +174,24 @@ def test_results_are_reproducible_from_the_seed():
     assert a == b
     c = power.power_at_n(10, 0.2, 0.3, n_sims=800, seed=43)
     assert isinstance(c["power"], float)   # a different seed is allowed to differ
+
+
+def test_every_sample_size_the_project_uses_is_enumerated_exactly():
+    # 5 and 10 seeds, 6 and 10 held-out tickers, 4 folds.
+    assert power.EXACT_LIMIT >= 10
+    assert power.power_at_n(10, effect=0.2, sd=0.3, n_sims=50)["exact"] is True
+
+
+def test_a_search_past_its_time_budget_stops_and_says_so(monkeypatch):
+    monkeypatch.setattr(power, "TIME_BUDGET_S", 0.0)
+    out = power.analyse(effect=0.001, sd=1.0, have_n=6, n_sims=100, seed=1)
+    assert out["required_n"] is None
+    assert out["stopped_at"] == out["curve"][-1]["n"]
+    full = power.required_n(effect=0.001, sd=1.0, n_sims=100, seed=1)
+    assert len(out["curve"]) < len(full["curve"])        # stopped well short of the full search
+    assert "stopped at" in out["verdict"] and "to answer in time" in out["verdict"]
+
+
+def test_within_budget_the_search_is_unchanged():
+    out = power.analyse(effect=0.3, sd=0.3, n_sims=600, seed=4)
+    assert out["stopped_at"] is None and out["required_n"] is not None
