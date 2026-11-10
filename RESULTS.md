@@ -53,7 +53,7 @@ fantasy money-machine.
 | **Features** | **28 engineered, stationary features** per bar — multi-horizon momentum (1–120 bar), MA/EMA ratios, RSI, MACD, Bollinger %B, Donchian position, ATR, volatility-regime signals, distance-below-trailing-high, volume microstructure, and **cross-asset context** (relative strength vs. SPY/BTC + market trend/momentum) — over a rolling window |
 | **Reward** | Selectable: risk-aware net return (return − drawdown − turnover) **or** the **Differential Sharpe Ratio** (Moody & Saffell, 1998) |
 | **Training** | Running (Welford) observation normalisation, exported and applied at serve time; fully seeded (Torch + NumPy + env RNG) so runs are reproducible |
-| **Real data** | 10 equities + 6 crypto pairs, daily OHLCV, ~10 yrs (Yahoo Finance). **Frozen evaluation snapshot: data through 2026-06-17** — deliberately fixed so every number below is reproducible; refresh with `tools/fetch_data.py` to re-snapshot to a later date |
+| **Real data** | 10 equities + 6 crypto pairs, daily OHLCV, ~10 yrs (Yahoo Finance). **Frozen evaluation snapshot: data through 2026-08-28** (pinned in `data/SNAPSHOT.json`; §5c's walk-forward predates it and uses data through 2026-06-17) — deliberately fixed so every number below is reproducible; refresh with `tools/fetch_data.py` to re-snapshot to a later date |
 | **Split** | Chronological walk-forward — train on the older 60%, test on the held-out recent 40%; scalers fit on training data only |
 | **Reporting** | Mean across the basket; agent run deterministically; benchmarked vs. buy-&-hold, random, and a moving-average-crossover rule; uncertainty via bootstrap CIs + a permutation test |
 
@@ -68,7 +68,7 @@ the training path ("in-sample") vs. 30 unseen paths ("out-of-sample").
 
 `python tools/ablation_multiseed.py --seeds 42 43 44 45 46 47 48 49 50 51 --timesteps 60000`
 
-5 seeds, 60k steps. Out-of-sample is the mean over 30 held-out paths (identical for
+10 seeds, 60k steps. Out-of-sample is the mean over 30 held-out paths (identical for
 every arm and seed) with a bootstrap 95% CI across seeds. In-sample is given as a
 **range** over seeds, not a mean — it is one leveraged compounding return on a
 memorized path and spans orders of magnitude.
@@ -95,31 +95,31 @@ All four intervals exclude zero, so the effect is robust to seed choice — whic
 precisely the property §5 shows real-market edges *lack*. Two caveats the
 distribution makes visible and a single run would hide:
 
-- **Equities are the weaker case.** One of five single-path seeds returned **+8%**
-  instead of a loss, and the interval reaches to −9%. "Reliably negative" there
-  rests on a margin, not a chasm.
-- **The crypto domain-random mean is inflated by one seed** at +307% against a
-  cluster near +60%, which is why its interval is so wide. The figure plots the
-  individual seeds rather than bars alone so this is visible rather than averaged
-  away.
+- **"Reliably negative" is a statement about the mean, not every seed.** In each
+  market one of the ten single-path seeds finished positive out-of-sample (stocks
+  +7.6%, crypto +47%), and a second stock seed finished flat (−0.2%). The intervals
+  still exclude zero, but a reader quoting any single run could have drawn the
+  opposite conclusion.
+- **The domain-randomized arm is positive in all 20 runs** (stocks +11% to +80%,
+  crypto +82% to +291%). No single seed carries the crypto mean; the spread is wide
+  because crypto paths compound volatility, not because of one outlier.
 
 **What multi-seed reporting actually changed.** The out-of-sample conclusion
-survived; the in-sample column did not. Single-path in-sample ranges from +17,000%
-to +30,000% on equities and from +322,000% to +4,000,000% on crypto across seeds —
-quoting any one of those as *the* memorization figure, as the earlier version of
+survived; the in-sample column did not. Single-path in-sample ranges from +6,400%
+to +31,000% on equities and from +87,000% to +4,000,000% on crypto across seeds —
+quoting any one of those as *the* memorization figure, as an earlier version of
 this table did, communicates a precision that does not exist. Worth noting for
-honesty: at three seeds the equity single-path interval still straddled zero, and
-two further seeds resolved it. The seed count was fixed at 5 to match §2's protocol
-before the arm was run, not raised until the interval cooperated.
+honesty: at three seeds the equity single-path interval still straddled zero. The
+five-seed count was fixed to match §2 before that arm was run; the later move to ten
+applied to all four arms at once, and every interval excluded zero at both counts.
 
-Two further notes on reproducibility, both stated in the paper:
+Two further notes on reproducibility:
 
-- The **domain-randomized arm cannot be reproduced from a single run.** In
-  `tools/ablation.py` it calls `synthetic_market_data(market)` with **no seed** —
-  fresh unseeded data every episode, which is what domain randomization *means*.
-  `--seed` controls the network init, not that data stream. The single-path arm, by
-  contrast, is seeded and reproduces exactly. Comparing one run of each is
-  therefore not a controlled comparison, which is why this table is a distribution.
+- **Both arms are seeded.** The domain-randomized arm draws a fresh path every
+  episode — that is what domain randomization means — but since v2.1 the stream of
+  paths comes from `seeded_path_factory(market, seed)`, so a given seed reproduces
+  its run exactly. (Before that it called `synthetic_market_data(market)` with no
+  seed, and single runs of that arm could not be reproduced.)
 - An earlier version of this table was **stale**: its numbers predate commit
   `d4c0ef9`, which took the observation space from 19 to 28 features, so they
   described a model this repository no longer ships. Regenerate from
@@ -193,6 +193,11 @@ Seed 42, 200,000 timesteps, test window ending 2026-08-28:
 | Flat (cash) | +0.0% | +0.00 | 0.0% |
 | Random | −77.7% | −1.82 | 78.6% |
 <!-- END GENERATED: baselines-table -->
+
+*Buy-and-hold in these tables is traded through the same environment as the agent,
+so it pays the same entry cost and slippage; the headline lines above use the
+frictionless price return, which is why the two differ by a few tenths of a point
+(+239.5% vs +239.3% on stocks, +33.5% vs +33.2% on crypto).*
 
 ---
 
