@@ -35,11 +35,18 @@
   // what Render's "Service Suspended" page does. Say that in words a visitor
   // understands instead of the browser's "Failed to fetch".
   const OFFLINE = "the lab's backend is offline right now";
+  // A request that fails only after a long wait reached a running server that
+  // dropped it (the free plan cuts requests off at about 30 s): not "offline".
+  const DROPPED =
+    "the server stopped this request before it finished (it took too long on " +
+    "the free plan); try again, or ask for less";
   async function request(url, opts) {
+    const started = Date.now();
     try {
       return await fetch(url, opts);
     } catch (err) {
-      throw err instanceof TypeError ? new Error(OFFLINE) : err;
+      if (!(err instanceof TypeError)) throw err;
+      throw new Error(Date.now() - started > 20000 ? DROPPED : OFFLINE);
     }
   }
 
@@ -2380,7 +2387,7 @@
           effect: pct("pw-effect"),
           sd: pct("pw-sd"),
           have_n: Number($("pw-have").value),
-          n_sims: 1500,
+          n_sims: 1000,
         }));
         setStatus($("pw-status"), "", false);
       } catch (err) {

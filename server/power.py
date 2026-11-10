@@ -32,14 +32,20 @@ put in the project's own numbers and read off what it would have taken.
 
 from __future__ import annotations
 
+import time
 from typing import List, Optional
 
 import numpy as np
 
-# 2**n sign assignments are enumerated below this; above it they are sampled.
-# 2**16 = 65,536 rows is still cheap, and every sample size in this project
-# (5 seeds, 6 and 10 held-out tickers, 4 folds) sits far below it.
-EXACT_LIMIT = 16
+# 2**n sign assignments are enumerated up to this n; above it they are sampled.
+# Every sample size in this project (5 and 10 seeds, 6 and 10 held-out tickers,
+# 4 folds) sits at or below 12. It was 16, but 2**16 rows made n = 13-16 the
+# slowest part of the search by far, and on the free server the full request ran
+# past the 30 s limit and was dropped.
+EXACT_LIMIT = 12
+# The whole analysis stops searching after this many seconds and says how far it
+# got, so a request always answers inside the server's time limit.
+TIME_BUDGET_S = 20.0
 DEFAULT_SIMS = 2000
 DEFAULT_PERMS = 4096
 MAX_N = 200
@@ -149,8 +155,12 @@ def required_n(
     max_n: int = MAX_N,
     n_sims: int = DEFAULT_SIMS,
     seed: int = 0,
+    deadline: Optional[float] = None,
 ) -> dict:
     """Smallest ``n`` reaching ``target`` power, plus the curve it was found on.
+
+    ``deadline`` (a ``time.monotonic()`` value) stops the search early; the result
+    then has ``stopped_at`` set to the last size tried.
 
     Searched upward rather than solved, because the underlying test is discrete:
     power does not increase smoothly with ``n``, and inverting a formula would
@@ -158,8 +168,12 @@ def required_n(
     """
     curve: List[dict] = []
     found: Optional[int] = None
+    stopped_at: Optional[int] = None
     n = 2
     while n <= max_n:
+        if deadline is not None and curve and time.monotonic() > deadline:
+            stopped_at = curve[-1]["n"]
+            break
         row = power_at_n(n, effect, sd, alpha=alpha, n_sims=n_sims, seed=seed)
         curve.append(row)
         if found is None and row["power"] >= target:
@@ -169,7 +183,8 @@ def required_n(
         # the curve is smooth enough above ~20 that it would add nothing.
         n += 1 if n < 24 else 4
     return {"required_n": found, "target": target, "alpha": alpha,
-            "effect": effect, "sd": sd, "curve": curve, "max_n": max_n}
+            "effect": effect, "sd": sd, "curve": curve, "max_n": max_n,
+            "stopped_at": stopped_at}
 
 
 def analyse(
@@ -189,11 +204,13 @@ def analyse(
     if not 0.0 < target < 1.0:
         raise ValueError("'target' must be between 0 and 1")
 
-    out = required_n(effect, sd, alpha=alpha, target=target, n_sims=n_sims, seed=seed)
+    deadline = time.monotonic() + TIME_BUDGET_S
     current = None
     if have_n:
         current = power_at_n(int(have_n), effect, sd, alpha=alpha,
                              n_sims=n_sims, seed=seed)
+    out = required_n(effect, sd, alpha=alpha, target=target, n_sims=n_sims, seed=seed,
+                     deadline=deadline)
     out.update({
         "current": current,
         "test": "two-sided paired sign-flip permutation test",
@@ -226,7 +243,14 @@ def _verdict(out: dict, current: Optional[dict], target: float) -> str:
                 f"At {current['n']} pairs this design would detect an effect that "
                 f"size about {current['power']:.0%} of the time."
             )
-    if need is None:
+    if need is None and out.get("stopped_at"):
+        last = out["curve"][-1]
+        parts.append(
+            f"The search stopped at {out['stopped_at']} pairs to answer in time; "
+            f"power there was {last['power']:.0%}, short of {target:.0%}, so it would "
+            f"take more than {out['stopped_at']} paired runs."
+        )
+    elif need is None:
         parts.append(
             f"No sample size up to {out['max_n']} reached {target:.0%} power, which "
             "means the effect is small relative to its spread — more runs are not "
