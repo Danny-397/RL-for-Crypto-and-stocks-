@@ -707,6 +707,43 @@ def tex_surrogate_real() -> Optional[str]:
     return _tex_surrogate("real")
 
 
+def _hedging_table(name: str) -> Optional[str]:
+    """The hedging study: the RL agent against the textbook hedges, per trading cost."""
+    art = _asset(f"hedging_{name}.json")
+    if not art:
+        return None
+    out = ["| Trading cost | RL agent (median of 10) | Seed range | Delta daily | Tuned band | No hedge "
+           "| P&L spread agent / band | Worst 5% agent / band | Seeds beating band |",
+           "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for r in art["costs"]:
+        m, b = r["agent_median"], r["baselines"]
+        objs = sorted(s["objective"] for s in r["seeds"])
+        cost = "none" if r["cost"] == 0 else f"{r['cost'] * 100:g}%"
+        out.append(
+            f"| {cost} | {m['objective']:+.3f} | {objs[0]:+.3f} to {objs[-1]:+.3f} "
+            f"| {b['delta']['objective']:+.3f} | {b['band']['objective']:+.3f} (\u00b1{r['band_width']:g}) "
+            f"| {b['none']['objective']:+.3f} | {m['std']:.2f}% / {b['band']['std']:.2f}% "
+            f"| {m['cvar95']:.2f}% / {b['band']['cvar95']:.2f}% "
+            f"| {r['vs_band']['wins']}/{r['vs_band']['n']} (p = {pval(r['vs_band']['p'])}) |")
+    out.append("")
+    if name == "real":
+        out.append(f"*{art['episodes']} non-overlapping one-month episodes, {art['first'][:7]} to "
+                   f"{art['last'][:7]}; {art['source']}. No policy or band saw these prices.*")
+    else:
+        out.append("*Held-out simulated paths (20,000, volatility drawn from the training range). Score = "
+                   "mean over months of the daily x \u2212 \u00bdx\u00b2, x the day's hedged P&L in % of "
+                   "notional; higher is better.*")
+    return "\n".join(out)
+
+
+def hedging_sim() -> Optional[str]:
+    return _hedging_table("sim")
+
+
+def hedging_real() -> Optional[str]:
+    return _hedging_table("real")
+
+
 BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "significance-full": significance_full,
     "significance-brief": significance_brief,
@@ -730,6 +767,8 @@ BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "tex-significance": tex_significance,
     "tex-surrogate-control": tex_surrogate_control,
     "tex-surrogate-real": tex_surrogate_real,
+    "hedging-sim": hedging_sim,
+    "hedging-real": hedging_real,
 }
 
 TARGETS = ("README.md", "RESULTS.md", os.path.join("paper", "rl_trader.tex"))

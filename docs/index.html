@@ -49,6 +49,7 @@
       <a href="#how" class="navtab" data-view="how">How it works</a>
       <a href="#crypto" class="navtab" data-view="crypto">Crypto</a>
       <a href="#stocks" class="navtab" data-view="stocks">Stocks</a>
+      <a href="#hedging" class="navtab" data-view="hedging">Hedging</a>
       <a href="#lab" class="navtab navtab-lab" data-view="lab">Lab</a>
     </nav>
     <a class="btn btn-ghost nav-cta" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">
@@ -358,6 +359,20 @@
     </section>
 
     <!-- ═══════════ WHAT YOU CAN RUN (deep links into the lab) ═══════════ -->
+    <!-- ═══════════════════ PART 2 ═══════════════════ -->
+    <section class="section part2-section" id="part2">
+      <div class="section-head">
+        <div class="kicker">Part 2</div>
+        <h2>So where does reinforcement learning help?</h2>
+        <p>
+          Not in guessing tomorrow's price. It helps with a decision that has a cost attached and a theory to check against:
+          hedging an option you have sold, when every trade costs money. The same PPO code, checked first against the answers
+          theory already gives, then tested on twenty years of real S&amp;P 500 prices it never trained on.
+        </p>
+        <p><a class="btn btn-ghost navtab" data-view="hedging" href="#hedging">See the hedging study &rarr;</a></p>
+      </div>
+    </section>
+
     <section class="section lab-strip-section">
       <div class="section-head">
         <div class="kicker">The lab</div>
@@ -894,6 +909,119 @@
     </div><!-- /view-market -->
 
     <!-- ======================= LAB ======================= -->
+    <!-- ═══════════════════════ HEDGING VIEW (part 2) ═══════════════════════ -->
+    <div class="view" id="view-hedging">
+    <section class="section hg-hero">
+      <div class="section-head">
+        <div class="kicker">Part 2 · Where reinforcement learning helps</div>
+        <h1>Not predicting the market. Hedging it.</h1>
+        <p>Part 1 showed the agent cannot beat buy-and-hold by guessing tomorrow's price. That is a forecasting problem,
+          and RL adds nothing to it. This is a problem RL is suited to: you have <strong>sold an option</strong>, and every
+          day you decide how many shares to hold against it. Hedging more tracks the option better but every trade costs
+          money; hedging less saves costs and leaves you exposed. With free trading the answer is the Black-Scholes delta.
+          With costs, nobody has the exact answer in closed form. Options desks have the same problem, and it is where RL
+          is used in practice (deep hedging).</p>
+      </div>
+    </section>
+
+    <p class="hg-loading" id="hg-loading">Loading the results…</p>
+    <div id="hg-body" hidden>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="kicker">Two checks against theory</div>
+        <h2>First, does it learn what we already know?</h2>
+        <p>A hedging agent can be checked in a way a trading agent cannot: there are known answers it has to reproduce
+          before anything it adds can be trusted.</p>
+      </div>
+      <div class="hg-checks">
+        <div class="hg-check"><h3>1 · No costs: rediscover delta</h3><p id="hg-check1"></p></div>
+        <div class="hg-check"><h3>2 · Costs: learn to trade less</h3><p id="hg-check2"></p></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="kicker">The setup</div>
+        <h2>One short call, 21 trading days, a hedge each day.</h2>
+        <p>Sell a one-month at-the-money call and collect its price. Each day choose a hedge between 0 and 1 share per
+          option. Every trade pays a cost: a share of the dollar amount traded (0.05% is about what an S&amp;P 500 fund
+          costs to trade; 1% is an illiquid market). The score is the month's hedged P&amp;L with a penalty for risk:
+          each day, <em>x − ½x²</em> for a P&amp;L of <em>x</em>% of the notional (a mean-variance reward, Kolm &amp; Ritter
+          2019). The agent is the project's own PPO, trained only on simulated prices with a different volatility every
+          path (domain randomization, part 1's fix for memorisation), ten times with ten seeds for each cost level.
+          It is compared with three hedges: none; the delta every day; and delta with a no-trade band, re-hedging only
+          when the position drifts outside it, with the band's width tuned for each cost on separate validation paths, so
+          it is the strongest fair version of the textbook answer.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <p class="hg-verdict" id="hg-verdict"></p>
+      <div class="section-head">
+        <div class="kicker">Results</div>
+        <h2>Held-out simulated paths</h2>
+        <p>Score per month (higher is better; it combines P&amp;L, risk and costs). The agent column is the median of ten
+          independently trained agents, with their range. The last columns compare the agent with the tuned band:
+          spread of P&amp;L, average of the worst 5% of months, and cost, all in % of the notional.</p>
+      </div>
+      <div class="table-scroll" tabindex="0"><table class="hg-table">
+        <thead><tr><th>Cost</th><th>RL agent</th><th>Delta daily</th><th>Tuned band</th><th>No hedge</th>
+          <th>P&amp;L spread<br><span class="hg-sub">agent / band</span></th><th>Worst 5%<br><span class="hg-sub">agent / band</span></th>
+          <th>Cost<br><span class="hg-sub">agent / band</span></th><th>Verdict (10 seeds)</th></tr></thead>
+        <tbody id="hg-sim-tbody"></tbody></table></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="kicker">The real test</div>
+        <h2>Real SPY, 2007 to 2026</h2>
+        <p id="hg-real-meta"></p>
+      </div>
+      <div class="table-scroll" tabindex="0"><table class="hg-table">
+        <thead><tr><th>Cost</th><th>RL agent</th><th>Delta daily</th><th>Tuned band</th><th>No hedge</th>
+          <th>P&amp;L spread<br><span class="hg-sub">agent / band</span></th><th>Worst 5%<br><span class="hg-sub">agent / band</span></th>
+          <th>Cost<br><span class="hg-sub">agent / band</span></th><th>Verdict (10 seeds)</th></tr></thead>
+        <tbody id="hg-real-tbody"></tbody></table></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="kicker">Watch it</div>
+        <h2>Hedge any month since 2007.</h2>
+        <p>The agent below is one of the ten (the median one), running in your browser on the real prices of the month you
+          pick. The dashed line is delta; blue is delta with the tuned band; green is the agent.</p>
+      </div>
+      <div class="hg-controls">
+        <label>Month <select id="hg-month" aria-label="Month"></select></label>
+        <button type="button" class="btn-link" id="hg-prev" aria-label="Previous month">&larr;</button>
+        <button type="button" class="btn-link" id="hg-next" aria-label="Next month">&rarr;</button>
+        <label>Trading cost <select id="hg-cost" aria-label="Trading cost"></select></label>
+      </div>
+      <div class="hg-charts">
+        <div><div class="hg-sub">Shares held per option</div><canvas id="hg-chart" class="hg-canvas"></canvas></div>
+        <div><div class="hg-sub">SPY over the month</div><canvas id="hg-price" class="hg-canvas hg-canvas-sm"></canvas></div>
+      </div>
+      <p class="hg-sub" id="hg-month-note"></p>
+      <div class="table-scroll" tabindex="0"><table class="hg-table hg-month-table">
+        <thead><tr><th>This month</th><th>Hedged P&amp;L</th><th>Costs</th><th>Days traded</th></tr></thead>
+        <tbody id="hg-month-tbody"></tbody></table></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="kicker">What this is not</div>
+        <h2>The limits, stated plainly.</h2>
+        <p id="hg-limits">Option prices are modelled (Black-Scholes at 0.875 × the VIX), not traded quotes; the hedge is in the
+          underlying only, so changes in implied volatility are not hedged; rates and dividends are left out; one daily
+          rebalance at the close. The score's risk penalty is one choice of many. None of this is a trading system. It is
+          a demonstration that the same RL code that could not find an edge does solve a well-posed decision problem,
+          checked against the theory it should reproduce.</p>
+      </div>
+    </section>
+    </div>
+    </div><!-- /view-hedging -->
+
     <div class="view" id="view-lab">
       <div class="lab-wrap">
 
@@ -1804,6 +1932,7 @@ python -m rl_trader.scripts.compare_markets --plot</code></pre>
   <script src="ablation.js" defer></script>
   <script src="app.js" defer></script>
   <script src="lab.js" defer></script>
+  <script src="hedging-view.js" defer></script>
 <script src="scroll-focus.js" defer></script>
 </body>
 </html>

@@ -931,3 +931,35 @@ h1, h2, h3 { color: var(--text); text-wrap: balance; }
   }
   main #features .grid > *, main .learned-grid > *, main .lab-strip > * { scroll-snap-align: start; }
 }
+
+/* ── Hedging view (part 2) ─────────────────────────────────── */
+#view-hedging .section { padding-top: 40px; padding-bottom: 40px; }
+.hg-hero h1 { font-size: clamp(30px, 5vw, 52px); margin: 8px 0 0; }
+.hg-loading { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; color: var(--muted); }
+.hg-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.hg-check { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+.hg-check h3 { margin: 0 0 10px; font-size: 17px; color: var(--volt); }
+.hg-check p { margin: 0; color: var(--muted); line-height: 1.6; }
+.hg-check strong { color: var(--text); }
+.hg-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; }
+.hg-table th, .hg-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.hg-table th { color: var(--muted); font-weight: 500; font-size: 12.5px; }
+.hg-sub { color: var(--faint); font-size: 12px; font-weight: 400; }
+.hg-good { color: var(--pos); }
+.hg-bad { color: var(--neg); }
+.hg-mid { color: var(--muted); }
+.hg-table td.pos { color: var(--pos); }
+.hg-table td.neg { color: var(--neg); }
+.hg-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 16px; }
+.hg-controls label { color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.hg-controls select { background: var(--surface); color: var(--text); border: 1px solid var(--border-2); border-radius: 8px; padding: 6px 10px; }
+.hg-charts { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 8px; }
+.hg-canvas { width: 100%; height: 240px; display: block; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.hg-canvas-sm { height: 240px; }
+.hg-month-table { max-width: 560px; }
+@media (max-width: 760px) {
+  .hg-checks, .hg-charts { grid-template-columns: 1fr; }
+  .hg-canvas, .hg-canvas-sm { height: 190px; }
+}
+.hg-verdict { max-width: 820px; background: var(--surface); border: 1px solid var(--border-2); border-left: 3px solid var(--volt); border-radius: var(--radius); padding: 18px 22px; color: var(--muted); line-height: 1.6; margin: 0 0 40px; }
+.hg-verdict strong { color: var(--text); }
