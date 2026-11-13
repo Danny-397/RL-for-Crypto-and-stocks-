@@ -210,13 +210,13 @@ A single backtest is an anecdote. On synthetic markets where a signal provably
 exists, the agent is repeatably profitable across 5 seeds --- its bootstrap
 interval excludes zero in both markets --- yet remains statistically
 indistinguishable from buy-and-hold under a paired permutation test. On
-\emph{real} markets the two markets fail differently (Table~\ref{tab:real}). On
-equities the agent is significantly \emph{worse} than the mega-cap bull. On crypto
-the mean across seeds is positive and its interval excludes zero, so the agent did
-make money on average; what it did not do is beat buy-and-hold, which the paired
-test cannot distinguish it from. The per-seed returns span more than an order of
-magnitude (crypto: $-29\pc$ to $+226\pc$ across the ten seeds), so a single run of
-either sign would have told a confident and wrong story. The paired test runs
+\emph{real} markets (Table~\ref{tab:real}; repaired PPO and leak-free split,
+\S\ref{sec:rigor}) the agent is significantly \emph{worse} than buy-and-hold on
+equities, and on crypto it loses money in every seed while remaining statistically
+indistinguishable from a buy-and-hold that itself made little. In the previous
+version of this study, whose crypto split leaked, the crypto mean was positive with
+an interval above zero and the per-seed returns spanned $-29\pc$ to $+226\pc$: a
+single run of either sign would have told a confident and wrong story. The paired test runs
 across the held-out tickers, not across seeds. An earlier build of this study
 (commit \texttt{d4c0ef9}) published the crypto agent at $+275\pc$ against
 buy-and-hold's $+19\pc$; rebuilding the identical recipe --- same code, same seed,
@@ -224,16 +224,15 @@ same budget --- against a data snapshot pinned two months later erased that
 headline entirely. The run was not merely seed-lucky but window-lucky.
 
 \begin{table}[t]\centering\small
-\caption{Real-market multi-seed significance (10 seeds, held-out walk-forward; $p$ from a paired permutation test across held-out tickers). The crypto row uses per-coin splits that leak across coins in calendar time (\S\ref{sec:rigor}); on a leak-free split the agent loses money. The
-lucky single-seed crypto ``win'' does not survive resampling.}
+\caption{Real-market multi-seed significance (10 seeds, held-out walk-forward; $p$ from a paired permutation test across held-out tickers). Repaired PPO and one calendar cut for every ticker (\S\ref{sec:rigor}); seeds 100--109, 150k steps.}
 \label{tab:real}
 \begin{tabular}{@{}lrrl@{}}
 \toprule
 Market & Agent (95\pc\ CI) & vs.\ B\&H & Verdict\\
 \midrule
 % BEGIN GENERATED: tex-significance
-Crypto & $+56.8\pc$ $[+16,+106]$ & $+23\pc$ & indist. ($p{=}0.7871$)\\
-Stock  & $-19.1\pc$ $[-27,-11]$ & $-259\pc$ & worse ($p{=}0.0021$)\\
+Crypto & $-44.6\pc$ $[-56,-33]$ & $-55\pc$ & indist. ($p{=}0.2237$)\\
+Stock  & $-26.5\pc$ $[-35,-17]$ & $-266\pc$ & worse ($p{=}0.0021$)\\
 % END GENERATED: tex-significance
 \bottomrule
 \end{tabular}

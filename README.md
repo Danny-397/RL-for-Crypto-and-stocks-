@@ -101,26 +101,28 @@ significance test on it:
 <!-- BEGIN GENERATED: significance-brief -->
 | Market | Agent return (95% CI, seeds) | Buy & hold | Verdict |
 |---|---:|---:|---|
-| Crypto | **+56.8%** `[+16%, +106%]` | +33% | indistinguishable (p = 0.79) |
-| Stock | **−19.1%** `[−27%, −11%]` | +240% | significantly **worse** (p = 0.0021) |
+| Crypto | **−44.6%** `[−56%, −33%]` | +10% | indistinguishable (p = 0.22) |
+| Stock | **−26.5%** `[−35%, −17%]` | +240% | significantly **worse** (p = 0.0021) |
 <!-- END GENERATED: significance-brief -->
 
-*The crypto row uses per-coin splits that leak across coins in calendar time; on a
-leak-free split every agent loses money on crypto (see "Does it hold up?" below).*
+*From v2.3.0 these use the repaired PPO and a leak-free split (see "Does it hold
+up?" below). In v2.2.1 the crypto row read +56.8%: the old split leaked across coins
+in calendar time.*
 
 Read the spread, not the mean. The individual seeds returned:
 
 <!-- BEGIN GENERATED: seed-spread -->
-- **Stock** — −20.9%, −23.6%, −12.2%, −14.5%, −36.5%, −36.9%, +4.1%, −4.4%, −15.8%, −29.9%
-- **Crypto** — +225.5%, +135.0%, −3.4%, −28.8%, +70.1%, +81.7%, −14.4%, +30.1%, +26.8%, +45.0%
+- **Stock** — −29.6%, −44.3%, −21.1%, −24.6%, −44.1%, −32.4%, −36.7%, −13.0%, +6.1%, −25.2%
+- **Crypto** — −41.8%, −69.2%, −66.9%, −56.8%, −62.7%, −42.0%, −12.2%, −27.6%, −18.4%, −48.6%
 <!-- END GENERATED: seed-spread -->
 
-One crypto seed more than tripled capital while another lost money, on identical
-code and identical data. The crypto mean is positive, but the paired test against
-buy-&-hold across the held-out pairs cannot tell the two apart, and on equities the
-agent is significantly *worse* than simply holding. **There is no reliable,
-seed-robust edge on real markets**, as weak-form market efficiency predicts. A naive
-project ships the lucky backtest; `tools/real_significance.py` is what catches it.
+On equities the agent is significantly *worse* than simply holding; on crypto it
+loses money in every seed. In v2.2.1, before the split leak was found, one crypto
+seed more than tripled capital while another lost money on identical code and data,
+which is exactly the story a single run would have told with confidence. **There is
+no reliable, seed-robust edge on real markets**, as weak-form market efficiency
+predicts. A naive project ships the lucky backtest; `tools/real_significance.py` is
+what catches it.
 
 **"Maybe PPO is just the wrong tool."** That is the obvious objection to a negative
 result, and the rule-based baselines cannot answer it. So two ordinary supervised
@@ -133,12 +135,12 @@ PPO column differs from the ten-seed means above:
 <!-- BEGIN GENERATED: supervised-brief -->
 | Market | Ridge | Logistic | PPO agent | Buy & hold |
 |---|---:|---:|---:|---:|
-| Stocks | −6.0% | +3.1% | −4.7% | **+239.3%** |
-| Crypto | +0.7% | −7.4% | +38.7% | **+33.2%** |
+| Stocks | −6.0% | +3.1% | −19.8% | **+239.3%** |
+| Crypto | +0.1% | −4.6% | −34.4% | **+10.1%** |
 <!-- END GENERATED: supervised-brief -->
 
 Neither beat buy-and-hold in either market, so two unrelated method classes land in
-the same place. Their in-sample directional accuracy was *above* chance, so they did
+the same place (and both beat the PPO agent in both markets). Their in-sample directional accuracy was *above* chance, so they did
 fit their training data — and none of it survived out of sample. That is the
 overfitting result again, reached by a completely different route.
 (`tools/supervised_report.py`)
@@ -168,7 +170,8 @@ for, each **pre-registered** before it ran
   identical hyper-parameters, it trailed on HalfCheetah and Pendulum. Seven standard
   implementation details, together, close the gap on HalfCheetah, Hopper and
   InvertedPendulum; Pendulum stays unexplained. The repairs ship as
-  `repaired_ppo()`, with the published defaults kept so every number reproduces.
+  the defaults from v2.3.0; `RL_TRADER_PUBLISHED=1` restores the published PPO and
+  split, so every v2.2.1 number still reproduces.
 - **The crypto split leaked.** Coins were cut 60/40 on their own histories, so some
   were trained on dates that were already test dates for others. That inflated
   every published crypto number; stocks were unaffected.
@@ -618,8 +621,8 @@ is less stable than a ranked bar chart makes it look:
 <!-- BEGIN GENERATED: attribution-table -->
 | | Strongest inputs | Largest account-state effect |
 |---|---|---:|
-| **Stock** | `high_low_range` 0.22 · `vol_ratio` 0.21 · `rsi_14` 0.21 | 0.027 |
-| **Crypto** | `high_120_dist` 0.21 · `return_120` 0.18 · `atr_norm` 0.17 | 0.025 |
+| **Stock** | `volatility_10` 0.17 · `atr_norm` 0.17 · `volume_zscore` 0.15 | 0.030 |
+| **Crypto** | `volatility_10` 0.23 · `return_120` 0.18 · `high_low_range` 0.17 | 0.043 |
 
 *600-bar momentum paths, seed 1, 80 sampled bars. Fraction of equity: 0.22 means occluding the input moves the requested position by 22 percentage points of exposure.*
 <!-- END GENERATED: attribution-table -->

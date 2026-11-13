@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-31",
+  "generated": "2026-11-13",
   "episode_bars": 600,
   "sampled_bars": 80,
   "seed": 1,
@@ -10,53 +10,53 @@
     "stock": {
       "features": [
         {
-          "name": "high_low_range",
-          "mean_abs_delta": 0.2163
+          "name": "volatility_10",
+          "mean_abs_delta": 0.168
         },
         {
-          "name": "vol_ratio",
-          "mean_abs_delta": 0.2111
+          "name": "atr_norm",
+          "mean_abs_delta": 0.1666
+        },
+        {
+          "name": "volume_zscore",
+          "mean_abs_delta": 0.1538
         },
         {
           "name": "rsi_14",
-          "mean_abs_delta": 0.2073
+          "mean_abs_delta": 0.1529
         },
         {
-          "name": "volatility_10",
-          "mean_abs_delta": 0.1841
-        },
-        {
-          "name": "bollinger_pct_b",
-          "mean_abs_delta": 0.1776
+          "name": "high_120_dist",
+          "mean_abs_delta": 0.1443
         }
       ],
-      "account_max": 0.0272,
+      "account_max": 0.0305,
       "account_max_name": "position_fraction"
     },
     "crypto": {
       "features": [
         {
-          "name": "high_120_dist",
-          "mean_abs_delta": 0.212
+          "name": "volatility_10",
+          "mean_abs_delta": 0.2345
         },
         {
           "name": "return_120",
-          "mean_abs_delta": 0.184
-        },
-        {
-          "name": "atr_norm",
-          "mean_abs_delta": 0.1729
+          "mean_abs_delta": 0.1775
         },
         {
           "name": "high_low_range",
-          "mean_abs_delta": 0.1638
+          "mean_abs_delta": 0.1691
         },
         {
-          "name": "volume_zscore",
-          "mean_abs_delta": 0.1587
+          "name": "vol_regime",
+          "mean_abs_delta": 0.16
+        },
+        {
+          "name": "return_5",
+          "mean_abs_delta": 0.16
         }
       ],
-      "account_max": 0.0249,
+      "account_max": 0.0429,
       "account_max_name": "position_fraction"
     }
   }

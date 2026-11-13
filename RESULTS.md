@@ -27,12 +27,12 @@ respectively.
    tempting headline. It was not one: it survived neither reseeding (§5) nor moving
    the evaluation window forward by two months (§4).
 3. **Multi-seed evaluation dissolves the illusion (RQ3).** Across **10 seeds** the
-   crypto agent's individual returns span more than an order of magnitude — one seed
-   more than triples capital, another loses money — and the paired permutation test
-   cannot distinguish the agent from buy-&-hold. On equities it is significantly
-   **worse** than the mega-cap bull. There is **no reliable, seed-robust edge on real
-   markets** — consistent with weak-form market efficiency (Fama, 1970), even with
-   the cross-asset features. The numbers are in §5.
+   agent is significantly **worse** than buy-and-hold on equities and loses money on
+   crypto in every seed; in the v2.2.1 build, whose crypto split leaked (§10c), the
+   crypto seeds ranged from more than tripling capital to losing it. There is **no
+   reliable, seed-robust edge on real markets** — consistent with weak-form market
+   efficiency (Fama, 1970), even with the cross-asset features. The numbers are in
+   §5.
 4. **Catching that is the result.** This is Henderson et al.'s (2018) *Deep RL that
    Matters* finding — single-run RL numbers are unreliable — reproduced in a new
    domain: the framework's own significance tooling exposed a false positive that a
@@ -165,19 +165,19 @@ synthetic paths. That is exactly the discipline I apply to the real-data win bel
 `python tools/build_site_data.py --real` then `python tools/baseline_report.py`
 
 > ⚠️ **Read this with §5.** The tables below are **one training seed (42)** — the
-> run the dashboard displays. It happens to be *favorable* for crypto. §5 shows
-> what happens across many seeds, and the honest picture is very different. This
+> run the dashboard displays. §5 shows what happens across many seeds. This
 > single-seed table is shown for transparency, not as the headline result.
 
-> ⚠️ **Crypto rows below use per-coin 60/40 cuts, which leak across coins in calendar time** (§10c). They are left as published so they still reproduce; the leak-free crypto result is in §10b. Stock rows are unaffected.
+> **Updated in v2.3.0.** These numbers now come from the repaired PPO (§10a) with one calendar cut for every ticker (§10c), on the archived 2026-10-28 data snapshot. In v2.2.1, whose crypto split leaked, this run
+> read crypto +38.7% and stock −4.7%; `RL_TRADER_PUBLISHED=1` restores that setup.
 
 **The published run:**
 
 <!-- BEGIN GENERATED: headline-run -->
 Seed 42, 200,000 timesteps, test window ending 2026-08-28:
 
-- **Crypto** — agent +38.7% vs. buy-and-hold +33.5%, beating buy-and-hold on 2 of 6 tickers (Sharpe +0.21, max drawdown 66.6%).
-- **Stock** — agent −4.7% vs. buy-and-hold +239.5%, beating buy-and-hold on 0 of 10 tickers (Sharpe −0.09, max drawdown 35.0%).
+- **Crypto** — agent −34.4% vs. buy-and-hold +10.3%, beating buy-and-hold on 2 of 6 tickers (Sharpe −0.24, max drawdown 66.5%).
+- **Stock** — agent −19.8% vs. buy-and-hold +239.5%, beating buy-and-hold on 0 of 10 tickers (Sharpe −0.27, max drawdown 43.8%).
 <!-- END GENERATED: headline-run -->
 
 ![Agent vs. baselines on real data](docs/assets/fig_baselines.png)
@@ -187,7 +187,7 @@ Seed 42, 200,000 timesteps, test window ending 2026-08-28:
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| **PPO agent** | −4.7% | −0.09 | 35.0% |
+| **PPO agent** | −19.8% | −0.27 | 43.8% |
 | Buy & hold | +239.3% | +1.12 | 26.9% |
 | MA crossover | +74.5% | +0.78 | 23.4% |
 | Flat (cash) | +0.0% | +0.00 | 0.0% |
@@ -197,17 +197,17 @@ Seed 42, 200,000 timesteps, test window ending 2026-08-28:
 
 | Strategy | Return | Sharpe | Max DD |
 |---|---:|---:|---:|
-| **PPO agent** | +38.7% | +0.21 | 66.6% |
-| Buy & hold | +33.2% | +0.38 | 73.7% |
-| MA crossover | +8.3% | +0.24 | 59.9% |
+| **PPO agent** | −34.4% | −0.24 | 66.5% |
+| Buy & hold | +10.1% | +0.32 | 71.3% |
+| MA crossover | −6.8% | +0.04 | 56.8% |
 | Flat (cash) | +0.0% | +0.00 | 0.0% |
-| Random | −77.7% | −1.82 | 78.6% |
+| Random | −64.5% | −0.99 | 70.5% |
 <!-- END GENERATED: baselines-table -->
 
 *Buy-and-hold in these tables is traded through the same environment as the agent,
 so it pays the same entry cost and slippage; the headline lines above use the
 frictionless price return, which is why the two differ by a few tenths of a point
-(+239.5% vs +239.3% on stocks, +33.5% vs +33.2% on crypto).*
+(+239.5% vs +239.3% on stocks, +10.3% vs +10.1% on crypto).*
 
 ---
 
@@ -239,8 +239,8 @@ period during fitting.
 | MA crossover | +74.5% |
 | Logistic direction *(learned)* | +3.1% |
 | Flat (cash) | +0.0% |
-| **PPO agent** | −4.7% |
 | Ridge regression *(learned)* | −6.0% |
+| **PPO agent** | −19.8% |
 | Random | −37.8% |
 
 *Logistic in-sample directional accuracy: 55.6%.*
@@ -249,23 +249,23 @@ period during fitting.
 
 | Strategy | Return |
 |---|---:|
-| **PPO agent** | +38.7% |
-| Buy & hold | +33.2% |
-| MA crossover | +8.3% |
-| Ridge regression *(learned)* | +0.7% |
+| Buy & hold | +10.1% |
+| Ridge regression *(learned)* | +0.1% |
 | Flat (cash) | +0.0% |
-| Logistic direction *(learned)* | −7.4% |
-| Random | −77.7% |
+| Logistic direction *(learned)* | −4.6% |
+| MA crossover | −6.8% |
+| **PPO agent** | −34.4% |
+| Random | −64.5% |
 
-*Logistic in-sample directional accuracy: 55.6%.*
+*Logistic in-sample directional accuracy: 55.1%.*
 <!-- END GENERATED: supervised-table -->
 
 **Reading it:** neither supervised model beat buy-and-hold in either market, so
 two unrelated method classes reach the same place. That is what one expects if
 the features carry no exploitable structure, and not what one expects if the
 problem were simply that PPO is bad at this. Two details are worth not glossing:
-the logistic model *did* beat the trained agent on equities — the agent is not
-even the best use of its own inputs there — and in-sample directional accuracy
+both supervised models beat the trained agent in both markets — the agent is not
+even the best use of its own inputs — and in-sample directional accuracy
 was **above** chance, so the models did fit their training data and none of it
 survived into the held-out period. That is the domain-randomization result of §1
 reached by a completely different route.
@@ -283,28 +283,28 @@ frozen, it can simply be replayed at different cost levels.
 
 | Costs | Fee | Slippage | Mean held-out return | Turnover |
 |---|---:|---:|---:|---:|
-| 0× | 0.000% | 0.000% | +37.5% | 0.49 |
-| 0.5× | 0.025% | 0.015% | +14.5% | 0.49 |
-| 1× *(published)* | 0.050% | 0.030% | −4.7% | 0.49 |
-| 2× | 0.100% | 0.060% | −34.2% | 0.49 |
-| 5× | 0.250% | 0.150% | −76.8% | 0.49 |
+| 0× | 0.000% | 0.000% | +15.2% | 0.82 |
+| 0.5× | 0.025% | 0.015% | −3.9% | 0.82 |
+| 1× *(published)* | 0.050% | 0.030% | −19.8% | 0.82 |
+| 2× | 0.100% | 0.060% | −44.2% | 0.82 |
+| 5× | 0.250% | 0.150% | −79.2% | 0.82 |
 
 **Crypto**:
 
 | Costs | Fee | Slippage | Mean held-out return | Turnover |
 |---|---:|---:|---:|---:|
-| 0× | 0.000% | 0.000% | +545.7% | 0.51 |
-| 0.5× | 0.050% | 0.050% | +197.7% | 0.51 |
-| 1× *(published)* | 0.100% | 0.100% | +38.7% | 0.51 |
-| 2× | 0.200% | 0.200% | −67.6% | 0.52 |
-| 5× | 0.500% | 0.500% | −80.2% | 0.50 |
+| 0× | 0.000% | 0.000% | +66.5% | 0.84 |
+| 0.5× | 0.050% | 0.050% | +4.0% | 0.84 |
+| 1× *(published)* | 0.100% | 0.100% | −34.4% | 0.84 |
+| 2× | 0.200% | 0.200% | −71.0% | 0.84 |
+| 5× | 0.500% | 0.500% | −80.6% | 0.88 |
 
 *Turnover is the mean absolute change in target position per bar: 0 would be buy-and-hold, 2.0 would be flipping fully long to fully short every bar. The policy is frozen and replayed — it is not retrained per cost level, which would measure churn rather than friction.*
 <!-- END GENERATED: cost-table -->
 
 **Reading it, carefully.** The agent is positive *before* friction in both
-markets and negative after it on equities, and its turnover is about **half its
-equity per bar** — that is the mechanism, and it is a real measurement.
+markets and negative after it in both, and its turnover is over **four-fifths of
+its equity per bar** — that is the mechanism, and it is a real measurement.
 
 It is *not* evidence of a tradable edge, and the temptation to read it that way
 is exactly why it is written up here rather than left in a notebook. A
@@ -327,9 +327,9 @@ experiment.
   single run carries information about the next one.
 - **And the evaluation window mattered as much as the seed.** Rebuilding the
   identical recipe — same code, same seed 42, same 200k steps — against a snapshot
-  pinned two months later moved that crypto headline from +275% to the figure in the
-  table above, against a benchmark that had itself risen. Nothing about the model
-  changed. The window is part of the claim, which is why `data/SNAPSHOT.json` pins
+  pinned two months later moved that crypto headline from +275% to +38.7%, against
+  a benchmark that had itself risen. Nothing about the model changed. (The figure
+  in the table above is lower again: v2.3.0 uses a leak-free split, §10c.) The window is part of the claim, which is why `data/SNAPSHOT.json` pins
   it.
 - **The equities single seed is already an honest loss.** Even on the displayed
   seed the stock agent loses against the mega-cap bull, and the hand-coded
@@ -349,30 +349,34 @@ vs. buy-&-hold *across the held-out tickers*.
 
 `python tools/real_significance.py --seeds 10 --timesteps 150000`
 
-> ⚠️ **Crypto rows below use per-coin 60/40 cuts, which leak across coins in calendar time** (§10c). They are left as published so they still reproduce; the leak-free crypto result is in §10b. Stock rows are unaffected.
+> **Updated in v2.3.0.** These numbers now come from the repaired PPO (§10a) with one calendar cut for every ticker (§10c), on the archived 2026-10-28 data snapshot. Seeds 100–109, 150k steps. The v2.2.1
+> table (published PPO, per-coin cuts, August data) read: stock −19.1%
+> [−26.7%, −11.2%], p = 0.0021; crypto +56.8% [+16.3%, +106.3%], p = 0.79.
 
 <!-- BEGIN GENERATED: significance-full -->
 | Market | Agent return (95% CI across seeds) | Buy & hold | Agent − B&H | p-value | Verdict |
 |---|---:|---:|---:|---:|---|
-| Stock | **−19.1%** `[−26.7%, −11.2%]` | +239.5% | −258.6% | **0.0021** | significantly **worse** than B&H |
-| Crypto | **+56.8%** `[+16.3%, +106.3%]` | +33.5% | +23.3% | 0.79 | **indistinguishable** from B&H |
+| Stock | **−26.5%** `[−34.7%, −17.4%]` | +239.5% | −266.0% | **0.0021** | significantly **worse** than B&H |
+| Crypto | **−44.6%** `[−56.2%, −32.7%]` | +10.3% | −54.9% | 0.22 | **indistinguishable** from B&H |
 
 *10 independent training seeds per market. The p-value is a paired permutation test of agent vs. buy-and-hold across the held-out tickers (10 equities, 6 crypto pairs), not across seeds — the two axes answer different questions and their p-values are not comparable.*
 <!-- END GENERATED: significance-full -->
 
-**Reading it (28-feature model, incl. cross-asset features).** The two markets fail
-differently, and the difference matters. On **equities** the agent is significantly
-*worse* than buy-and-hold — a clean negative result. On **crypto** the mean is
-positive and its bootstrap interval excludes zero, so the agent did make money on
-average across seeds; what it did *not* do is beat buy-and-hold, which the paired
-permutation test cannot distinguish it from. Per-seed returns were:
+**Reading it (28-feature model, incl. cross-asset features).** On **equities** the
+agent is significantly *worse* than buy-and-hold — a clean negative result. On
+**crypto** it loses money in every seed and its interval lies wholly below zero;
+the paired test still cannot separate it from buy-and-hold, because buy-and-hold
+itself made only +10% over the window and differed widely across coins. In v2.2.1
+the crypto mean was *positive* with an interval above zero; that was partly seed
+luck (the replication below said so) and partly the calendar leak (§10c).
+Per-seed returns were:
 
 <!-- BEGIN GENERATED: seed-spread -->
-- **Stock** — −20.9%, −23.6%, −12.2%, −14.5%, −36.5%, −36.9%, +4.1%, −4.4%, −15.8%, −29.9%
-- **Crypto** — +225.5%, +135.0%, −3.4%, −28.8%, +70.1%, +81.7%, −14.4%, +30.1%, +26.8%, +45.0%
+- **Stock** — −29.6%, −44.3%, −21.1%, −24.6%, −44.1%, −32.4%, −36.7%, −13.0%, +6.1%, −25.2%
+- **Crypto** — −41.8%, −69.2%, −66.9%, −56.8%, −62.7%, −42.0%, −12.2%, −27.6%, −18.4%, −48.6%
 <!-- END GENERATED: seed-spread -->
 
-A study whose seeds range this widely cannot support a claim about any one of them.
+Seeds that spread this widely cannot support a claim about any one of them.
 This study originally ran **5** seeds, at which the sign-flip test on the seed axis
 could not reach p ≤ 0.05 even in principle — its floor is 2/2⁵ = 0.0625, which the
 lab's power calculator reports for any design that small. It was rerun at **10**
@@ -392,7 +396,9 @@ indistinguishable from buy-and-hold, p = 0.88. One detail above did **not**
 replicate: the crypto mean fell to +26.7% and its interval, [−13.8%, +70.4%], now
 includes zero, so "the agent made money on average across seeds" was itself
 partly seed luck. (The replication used re-fetched data that Yahoo has since
-re-adjusted, so data drift may contribute.)
+re-adjusted, so data drift may contribute.) Both of these used the v2.2.1 PPO and
+split. Under v2.3.0 the same seeds 200–209 give stock −23.4% (p = 0.0021) and
+crypto −29.0% (p = 0.31), the same verdicts as the table above (§10b).
 
 This mirrors §2 exactly: on synthetic markets where a signal provably exists the
 agent is repeatably profitable but still statistically indistinguishable from
@@ -500,8 +506,9 @@ every period:
 3. **On this asset the agent is not merely edgeless — it is reliably negative.**
    Pooled across folds the interval **excludes zero**. That is a narrower claim
    than §5 and should be read beside it, not against it: §5 averages six coins
-   and reports a positive crypto mean (**+56.8%** `[+16.3%, +106.3%]`, 10 seeds)
-   that still cannot be distinguished from buy-&-hold. Here, on BTC-USD alone and
+   and reported, in v2.2.1, a positive crypto mean (**+56.8%** `[+16.3%, +106.3%]`,
+   10 seeds) that still could not be distinguished from buy-&-hold; that figure
+   was inflated by a leak in its split (§10c). Here, on BTC-USD alone and
    across four different slices of history, the agent loses money outright.
    Adding the time axis did not rescue the result; it sharpened the verdict
    against it.
@@ -830,9 +837,10 @@ off by a time limit; SB3's value loss; Adam ε = 1e-5; and normalising advantage
 per minibatch. **Pendulum is not explained:** every variant stays near a random
 policy while SB3 reaches −407. We report that rather than keep searching.
 
-The repairs are available as `repaired_ppo()` in `rl_trader/config` and as
-individual `PPOConfig` flags. The defaults are left as published, so every number
-in §1–§9 still reproduces.
+The repairs are the `PPOConfig` defaults from v2.3.0 (`REPAIRED_PPO` in
+`rl_trader/config`), and §3 and §5 are regenerated with them. The other sections
+were produced with the published PPO; `RL_TRADER_PUBLISHED=1` restores it, and
+the published split, so they still reproduce. Part 2 pins the published PPO.
 
 ### 10b. Is it this PPO, or RL?
 
@@ -882,15 +890,16 @@ BTC and +505% on LTC, averaged over seeds. Cut every coin on one calendar date
 instead (60% of the window all six trade in: train before 2024-03-27, test to
 2026-08-28) and its result falls to a loss.
 
-**What this changes.** Every crypto number in §3, §5 (including the replication)
-and §6's real-data arm used per-coin cuts and is inflated by the leak; the
-published PPO's crypto result at 150k steps, for example, goes from a gain to a
-loss (table above). The direction of the conclusion is unchanged, because the
+**What this changes.** Every crypto number v2.2.1 published in §3 and §5
+(including the replication) and §6's real-data arm used per-coin cuts and was
+inflated by the leak; the published PPO's crypto result at 150k steps, for
+example, goes from a gain to a loss (table above). From v2.3.0, §3 and §5 use the
+common cut. The direction of the conclusion is unchanged, because the
 published conclusion was already that there is no edge: §5's "the crypto agent
 made money on average across seeds" was partly seed luck (the replication said so)
 and partly this leak. The stock results are untouched.
-`load_real_basket(..., split="common")` is the fix; the default is left as
-published so the original numbers still reproduce.
+`load_real_basket(..., split="common")` is the fix and, from v2.3.0, the
+default; `RL_TRADER_PUBLISHED=1` restores per-coin cuts.
 
 ### 10d. Would more training have helped?
 
@@ -951,7 +960,7 @@ on 8% of tickers. The negative result is not an artifact of a winners-only baske
 | §2 synthetic multi-seed | crypto: agent vs buy-and-hold, synthetic paths | no difference | 0.57 | 1.00 | 1.00 |
 | §5 real-data significance | stock: agent vs buy-and-hold, held-out tickers | worse than buy-and-hold | 0.0021 | **0.0042** | **0.03** |
 | §5 pre-registered replication | stock: replication, seeds 200-209 | worse than buy-and-hold | 0.0021 | **0.0042** | **0.03** |
-| §5 real-data significance | crypto: agent vs buy-and-hold, held-out tickers | no difference | 0.79 | 0.79 | 1.00 |
+| §5 real-data significance | crypto: agent vs buy-and-hold, held-out tickers | no difference | 0.22 | 0.22 | 1.00 |
 | §5 pre-registered replication | crypto: replication, seeds 200-209 | no difference | 0.88 | 0.88 | 1.00 |
 | §6 surrogate test | stock: positive control, structured vs shuffled | test has power (difference) | 0.0026 | **0.01** | **0.03** |
 | §6 surrogate test | stock: real vs shuffled prices | no difference | 0.41 | 0.41 | 1.00 |
@@ -986,11 +995,11 @@ bit for bit across machines; the conclusions do.
 - **Pendulum is unexplained** (§10a). The repaired PPO matches Stable-Baselines3
   on three standard tasks but not on Pendulum, where every variant stays near a
   random policy. Some difference between the two implementations remains.
-- **The published numbers use the published PPO and the per-coin crypto cut**
-  (§10a, §10c). §10 re-runs the central real-data study with both repaired; the
-  other real-data crypto experiments (§3 single seed, §3b–c, §6 real arm) have
-  not been re-run on the leak-free cut. §5c trains and tests on BTC alone, so it
-  is not affected.
+- **Only §3 and §5 are regenerated with the repaired PPO and the leak-free
+  split** (v2.3.0). §1–§2, §5b–c and §6–§9 were produced with the published PPO,
+  and §6's real crypto arm with per-coin cuts. §10 shows the conclusions do not
+  depend on either, but those numbers are v2.2.1's. §5c trains and tests on BTC
+  alone, so the split does not affect it.
 
 - **Signal is the bottleneck, not the agent.** Across single-asset *and*
   cross-sectional setups, the ceiling is the data: raw daily OHLCV carries little

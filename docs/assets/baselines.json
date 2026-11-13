@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-04",
+  "generated": "2026-11-13",
   "note": "Mean over the held-out basket, one training seed. Read with the multi-seed study -- a single seed is not evidence.",
   "markets": {
     "stock": {
@@ -7,14 +7,14 @@
       "agent_beats_bh": 0,
       "strategies": {
         "PPO agent": {
-          "total_return": -0.04727553644749233,
-          "sharpe": -0.0901736110604379,
-          "max_drawdown": 0.3500623877051151
+          "total_return": -0.1980071739951909,
+          "sharpe": -0.274562177586365,
+          "max_drawdown": 0.4380038491574772
         },
         "buy_and_hold": {
-          "total_return": 2.39258978941905,
-          "sharpe": 1.1150363310345839,
-          "max_drawdown": 0.2689155112296609
+          "total_return": 2.3925898073543808,
+          "sharpe": 1.1150361768750015,
+          "max_drawdown": 0.2689155396049151
         },
         "flat": {
           "total_return": 0.0,
@@ -22,14 +22,14 @@
           "max_drawdown": 0.0
         },
         "random": {
-          "total_return": -0.3781956788701171,
-          "sharpe": -0.9826153498129532,
-          "max_drawdown": 0.5191432125555415
+          "total_return": -0.37819591800845903,
+          "sharpe": -0.9826163716592322,
+          "max_drawdown": 0.519143440164872
         },
         "ma_crossover": {
-          "total_return": 0.7454784431376443,
-          "sharpe": 0.7842877057001665,
-          "max_drawdown": 0.234290043090786
+          "total_return": 0.7454784944970027,
+          "sharpe": 0.7842878136591042,
+          "max_drawdown": 0.23428996007638894
         }
       }
     },
@@ -38,14 +38,14 @@
       "agent_beats_bh": 2,
       "strategies": {
         "PPO agent": {
-          "total_return": 0.3872751615666703,
-          "sharpe": 0.21323768129394446,
-          "max_drawdown": 0.666232062529461
+          "total_return": -0.34355854889009046,
+          "sharpe": -0.24061659446843983,
+          "max_drawdown": 0.6654224552935254
         },
         "buy_and_hold": {
-          "total_return": 0.33221498538359767,
-          "sharpe": 0.38492665093047607,
-          "max_drawdown": 0.7365156704725521
+          "total_return": 0.10074714346544589,
+          "sharpe": 0.3168473015871717,
+          "max_drawdown": 0.712588209247095
         },
         "flat": {
           "total_return": 0.0,
@@ -53,14 +53,14 @@
           "max_drawdown": 0.0
         },
         "random": {
-          "total_return": -0.7770887951453785,
-          "sharpe": -1.8172163866960338,
-          "max_drawdown": 0.7864376365886449
+          "total_return": -0.6453317071415675,
+          "sharpe": -0.9919833663714099,
+          "max_drawdown": 0.704700538564954
         },
         "ma_crossover": {
-          "total_return": 0.08279693080786367,
-          "sharpe": 0.23897906730777252,
-          "max_drawdown": 0.5988622944867832
+          "total_return": -0.06807638885762579,
+          "sharpe": 0.03722476304434372,
+          "max_drawdown": 0.5676462075344882
         }
       }
     }
