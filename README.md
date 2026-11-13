@@ -151,6 +151,35 @@ benchmarks are hard to beat, measured honestly.
 
 ---
 
+## Part 2: where RL does help — hedging an option
+
+Predicting prices is a forecasting problem, and the study above shows PPO adds nothing
+to it. Hedging is a decision problem: you have sold an option and each day choose how
+many shares to hold against it, when every trade costs money. Theory gives two answers
+the agent must reproduce (with free trading, the Black-Scholes delta; with costs, a
+no-trade band around it), and beyond those the best policy is not known in closed form.
+The same PPO, trained only on simulated prices, is checked against both and then tested
+on 237 real one-month SPY episodes (2007–2026) it never saw, against delta with a
+no-trade band tuned per cost:
+
+<!-- BEGIN GENERATED: hedging-real -->
+| Trading cost | RL agent (median of 10) | Seed range | Delta daily | Tuned band | No hedge | P&L spread agent / band | Worst 5% agent / band | Seeds beating band |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| none | -0.107 | -0.142 to -0.082 | -0.100 | -0.100 (±0) | -3.416 | 0.64% / 0.69% | 1.56% / 1.94% | 4/10 (p = 0.32) |
+| 0.05% | -0.207 | -0.280 to -0.186 | -0.224 | -0.216 (±0.01) | -3.416 | 0.62% / 0.67% | 1.59% / 1.99% | 7/10 (p = 0.80) |
+| 0.2% | -0.506 | -0.565 to -0.471 | -0.611 | -0.547 (±0.03) | -3.416 | 0.65% / 0.65% | 1.84% / 2.21% | 9/10 (p = 0.0057) |
+| 1% | -1.776 | -1.827 to -1.660 | -3.122 | -2.355 (±0.1) | -3.416 | 0.90% / 0.69% | 3.10% / 3.25% | 10/10 (p = 0.0021) |
+
+*237 non-overlapping one-month episodes, 2007-01 to 2026-09; SPY daily closes (dividend-adjusted, Yahoo); implied volatility 0.875 x VIX (Cboe). No policy or band saw these prices.*
+<!-- END GENERATED: hedging-real -->
+
+It rediscovers delta approximately (within ~0.04 shares, but scoring below it), learns to
+trade less as costs rise, ties the tuned band at low costs and beats it at high costs on
+real data. Full write-up in [RESULTS.md §9](RESULTS.md#9-part-2--where-rl-helps-hedging-an-option-with-trading-costs);
+interactive version on the [site](https://rl-for-crypto-and-stocks.vercel.app/#hedging).
+
+---
+
 ## Why markets are the testbed
 
 The research questions above — generalization, memorization, and honest evaluation —

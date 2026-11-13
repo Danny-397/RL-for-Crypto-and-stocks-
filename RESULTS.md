@@ -441,7 +441,7 @@ if it ever happens.
 
 §5 varies the **seed** and holds the split fixed. It cannot tell you whether the
 result is an artifact of *which* 40% of history happened to be the test block.
-This section closes that gap — it is the "multi-*fold*" item §9 listed as an
+This section closes that gap — it is the "multi-*fold*" item §10 listed as an
 extension, now run.
 
 `tools/walk_forward_report.py` drives `rl_trader.evaluation.walk_forward`, whose
@@ -647,7 +647,93 @@ exploitable cross-sectional signal, so equal-weight diversification is hard to b
   at episode boundaries, and the update replays whole sequences from their stored
   initial state (truncated BPTT) rather than shuffling individual transitions.
 
-## 9. Limitations & next steps
+## 9. Part 2 — where RL helps: hedging an option with trading costs
+
+Everything above asks PPO to predict price direction, and the honest answer is that it
+cannot beat buy-and-hold. That is a forecasting problem; RL adds nothing to it. This
+section asks the same code a question RL is suited to: a **sequential decision with a
+cost attached**, where the right answer does not depend on predicting the market.
+
+**The problem.** Sell one at-the-money call with 21 trading days to expiry and collect
+its price. Each day choose a hedge `h` in [0, 1] shares per option. Every trade costs a
+share `c` of the notional traded (0.05% is roughly an S&P 500 fund; 1% an illiquid
+market). Each day's P&L is `h·ΔS − ΔV − c·|Δh|·S`, with the option `V` marked at
+Black-Scholes; the hedge is sold at expiry. The reward is `x − ½x²` for a daily P&L of
+`x`% of the notional, a mean-variance objective (Kolm & Ritter 2019), so the agent is
+paid for lower risk and lower costs together.
+
+**Why this is a fair test of RL.** It has answers the agent must reproduce before
+anything else counts. With `c = 0`, the best hedge is the Black-Scholes delta. With
+`c > 0`, theory (Whalley & Wilmott 1997) says the best policy is a *no-trade band*
+around delta that widens as costs rise. Neither is told to the agent: it observes only
+`ln(S/K)`, the time left, the implied volatility and its own position (not delta).
+
+**Setup.** `rl_trader/hedging/` holds a batched NumPy environment and the baselines;
+the agent is the project's own `PPOAgent`, trained by a batched loop
+(`rl_trader/hedging/train.py`) only on simulated geometric-Brownian paths, with a new
+volatility drawn from [10%, 45%] for every path (domain randomization, §1's fix for
+memorisation). Ten seeds per cost level, 1,024 episodes per update, 300 updates. The
+strongest baseline is delta with a no-trade band whose width is **tuned per cost on
+separate validation paths**, so it is the best fair version of the textbook rule. The
+real test is SPY, January 2007 to September 2026, in non-overlapping one-month
+episodes, with the option marked at 0.875 × the VIX each day (the factor AlphaGlyph
+fitted to Cboe's PutWrite index). No policy or band saw these prices.
+
+**Held-out simulated paths:**
+
+<!-- BEGIN GENERATED: hedging-sim -->
+| Trading cost | RL agent (median of 10) | Seed range | Delta daily | Tuned band | No hedge | P&L spread agent / band | Worst 5% agent / band | Seeds beating band |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| none | -0.275 | -0.282 to -0.244 | -0.195 | -0.195 (±0) | -13.726 | 0.75% / 0.63% | 1.97% / 1.53% | 0/10 (p = 0.0021) |
+| 0.05% | -0.399 | -0.408 to -0.371 | -0.319 | -0.314 (±0.01) | -13.726 | 0.77% / 0.64% | 2.14% / 1.67% | 0/10 (p = 0.0021) |
+| 0.2% | -0.752 | -0.797 to -0.714 | -0.706 | -0.650 (±0.03) | -13.726 | 0.86% / 0.70% | 2.67% / 2.07% | 0/10 (p = 0.0021) |
+| 1% | -2.423 | -2.467 to -2.384 | -3.170 | -2.453 (±0.1) | -13.726 | 1.44% / 1.08% | 5.16% / 4.13% | 8/10 (p = 0.01) |
+
+*Held-out simulated paths (20,000, volatility drawn from the training range). Score = mean over months of the daily x − ½x², x the day's hedged P&L in % of notional; higher is better.*
+<!-- END GENERATED: hedging-sim -->
+
+**Real SPY history:**
+
+<!-- BEGIN GENERATED: hedging-real -->
+| Trading cost | RL agent (median of 10) | Seed range | Delta daily | Tuned band | No hedge | P&L spread agent / band | Worst 5% agent / band | Seeds beating band |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| none | -0.107 | -0.142 to -0.082 | -0.100 | -0.100 (±0) | -3.416 | 0.64% / 0.69% | 1.56% / 1.94% | 4/10 (p = 0.32) |
+| 0.05% | -0.207 | -0.280 to -0.186 | -0.224 | -0.216 (±0.01) | -3.416 | 0.62% / 0.67% | 1.59% / 1.99% | 7/10 (p = 0.80) |
+| 0.2% | -0.506 | -0.565 to -0.471 | -0.611 | -0.547 (±0.03) | -3.416 | 0.65% / 0.65% | 1.84% / 2.21% | 9/10 (p = 0.0057) |
+| 1% | -1.776 | -1.827 to -1.660 | -3.122 | -2.355 (±0.1) | -3.416 | 0.90% / 0.69% | 3.10% / 3.25% | 10/10 (p = 0.0021) |
+
+*237 non-overlapping one-month episodes, 2007-01 to 2026-09; SPY daily closes (dividend-adjusted, Yahoo); implied volatility 0.875 x VIX (Cboe). No policy or band saw these prices.*
+<!-- END GENERATED: hedging-real -->
+
+**Reading it.**
+
+- **Check 1, partly met.** With no costs the agent's hedge stays within about 0.04
+  shares of delta on an average day and removes about 97% of the risk delta removes,
+  without being shown delta. But its score is below delta's in all ten seeds: it
+  learned the formula from noisy rewards and is close, not exact.
+- **Check 2, met.** As costs rise its trading falls (2.36 → 1.46 of the notional per
+  month, against 2.42 for daily delta), and its hedge drifts further from delta before
+  it corrects (an average gap of 0.04 shares with free trading, 0.11 at 1%). That is a
+  no-trade band, learned rather than given.
+- **Against the tuned band.** In simulation, the world the band was tuned for, the band
+  wins at low costs and the agent wins at 1%. On real SPY prices the agent ties the
+  band at low costs and beats it at 0.2% (9/10 seeds) and 1% (10/10 seeds; each seed
+  also month by month, p < 0.001), mostly by paying less in costs. Its worst 5% of
+  months are milder than the band's at every cost level on real data. A plausible
+  reason is that real volatility moves and jumps where the simulator's does not, and an
+  agent trained across many volatility levels copes better than a band tuned to
+  constant volatility; that explanation is not tested here.
+
+**Limits.** Option prices are modelled, not traded quotes; only the underlying is used
+to hedge, so changes in implied volatility are not hedged; rates and dividends are left
+out; one rebalance a day at the close; the score's risk penalty is one choice of many.
+This is not a trading system. It shows that the same PPO code that found no edge in
+price prediction does solve a well-posed decision problem, checked against theory.
+
+Reproduce: `python tools/hedging_experiment.py train` (about 50 minutes on 8 CPU
+cores), then `simulate`, `real` and `site`.
+
+## 10. Limitations & next steps
 
 - **Signal is the bottleneck, not the agent.** Across single-asset *and*
   cross-sectional setups, the ceiling is the data: raw daily OHLCV carries little
@@ -666,7 +752,7 @@ exploitable cross-sectional signal, so equal-weight diversification is hard to b
 - **Head-to-head feed-forward vs. LSTM** and cost/turnover-sensitivity sweeps are
   natural extensions the codebase is already structured for.
 
-## 10. Reproduce everything
+## 11. Reproduce everything
 
 Training is fully seeded, so these commands re-derive the numbers above.
 
@@ -680,5 +766,7 @@ python tools/significance.py --market crypto --seeds 5      # synthetic multi-se
 python tools/real_significance.py --seeds 10 --timesteps 150000  # real-data multi-seed test (§5)
 python tools/surrogate_test.py --mode synthetic --seeds 5 --timesteps 60000  # surrogate test (§6)
 python tools/portfolio_experiment.py --market stock         # cross-sectional allocation (§7)
+python tools/hedging_experiment.py train                    # part 2: 40 hedging policies (§9)
+python tools/hedging_experiment.py simulate && python tools/hedging_experiment.py real
 pytest -q                                                   # the test suite
 ```
