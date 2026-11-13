@@ -1000,6 +1000,49 @@ def tex_rigor_trading() -> Optional[str]:
     return "\n".join(rows)
 
 
+def hedging_quotes() -> Optional[str]:
+    """Part 2 on real SPY option quotes (tools/hedging_quotes.py), as far as the archive goes."""
+    q = _asset("hedging_quotes.json")
+    if not q:
+        return None
+    arc, a, b, c = q["archive"], q["part_a"], q["part_b"], q["part_c"]
+    ratios = [r["ratio_to_vix"] for r in a["rows"] if "ratio_to_vix" in r]
+    lines = [f"*Archive: {arc['days']} trading days, {arc['first']} to {arc['last']} "
+             f"(updated {q['generated']}).*", ""]
+    if ratios:
+        lines += [f"**A. The volatility assumption.** At-the-money implied volatility of the SPY expiry "
+                  f"nearest one month, from real mid quotes, is a median **{a['ratio_median']:.3f}× the VIX** "
+                  f"(range {min(ratios):.3f}–{max(ratios):.3f} over {len(ratios)} days); Part 2 assumes "
+                  f"{q['vix_to_atm_assumed']}×.", ""]
+    if b.get("n"):
+        agents = [v for k, v in b["rms"].items() if k.startswith("agent_")]
+        lines += ["**B. One-day hedging error on real quotes** (RMS, % of notional; "
+                  f"{b['n']:,} near-the-money contract-days over {len(b['day_pairs'])} day pairs):", "",
+                  "| Hedge | RMS error |", "|---|---:|",
+                  f"| None | {b['rms']['none']:.3f} |",
+                  f"| Black-Scholes delta (at the option's own implied vol.) | {b['rms']['delta']:.3f} |",
+                  f"| RL agent, zero-cost policies (median of {len(agents)}; range "
+                  f"{min(agents):.3f}–{max(agents):.3f}) | {b['agent_rms_median']:.3f} |", ""]
+    if c.get("n"):
+        lines += [f"**C. Full one-month episodes on real quotes** ({c['n']} so far; objective as in "
+                  "§9, higher is better):", "",
+                  "| Cost | RL agent (median of 10) | Delta daily | Tuned band | Seeds beating band |",
+                  "|---|---:|---:|---:|---:|"]
+        for r in c["costs"]:
+            cost = "none" if r["cost"] == 0 else f"{r['cost'] * 100:g}%"
+            bl = r["baselines"]
+            lines.append(f"| {cost} | {num(r['agent_median'], 3)} | {num(bl['delta'], 3)} | "
+                         f"{num(bl['band'], 3)} | {r['seeds_beating_band']}/10 |")
+    else:
+        lines += ["**C. Full one-month episodes on real quotes:** none yet. An episode needs one "
+                  "contract quoted on each of its last 22 trading days, and the archive keeps each "
+                  "week's last expiry that far out only from Danny-397/Tradeski#55 on. The first "
+                  "episode completes 21 trading days after that change takes effect (the 2026-12-18 "
+                  "expiry if it is in place by 2026-11-17). A weekly workflow re-runs this section "
+                  "as episodes complete."]
+    return "\n".join(lines)
+
+
 BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "significance-full": significance_full,
     "significance-brief": significance_brief,
@@ -1034,6 +1077,7 @@ BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "multiple-testing": multiple_testing,
     "tex-rigor-bench": tex_rigor_bench,
     "tex-rigor-trading": tex_rigor_trading,
+    "hedging-quotes": hedging_quotes,
 }
 
 TARGETS = ("README.md", "RESULTS.md", os.path.join("paper", "rl_trader.tex"))

@@ -755,6 +755,44 @@ price prediction does solve a well-posed decision problem, checked against theor
 Reproduce: `python tools/hedging_experiment.py train` (about 50 minutes on 8 CPU
 cores), then `simulate`, `real` and `site`.
 
+### 9b. On real option quotes
+
+§9 marks the option at Black-Scholes with an implied volatility of 0.875 × VIX.
+`tools/hedging_quotes.py` replaces the model with the market: daily SPY option
+chains (bid, ask, volume, open interest per strike) that Tradeski archives after
+each close. It checks the volatility assumption (A), measures each hedge's error
+over one day on real quotes (B), and, once a contract has been quoted on every day
+of its last month, re-runs §9's test with the option marked at its real mid and
+its payoff at expiry (C). Implied volatilities use r = 0 and no dividends, as the
+model does.
+
+`python tools/hedging_quotes.py run`
+
+<!-- BEGIN GENERATED: hedging-quotes -->
+*Archive: 5 trading days, 2026-11-06 to 2026-11-12 (updated 2026-11-13).*
+
+**A. The volatility assumption.** At-the-money implied volatility of the SPY expiry nearest one month, from real mid quotes, is a median **0.864× the VIX** (range 0.844–0.897 over 5 days); Part 2 assumes 0.875×.
+
+**B. One-day hedging error on real quotes** (RMS, % of notional; 1,187 near-the-money contract-days over 4 day pairs):
+
+| Hedge | RMS error |
+|---|---:|
+| None | 0.619 |
+| Black-Scholes delta (at the option's own implied vol.) | 0.081 |
+| RL agent, zero-cost policies (median of 10; range 0.081–0.101) | 0.096 |
+
+**C. Full one-month episodes on real quotes:** none yet. An episode needs one contract quoted on each of its last 22 trading days, and the archive keeps each week's last expiry that far out only from Danny-397/Tradeski#55 on. The first episode completes 21 trading days after that change takes effect (the 2026-12-18 expiry if it is in place by 2026-11-17). A weekly workflow re-runs this section as episodes complete.
+<!-- END GENERATED: hedging-quotes -->
+
+**Reading it so far.** The volatility assumption holds on real quotes: the market's
+one-month at-the-money volatility has run close to 0.875× the VIX. The model
+misses the skew, though, pricing calls a few percent from the money with an error
+of a few percent. Over one day on real quotes, the zero-cost agents hedge worse
+than delta, as §9 found in simulation at zero cost: close to delta (about 0.04
+shares apart on average), not better than it. The question §9 actually answers —
+whether the agent beats a tuned no-trade band once trading costs money — needs
+whole episodes (C), and those are what the archive is now collecting.
+
 ## 10. Does it hold up? Standard deep-RL evaluation, applied
 
 Sections 1–9 test whether the agent has an edge. This section tests the study

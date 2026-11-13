@@ -33,9 +33,15 @@
   function policyHedge(p, obs) {
     let h = obs.slice();
     if (p.obs_mean) h = h.map((v, i) => Math.max(-p.obs_clip, Math.min(p.obs_clip, (v - p.obs_mean[i]) / p.obs_std[i])));
-    for (const L of p.layers) {
-      h = L.W.map((row, j) => Math.tanh(row.reduce((s, w, k) => s + w * h[k], L.b[j])));
-    }
+    // Tanh after every trunk layer but the last, as rl_trader.models.networks.mlp
+    // builds it (the last hidden layer feeds the head un-activated).
+    p.layers.forEach((L, i) => {
+      const last = i === p.layers.length - 1;
+      h = L.W.map((row, j) => {
+        const z = row.reduce((s, w, k) => s + w * h[k], L.b[j]);
+        return last ? z : Math.tanh(z);
+      });
+    });
     const a = Math.tanh(p.head.W[0].reduce((s, w, k) => s + w * h[k], p.head.b[0]));
     return Math.min(1, Math.max(0, (a + 1) / 2));
   }

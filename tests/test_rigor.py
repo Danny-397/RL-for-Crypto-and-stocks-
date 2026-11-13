@@ -173,3 +173,27 @@ def test_per_ticker_split_overlaps_when_histories_start_apart():
     early_test_start = early.iloc[int(len(early) * 0.6)]
     late_train_end = late.iloc[int(len(late) * 0.6) - 1]
     assert late_train_end > early_test_start
+
+
+def test_a_v221_checkpoint_still_loads(tmp_path):
+    """Configs pickled before the repair fields existed must load as published.
+
+    Without the upgrade, the missing fields fall through to the v2.3.0 class
+    defaults, the agent is rebuilt with a separate critic trunk, and every old
+    checkpoint (the 40 hedging agents among them) fails to load.
+    """
+    import torch
+
+    from rl_trader.config.training_config import PUBLISHED_PPO, PPOConfig, published_ppo
+    from rl_trader.models.ppo_agent import PPOAgent
+
+    cfg = published_ppo(PPOConfig(hidden_sizes=(8, 8)))
+    agent = PPOAgent(4, 1, cfg)
+    for k in PUBLISHED_PPO:                      # what a v2.2.1 pickle looks like
+        vars(cfg).pop(k, None)
+    path = tmp_path / "old.pt"
+    agent.save(str(path))
+    loaded = PPOAgent.from_checkpoint(str(path))
+    assert loaded.ac.shared_trunk and loaded.ac.squash_mean
+    obs = torch.randn(4).numpy()
+    assert loaded.select_action(obs, deterministic=True)[0] == agent.select_action(obs, deterministic=True)[0]

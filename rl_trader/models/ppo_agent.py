@@ -227,6 +227,23 @@ class PPOAgent:
         if ckpt.get("obs_rms") is not None:
             self.obs_rms = RunningNormalizer.from_state_dict(ckpt["obs_rms"])
 
+    @staticmethod
+    def _upgrade_config(cfg):
+        """Fill settings an older checkpoint's config predates with what it used.
+
+        A pickled PPOConfig from before a field existed has no value for it, and
+        attribute lookup would fall through to the *current* class default. For
+        the PPO repairs (RESULTS.md §10a) that default changed in v2.3.0, so a
+        v2.2.1 checkpoint would rebuild the repaired architecture and fail to
+        load. Anything missing was, by construction, the published setting.
+        """
+        from ..config.training_config import PUBLISHED_PPO
+
+        for k, v in PUBLISHED_PPO.items():
+            if k not in vars(cfg):
+                setattr(cfg, k, v)
+        return cfg
+
     @classmethod
     def from_checkpoint(
         cls, path: str, device: torch.device | str = "cpu"
@@ -234,7 +251,7 @@ class PPOAgent:
         """Rebuild an agent directly from a checkpoint file."""
         device = torch.device(device) if isinstance(device, str) else device
         ckpt = torch.load(path, map_location=device, weights_only=False)
-        agent = cls(ckpt["obs_dim"], ckpt["act_dim"], ckpt["config"], device=device)
+        agent = cls(ckpt["obs_dim"], ckpt["act_dim"], cls._upgrade_config(ckpt["config"]), device=device)
         agent.ac.load_state_dict(ckpt["model_state"])
         if ckpt.get("obs_rms") is not None:
             agent.obs_rms = RunningNormalizer.from_state_dict(ckpt["obs_rms"])

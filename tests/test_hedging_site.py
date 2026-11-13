@@ -58,3 +58,50 @@ def test_the_browser_policy_matches_the_python_one():
     # The page's forward pass: normalise, tanh layers, tanh head, map to [0, 1].
     assert "Math.tanh(p.head.W[0]" in js and "(a + 1) / 2" in js and "obs_clip" in js
     assert 0.0 <= hedge <= 1.0
+
+
+def test_the_page_runs_the_same_policy_as_pytorch(tmp_path):
+    """docs/hedging-view.js must compute the hedge the trained network computes.
+
+    It once applied tanh after every trunk layer, including the last, which the
+    network does not; the page's hedges were off by up to 0.06 shares while the
+    published numbers (computed in PyTorch) were right. This runs the page's own
+    function in Node against a freshly exported policy.
+    """
+    import json
+    import shutil
+    import subprocess
+
+    import numpy as np
+    import pytest
+    import torch
+
+    if shutil.which("node") is None:
+        pytest.skip("node is not installed")
+    from rl_trader.hedging.core import OBS_DIM
+    from rl_trader.hedging.train import HedgeTrainConfig
+    from rl_trader.models.ppo_agent import PPOAgent
+    from tools.hedging_experiment import export_policy
+
+    torch.manual_seed(0)
+    agent = PPOAgent(OBS_DIM, 1, HedgeTrainConfig().ppo)
+    rng = np.random.default_rng(0)
+    for _ in range(100):
+        agent.observe(np.array([rng.normal(0, .05), rng.uniform(), rng.uniform(.1, .45), rng.uniform()]))
+    with torch.no_grad():                         # make the last layer matter
+        for p in agent.ac.parameters():
+            p.mul_(3.0)
+    pol = export_policy(agent)
+    obs = [[float(rng.normal(0, .05)), float(rng.uniform()), float(rng.uniform(.1, .45)), float(rng.uniform())]
+           for _ in range(50)]
+    src = open("docs/hedging-view.js", encoding="utf-8").read()
+    start = src.index("function policyHedge(p, obs) {")
+    end = src.index("\n  }\n", start) + 4
+    script = tmp_path / "run.js"
+    script.write_text("const f = (" + src[start:end].strip() + ");\n"
+                      f"const p = {json.dumps(pol)};\nconst obs = {json.dumps(obs)};\n"
+                      "console.log(JSON.stringify(obs.map(o => f(p, o))));\n", encoding="utf-8")
+    js = json.loads(subprocess.run(["node", str(script)], capture_output=True, text=True, check=True).stdout)
+    torch_h = [float(np.clip((agent.select_action(np.array(o), deterministic=True)[0][0] + 1) / 2, 0, 1))
+               for o in obs]
+    assert max(abs(a - b) for a, b in zip(js, torch_h)) < 1e-4

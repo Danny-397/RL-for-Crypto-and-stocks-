@@ -344,7 +344,11 @@ gap it tolerates to delta grows, a learned no-trade band. Against the tuned band
 simulation, where the band was tuned, the band wins below 1\pc. On real data the
 agent's worst 5\pc\ of months are milder than the band's at every cost; we do not test
 why. Prices are modelled, only the underlying is used to hedge, and rates and
-dividends are omitted.
+dividends are omitted. A first check against real SPY option quotes finds the
+volatility assumption close (at-the-money implied volatility $\approx 0.86\times$
+VIX) and the zero-cost agents hedging one-day moves somewhat worse than delta, as in
+simulation; full episodes on real quotes are accumulating and are reported in the
+repository as they complete.
 
 \subsection{RQ6: Does the study hold up?}\label{sec:rigor}
 A negative result is only as good as the machinery behind it, so we applied to the

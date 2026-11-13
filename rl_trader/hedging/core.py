@@ -137,7 +137,7 @@ class VecHedgeEnv:
     ``x - risk_aversion / 2 * x**2`` with ``x = 100 * dw`` (percent of notional).
     """
 
-    def __init__(self, S: np.ndarray, sigma: np.ndarray, spec: HedgeSpec):
+    def __init__(self, S: np.ndarray, sigma: np.ndarray, spec: HedgeSpec, V: Optional[np.ndarray] = None):
         S = np.asarray(S, dtype=np.float64)
         sigma = np.asarray(sigma, dtype=np.float64)
         if S.shape != sigma.shape or S.shape[1] != spec.n_steps + 1:
@@ -146,7 +146,14 @@ class VecHedgeEnv:
         self.n = S.shape[0]
         tau = (spec.n_steps - np.arange(spec.n_steps + 1)) * spec.dt
         self.tau = np.broadcast_to(tau, S.shape)
-        self.V = bs_call(S, spec.strike, self.tau, sigma, spec.rate)
+        # The option is marked at Black-Scholes unless real prices are supplied
+        # (tools/hedging_quotes.py passes market mid quotes, in units of the strike).
+        if V is None:
+            self.V = bs_call(S, spec.strike, self.tau, sigma, spec.rate)
+        else:
+            self.V = np.asarray(V, dtype=np.float64)
+            if self.V.shape != S.shape:
+                raise ValueError('V must have the shape of S')
         self.reset()
 
     def reset(self) -> np.ndarray:
