@@ -86,10 +86,44 @@ def test_published_budget_checkpoint_is_the_published_run():
     assert 150_000 // ROLLOUT == 73
 
 
-def test_bootstrap_truncation_is_off_by_default():
-    from rl_trader.config.training_config import PPOConfig
+def test_defaults_are_the_repaired_ppo():
+    from rl_trader.config.training_config import REPAIRED_PPO, PPOConfig
 
-    assert PPOConfig().bootstrap_truncation is False
+    cfg = PPOConfig()
+    assert {k: getattr(cfg, k) for k in REPAIRED_PPO} == REPAIRED_PPO
+
+
+def test_published_switch_restores_the_v221_ppo(monkeypatch):
+    from rl_trader.config.training_config import PUBLISHED_PPO, PPOConfig
+
+    monkeypatch.setenv("RL_TRADER_PUBLISHED", "1")
+    cfg = PPOConfig()
+    assert {k: getattr(cfg, k) for k in PUBLISHED_PPO} == PUBLISHED_PPO
+
+
+def test_published_switch_restores_the_per_ticker_split(monkeypatch, tmp_path):
+    # Two series on different dates: the default cuts both on one date, the
+    # published switch cuts each on its own history.
+    from tools.real_significance import load_real_basket
+
+    d = tmp_path / "crypto"
+    d.mkdir()
+    # Same last date, different first dates (BBB starts 600 days later).
+    for name, start, n, seed in (("AAA", "2015-01-01", 1500, 1), ("BBB", "2016-08-23", 900, 2)):
+        _frame(start, n, seed).to_csv(d / f"{name}.csv", index=False)
+    common = load_real_basket(str(tmp_path), "crypto")
+    assert len(common["AAA"]["test"]) == len(common["BBB"]["test"])
+    monkeypatch.setenv("RL_TRADER_PUBLISHED", "1")
+    per = load_real_basket(str(tmp_path), "crypto")
+    assert len(per["AAA"]["test"]) != len(per["BBB"]["test"])
+
+
+def test_hedging_keeps_its_published_ppo():
+    from rl_trader.config.training_config import PUBLISHED_PPO
+    from rl_trader.hedging.train import HedgeTrainConfig
+
+    ppo = HedgeTrainConfig().ppo
+    assert {k: getattr(ppo, k) for k in PUBLISHED_PPO} == PUBLISHED_PPO
 
 
 def test_training_callback_sees_every_update():
