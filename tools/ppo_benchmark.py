@@ -60,7 +60,19 @@ TASKS = {
     "HalfCheetah-v5": 1_000_000,
     "Hopper-v5": 1_000_000,
 }
-ARMS = ("ours", "ours_tb", "sb3")
+# Diagnostic arms (added after the pre-registered run found `ours` behind `sb3`;
+# exploratory, see RESULTS.md §12): each changes one thing from `ours`, and
+# `ours_fixed` changes all of them.
+VARIANTS = {
+    "ours": {},
+    "ours_tb": {"bootstrap_truncation": True},
+    "ours_sep": {"shared_trunk": False},
+    "ours_norm": {"normalize_at_collection": True},
+    "ours_nosquash": {"squash_mean": False},
+    "ours_fixed": {"bootstrap_truncation": True, "shared_trunk": False,
+                   "normalize_at_collection": True, "squash_mean": False},
+}
+ARMS = (*VARIANTS, "sb3")
 EVAL_EVERY = 10_000
 EVAL_EPISODES = 10
 FINAL_EVALS = 3
@@ -113,7 +125,7 @@ def _evaluate(act, env_id: str, seed: int, episodes: int = EVAL_EPISODES) -> flo
 
 
 # ── this repository's PPO ─────────────────────────────────────────────────────
-def train_ours(env_id: str, seed: int, steps: int, hp: HP, bootstrap_truncation: bool) -> dict:
+def train_ours(env_id: str, seed: int, steps: int, hp: HP, variant: dict) -> dict:
     import torch
 
     from rl_trader.config.training_config import PPOConfig
@@ -128,6 +140,7 @@ def train_ours(env_id: str, seed: int, steps: int, hp: HP, bootstrap_truncation:
         max_grad_norm=hp.max_grad_norm, update_epochs=hp.update_epochs,
         minibatch_size=hp.minibatch_size, hidden_sizes=tuple(hp.hidden_sizes),
         init_log_std=hp.init_log_std, normalize_obs=True, obs_clip=hp.obs_clip,
+        **{k: v for k, v in variant.items() if k != "bootstrap_truncation"},
     )
     env = make_env(env_id, seed)
     obs_dim, act_dim = env.observation_space.shape[0], env.action_space.shape[0]
@@ -147,10 +160,10 @@ def train_ours(env_id: str, seed: int, steps: int, hp: HP, bootstrap_truncation:
             action, logp, value = agent.select_action(obs)
             nxt, reward, term, trunc, _ = env.step(np.clip(action, -1.0, 1.0))
             reward = float(reward)
-            if bootstrap_truncation and trunc and not term:
+            if variant.get("bootstrap_truncation") and trunc and not term:
                 reward += hp.gamma * agent.value(nxt)
             done = term or trunc
-            buf.add(obs, action, logp, reward, value, done)
+            buf.add(agent.buffer_obs(obs), action, logp, reward, value, done)
             obs = nxt
             step += 1
             if done:
@@ -210,7 +223,7 @@ def run_one(env_id: str, arm: str, seed: int, steps: int | None, out_dir: str) -
     if arm == "sb3":
         res = train_sb3(env_id, seed, steps, hp)
     else:
-        res = train_ours(env_id, seed, steps, hp, bootstrap_truncation=(arm == "ours_tb"))
+        res = train_ours(env_id, seed, steps, hp, VARIANTS[arm])
     curve = res["curve"]
     final = float(np.mean([r for _, r in curve[-FINAL_EVALS:]])) if curve else float("nan")
     rec = {"env": env_id, "arm": arm, "seed": seed, "steps": steps, "final": final,
@@ -265,10 +278,11 @@ def aggregate(run_dir: str, out: str) -> dict:
                 "curve_high": [round(float(x), 2) for x in np.percentile(curves, 75, axis=0)],
                 "minutes": round(float(np.mean([r["seconds"] for r in rs])) / 60, 1),
             }
-        if "ours" in task["arms"] and "sb3" in task["arms"]:
-            task["ours_vs_sb3"] = two_sample_diff(task["arms"]["ours"]["finals"], task["arms"]["sb3"]["finals"])
-        if "ours_tb" in task["arms"] and "ours" in task["arms"]:
-            task["tb_vs_ours"] = two_sample_diff(task["arms"]["ours_tb"]["finals"], task["arms"]["ours"]["finals"])
+        arms = task["arms"]
+        task["vs_sb3"] = {a: two_sample_diff(arms[a]["finals"], arms["sb3"]["finals"])
+                          for a in VARIANTS if a in arms and "sb3" in arms}
+        task["vs_ours"] = {a: two_sample_diff(arms[a]["finals"], arms["ours"]["finals"])
+                           for a in VARIANTS if a in arms and a != "ours" and "ours" in arms}
         result["tasks"][env_id] = task
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     with open(out, "w", encoding="utf-8") as fh:

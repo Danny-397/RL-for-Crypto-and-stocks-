@@ -27,7 +27,7 @@ env:
 jobs:
   benchmark:
     # Stage 1: is this PPO correct? 4 tasks x 3 arms x 10 seeds.
-    if: (github.event_name == 'push' && !contains(github.ref_name, 'trading')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'trading')
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'trading') && !contains(github.ref_name, 'diagnose')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'trading')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -54,7 +54,7 @@ jobs:
   trading:
     # Stages 2-4: other implementations/algorithms, training budget, time-limit
     # handling, and the hindsight-free universe. Needs the archived data.
-    if: (github.event_name == 'push' && !contains(github.ref_name, 'benchmark')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'benchmark')
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'benchmark') && !contains(github.ref_name, 'diagnose')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'benchmark')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -96,8 +96,68 @@ jobs:
           name: trading-${{ matrix.universe }}-${{ matrix.market }}-${{ matrix.arm }}-${{ matrix.seeds }}
           path: results/trading_rigor/
 
+  diagnose:
+    # Added after the registered run: find why `ours` trails SB3 (one change per
+    # arm), and re-run the trading study with the repaired PPO.
+    if: github.event_name == 'push' && contains(github.ref_name, 'diagnose')
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [Pendulum-v1, InvertedPendulum-v5, HalfCheetah-v5, Hopper-v5]
+        arm: [ours_sep, ours_norm, ours_nosquash, ours_fixed]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e . "stable-baselines3==2.9.2" "gymnasium[mujoco]"
+      - name: Train 10 seeds
+        run: python tools/ppo_benchmark.py run-many --env ${{ matrix.env }} --arm ${{ matrix.arm }} --seeds 0-9 --jobs 4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ matrix.env }}-${{ matrix.arm }}
+          path: results/ppo_benchmark/
+
+  retrade:
+    if: github.event_name == 'push' && contains(github.ref_name, 'diagnose')
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        market: [stock, crypto]
+        seeds: ["200-204", "205-209"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e .
+      - name: Unpack the archived data
+        env:
+          KEY: ${{ secrets.RIGOR_DATA_KEY }}
+        run: |
+          test -n "$KEY" || { echo "RIGOR_DATA_KEY is not set"; exit 1; }
+          gpg --batch --quiet --pinentry-mode loopback --passphrase "$KEY" -d data/encrypted/rigor-data-2026-11-13.tgz.gpg > /tmp/d.tgz
+          mkdir -p data/raw && tar xzf /tmp/d.tgz -C data/raw stock crypto
+          python tools/fetch_data.py --verify --out data/raw --snapshot docs/preregistration/2026-10-28-fresh-seeds.SNAPSHOT.json
+      - name: Train
+        run: python tools/trading_rigor.py run-many --market ${{ matrix.market }} --arm ours_fixed --seeds ${{ matrix.seeds }} --jobs 5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trading-main-${{ matrix.market }}-ours_fixed-${{ matrix.seeds }}
+          path: results/trading_rigor/
+
   aggregate:
-    needs: [benchmark, trading]
+    needs: [benchmark, trading, diagnose, retrade]
     if: always()
     runs-on: ubuntu-latest
     steps:

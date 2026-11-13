@@ -76,6 +76,9 @@ class PPOConfig:
     obs_clip: float = 10.0            # clip normalised observations to +/- this many std
     normalize_reward: bool = False    # running-std reward scaling (off: return_scale handles it)
     bootstrap_truncation: bool = False  # bootstrap V(s) when data runs out (off: as published)
+    shared_trunk: bool = True         # one trunk for policy and value (on: as published)
+    squash_mean: bool = True          # tanh on the policy mean (on: as published)
+    normalize_at_collection: bool = False  # store obs normalised as the policy saw them
 
 
 @dataclass

@@ -34,6 +34,8 @@ from rl_trader.models.ppo_agent import PPOAgent
 
 def export(market: str, ckpt_dir: str = "checkpoints", out_dir: str = "server/models") -> None:
     agent = PPOAgent.from_checkpoint(os.path.join(ckpt_dir, f"ppo_{market}.pt"))
+    if not getattr(agent.ac, "shared_trunk", True) or not getattr(agent.ac, "squash_mean", True):
+        raise SystemExit("export supports the published architecture only (shared trunk, tanh mean)")
     trunk_linears = [m for m in agent.ac.trunk if isinstance(m, nn.Linear)]
 
     arrays = {"n_trunk": np.array(len(trunk_linears)),

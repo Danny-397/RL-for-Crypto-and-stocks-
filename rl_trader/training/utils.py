@@ -244,7 +244,7 @@ def run_ppo_training(
             # value of the state it was cut at instead of treating it as final.
             if truncated and not terminated and getattr(config.ppo, "bootstrap_truncation", False):
                 train_reward += config.ppo.gamma * agent.value(next_obs)
-            buffer.add(obs, action, log_prob, train_reward, value, done)
+            buffer.add(agent.buffer_obs(obs), action, log_prob, train_reward, value, done)
             obs = next_obs
             ep_return += reward
             if done:

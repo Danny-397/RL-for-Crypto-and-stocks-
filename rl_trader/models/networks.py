@@ -58,10 +58,21 @@ class ActorCritic(nn.Module):
         act_dim: int,
         hidden_sizes: Tuple[int, ...] = (128, 128),
         init_log_std: float = -0.5,
+        shared_trunk: bool = True,
+        squash_mean: bool = True,
     ) -> None:
         super().__init__()
         self.trunk = mlp([obs_dim, *hidden_sizes], activation=nn.Tanh)
         self.trunk.apply(lambda m: _orthogonal_init(m, gain=2.0**0.5))
+        # Published configuration: one trunk feeds both heads. With
+        # ``shared_trunk=False`` the critic gets its own trunk (as Stable-Baselines3
+        # and most continuous-control PPOs do), so value-loss gradients cannot
+        # reshape the policy's features. See RESULTS.md §12.
+        self.shared_trunk = shared_trunk
+        self.squash_mean = squash_mean
+        if not shared_trunk:
+            self.value_trunk = mlp([obs_dim, *hidden_sizes], activation=nn.Tanh)
+            self.value_trunk.apply(lambda m: _orthogonal_init(m, gain=2.0**0.5))
 
         last = hidden_sizes[-1]
         # Small policy-head gain keeps the initial policy near-deterministic and
@@ -73,9 +84,12 @@ class ActorCritic(nn.Module):
     def forward(self, obs: torch.Tensor) -> Tuple[Normal, torch.Tensor]:
         """Return the action distribution and the state-value estimate."""
         features = self.trunk(obs)
-        mean = torch.tanh(self.policy_mean(features))
+        mean = self.policy_mean(features)
+        if self.squash_mean:
+            mean = torch.tanh(mean)
         std = torch.exp(self.log_std).expand_as(mean)
-        value = self.value_head(features).squeeze(-1)
+        vfeat = features if self.shared_trunk else self.value_trunk(obs)
+        value = self.value_head(vfeat).squeeze(-1)
         return Normal(mean, std), value
 
     @torch.no_grad()

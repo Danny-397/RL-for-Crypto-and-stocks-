@@ -54,6 +54,8 @@ class PPOAgent:
             act_dim,
             hidden_sizes=config.hidden_sizes,
             init_log_std=config.init_log_std,
+            shared_trunk=getattr(config, "shared_trunk", True),
+            squash_mean=getattr(config, "squash_mean", True),
         ).to(self.device)
         self.optimizer = torch.optim.Adam(self.ac.parameters(), lr=config.learning_rate)
 
@@ -71,6 +73,24 @@ class PPOAgent:
 
     def _norm(self, observation: np.ndarray) -> np.ndarray:
         return self.obs_rms.normalize(observation) if self.obs_rms is not None else observation
+
+    @property
+    def _frozen_norm(self) -> bool:
+        return self.obs_rms is not None and getattr(self.cfg, "normalize_at_collection", False)
+
+    def buffer_obs(self, observation: np.ndarray) -> np.ndarray:
+        """What the rollout buffer should store for ``observation``.
+
+        Published behaviour: the raw observation, normalised at update time with
+        the statistics as they stand *after* the rollout, which differ from the
+        ones the action was sampled under, so the first PPO epoch starts with a
+        probability ratio that is not 1. With ``normalize_at_collection`` the
+        observation is stored already normalised, exactly as the policy saw it
+        (what Stable-Baselines3's VecNormalize does).
+        """
+        if self._frozen_norm:
+            return np.asarray(self._norm(observation), dtype=np.float32)
+        return observation
 
     # ------------------------------------------------------------------ #
     # Acting                                                             #
@@ -117,7 +137,7 @@ class PPOAgent:
         # The buffer stores *raw* observations; normalise them here with the stats
         # accumulated over the rollout (frozen for the duration of the update).
         norm_mean = norm_std = None
-        if self.obs_rms is not None:
+        if self.obs_rms is not None and not self._frozen_norm:
             norm_mean = torch.as_tensor(self.obs_rms.mean, dtype=torch.float32, device=self.device)
             norm_std = torch.as_tensor(
                 np.sqrt(self.obs_rms.var + self.obs_rms.epsilon), dtype=torch.float32, device=self.device
