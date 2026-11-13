@@ -67,7 +67,7 @@ class ActorCritic(nn.Module):
         # Published configuration: one trunk feeds both heads. With
         # ``shared_trunk=False`` the critic gets its own trunk (as Stable-Baselines3
         # and most continuous-control PPOs do), so value-loss gradients cannot
-        # reshape the policy's features. See RESULTS.md §12.
+        # reshape the policy's features. See RESULTS.md §10.
         self.shared_trunk = shared_trunk
         self.squash_mean = squash_mean
         if not shared_trunk:

@@ -1,6 +1,6 @@
 name: Rigor experiments
 
-# The heavy runs behind RESULTS.md §12 (pre-registered in
+# The heavy runs behind RESULTS.md §10 (pre-registered in
 # docs/preregistration/2026-11-13-rigor.md). Hours of CPU, so never on PRs:
 # push a branch named experiments/<anything> (a name containing 'benchmark'
 # or 'trading' runs only that suite), or dispatch by hand once this
@@ -159,7 +159,7 @@ jobs:
 
   leakfree:
     # Added after finding that per-ticker crypto splits overlap in calendar time
-    # (RESULTS.md §12): the crypto study again, every coin cut on one date.
+    # (RESULTS.md §10): the crypto study again, every coin cut on one date.
     if: github.event_name == 'push' && contains(github.ref_name, 'leakfree')
     runs-on: ubuntu-latest
     timeout-minutes: 350

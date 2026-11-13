@@ -45,7 +45,7 @@ BASKETS = {
     "stock": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "JPM", "JNJ", "XOM", "SPY", "QQQ"],
     "crypto": ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "LTC-USD", "ADA-USD"],
 }
-# A hindsight-free stock universe for the survivorship check (RESULTS.md §10b):
+# A hindsight-free stock universe for the survivorship check (RESULTS.md §10e):
 # the 30 Dow Jones Industrial Average members on the first day of the stock data
 # (2016-08-29; the list in force 2015-03-19 to 2017-09-01), chosen by an index
 # committee at the time rather than by this project in 2026. Two have since been

@@ -49,7 +49,7 @@ BUDGETS = [25_000, 50_000, 100_000, 150_000, 300_000, 600_000, 1_000_000]
 PUBLISHED = 150_000
 ARMS = ("ours", "ours_tb", "ours_fixed", "ours_repaired", "sb3_ppo", "sb3_sac")
 # ``ours_fixed``: the PPO with every repair from the benchmark diagnosis
-# (RESULTS.md §12): separate critic trunk, observations stored as the policy saw
+# (RESULTS.md §10): separate critic trunk, observations stored as the policy saw
 # them, no tanh on the mean, and time-limit bootstrapping.
 FIXED = {"bootstrap_truncation": True, "shared_trunk": False,
          "normalize_at_collection": True, "squash_mean": False}

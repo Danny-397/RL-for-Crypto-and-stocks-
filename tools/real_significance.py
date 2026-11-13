@@ -40,7 +40,7 @@ def common_split_date(frames: dict, train_frac: float = 0.6):
     """The date that splits the window *every* ticker trades in at ``train_frac``.
 
     Used by ``split="common"`` so that no ticker's training period overlaps any
-    ticker's test period. See RESULTS.md §12: with per-ticker splits, tickers
+    ticker's test period. See RESULTS.md §10: with per-ticker splits, tickers
     whose history starts later are trained on dates that are already test dates
     for tickers whose history starts earlier.
     """

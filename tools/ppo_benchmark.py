@@ -61,7 +61,7 @@ TASKS = {
     "Hopper-v5": 1_000_000,
 }
 # Diagnostic arms (added after the pre-registered run found `ours` behind `sb3`;
-# exploratory, see RESULTS.md §12): each changes one thing from `ours`, and
+# exploratory, see RESULTS.md §10): each changes one thing from `ours`, and
 # `ours_fixed` changes all of them.
 VARIANTS = {
     "ours": {},

@@ -760,6 +760,246 @@ def hedging_real() -> Optional[str]:
     return _hedging_table("real")
 
 
+# --------------------------------------------------------------------------- #
+# §10: does the study hold up to standard deep-RL evaluation practice?         #
+# --------------------------------------------------------------------------- #
+_BENCH_ORDER = ("Pendulum-v1", "InvertedPendulum-v5", "HalfCheetah-v5", "Hopper-v5")
+_DIAG_ROWS = (
+    ("ours", "As published"),
+    ("ours_tb", "+ time-limit bootstrapping"),
+    ("ours_sep", "+ separate critic trunk"),
+    ("ours_norm", "+ observations stored as seen"),
+    ("ours_nosquash", "+ no tanh on the mean"),
+    ("ours_vloss", "+ SB3's value loss"),
+    ("ours_eps", "+ Adam ε = 1e-5"),
+    ("ours_mbadv", "+ per-minibatch advantages"),
+    ("ours_fixed", "first four together"),
+    ("ours_sb3like", "**all seven (repaired)**"),
+    ("sb3", "Stable-Baselines3 PPO"),
+)
+
+
+def _p(p: float) -> str:
+    """``p = 0.21`` or ``p < 0.0001``."""
+    return "p < 0.0001" if p < 1e-4 else f"p = {pval(p)}"
+
+
+def _score(v: float) -> str:
+    return ("−" if v < 0 else "") + f"{abs(v):,.0f}"
+
+
+def _iqm_ci(a: dict) -> str:
+    return f"{_score(a['iqm'])} `[{_score(a['iqm_low'])}, {_score(a['iqm_high'])}]`"
+
+
+def rigor_benchmark() -> Optional[str]:
+    """The PPO against SB3 on four standard tasks, as published and repaired."""
+    b = _asset("ppo_benchmark.json")
+    if not b:
+        return None
+    rows = [
+        "| Task | Steps | Random policy | This PPO, as published | Repaired | Stable-Baselines3 | Repaired − SB3 |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for t in _BENCH_ORDER:
+        task = b["tasks"].get(t)
+        if not task or not all(k in task["arms"] for k in ("ours", "ours_sb3like", "sb3")):
+            continue
+        a = task["arms"]
+        d = task["vs_sb3"]["ours_sb3like"]
+        flag = " ↓" if task["vs_sb3"]["ours"]["high"] < 0 else ""
+        rflag = " ↓" if d["high"] < 0 else ""
+        rows.append(
+            f"| {t} | {task['steps'] // 1000:,}k | {_score(task['random'])} | {_iqm_ci(a['ours'])}{flag} | "
+            f"{_iqm_ci(a['ours_sb3like'])}{rflag} | {_iqm_ci(a['sb3'])} | {_score(d['diff'])} "
+            f"`[{_score(d['low'])}, {_score(d['high'])}]`, {_p(d['p'])} |")
+    n = len(b["tasks"][_BENCH_ORDER[0]]["arms"]["ours"]["seeds"])
+    rows += ["", f"*Interquartile mean (IQM) of the final return over {n} seeds, with a 95% bootstrap "
+             "CI; final return is the mean of the last three evaluations of 10 deterministic "
+             "episodes. ↓: significantly worse than SB3 (the CI of the "
+             "difference of means lies below zero). The last column is a difference of means "
+             "with a bootstrap CI and a permutation p. All arms use the trading study's "
+             "hyper-parameters, not values tuned for these tasks.*"]
+    return "\n".join(rows)
+
+
+def rigor_diagnosis() -> Optional[str]:
+    """One change at a time from the published PPO: IQM per task."""
+    b = _asset("ppo_benchmark.json")
+    if not b:
+        return None
+    tasks = [t for t in _BENCH_ORDER if t in b["tasks"]]
+    rows = ["| Change from the published PPO | " + " | ".join(t.split("-")[0] for t in tasks) + " |",
+            "|---|" + "---:|" * len(tasks)]
+    for arm, label in _DIAG_ROWS:
+        cells = []
+        for t in tasks:
+            a = b["tasks"][t]["arms"].get(arm)
+            if not a:
+                cells.append("–")
+                continue
+            vs = b["tasks"][t]["vs_sb3"].get(arm)
+            mark = " ↓" if vs and vs["high"] < 0 else ""
+            cells.append(_score(a["iqm"]) + mark)
+        rows.append(f"| {label} | " + " | ".join(cells) + " |")
+    rows += ["", "*IQM of final return over 10 seeds. ↓: significantly worse than "
+             "Stable-Baselines3 (CI of the difference of means below zero). Every row but the "
+             "last two is this repository's PPO with one change, or the stated set.*"]
+    return "\n".join(rows)
+
+
+_TRADE_ARMS = (("ours", "PPO as published"), ("ours_repaired", "PPO repaired"),
+               ("sb3_ppo", "SB3 PPO"), ("sb3_sac", "SB3 SAC"))
+_TRADE_GROUPS = (("main/stock", "Stocks"),
+                 ("main/crypto", "Crypto, per-coin cut (as published; leaks)"),
+                 ("main-common/crypto", "Crypto, one calendar cut (leak-free)"))
+
+
+def _cell(arm: Optional[dict], budget: int) -> str:
+    x = (arm or {}).get("budgets", {}).get(str(budget))
+    if not x:
+        return "–"
+    return f"{pct(x['iqm'])} ({_p(x['p_vs_bh'])})"
+
+
+def rigor_implementations() -> Optional[str]:
+    """Every implementation and algorithm on the trading study at the published budget."""
+    tr = _asset("trading_rigor.json")
+    if not tr:
+        return None
+    pub = tr["published"]
+    rows = ["| Market | Buy & hold | " + " | ".join(label for _, label in _TRADE_ARMS) + " |",
+            "|---|---:|" + "---:|" * len(_TRADE_ARMS)]
+    for key, label in _TRADE_GROUPS:
+        g = tr["groups"].get(key)
+        if not g:
+            continue
+        rows.append(f"| {label} | {pct(g['bh_mean'])} | "
+                    + " | ".join(_cell(g["arms"].get(a), pub) for a, _ in _TRADE_ARMS) + " |")
+    rows += ["", f"*Basket-mean held-out return at {pub // 1000}k steps (the published budget), "
+             "IQM over seeds 200–209; p from a paired permutation test of agent vs. buy-and-hold "
+             "across the held-out tickers (10 stocks, 6 coins). Same archived data (2026-10-28 "
+             "snapshot) and 60/40 split as the pre-registered replication.*"]
+    return "\n".join(rows)
+
+
+def rigor_budget() -> Optional[str]:
+    """Held-out return as training continues, 25k to 1M steps."""
+    tr = _asset("trading_rigor.json")
+    if not tr:
+        return None
+    cols = [("main/stock", "ours", "Stocks, PPO"), ("main/stock", "ours_repaired", "Stocks, repaired"),
+            ("main/stock", "sb3_ppo", "Stocks, SB3"),
+            ("main-common/crypto", "ours", "Crypto, PPO"),
+            ("main-common/crypto", "ours_repaired", "Crypto, repaired"),
+            ("main-common/crypto", "sb3_ppo", "Crypto, SB3")]
+    cols = [c for c in cols if c[1] in tr["groups"].get(c[0], {}).get("arms", {})]
+    rows = ["| Steps | " + " | ".join(c[2] for c in cols) + " |", "|---:|" + "---:|" * len(cols)]
+    for b in tr["budgets"]:
+        cells = []
+        for g, arm, _ in cols:
+            x = tr["groups"][g]["arms"][arm]["budgets"].get(str(b))
+            cells.append(pct(x["iqm"]) if x else "–")
+        mark = " *(published)*" if b == tr["published"] else ""
+        rows.append(f"| {b // 1000:,}k{mark} | " + " | ".join(cells) + " |")
+    bh = {g: tr["groups"][g]["bh_mean"] for g in ("main/stock", "main-common/crypto") if g in tr["groups"]}
+    pos = [(g, arm, b, x["p_vs_bh"]) for g, arm, _ in cols
+           for b, x in tr["groups"][g]["arms"][arm]["budgets"].items() if x["diff_vs_bh"] > 0]
+    note = ("no arm is ahead of buy-and-hold at any budget" if not pos else
+            f"{len(pos)} arm-budget cells are ahead of buy-and-hold; the smallest p among them is "
+            f"{pval(min(p for *_, p in pos))}")
+    rows += ["", f"*Basket-mean held-out return (IQM over 10 seeds) scored during one long run per "
+             f"seed; the PPO has no learning-rate schedule, so the checkpoint at n steps is a run "
+             f"of n steps. Buy-and-hold: stocks {pct(bh.get('main/stock', 0))}, crypto (leak-free "
+             f"cut) {pct(bh.get('main-common/crypto', 0))}. Across these columns {note}.*"]
+    return "\n".join(rows)
+
+
+def rigor_survivorship() -> Optional[str]:
+    """The hand-picked basket against a universe chosen in 2016 by an index committee."""
+    tr = _asset("trading_rigor.json")
+    if not tr or "pit/stock" not in tr["groups"]:
+        return None
+    pub = str(tr["published"])
+    rows = ["| Universe | Tickers | Buy & hold | Agent (IQM, 95% CI) | Agent − B&H | p | Tickers where agent beats B&H |",
+            "|---|---:|---:|---:|---:|---:|---:|"]
+    for key, label in (("main/stock", "This study's basket (chosen 2026)"),
+                       ("pit/stock", "Dow 30 of 2016-08-29 (chosen then)")):
+        g = tr["groups"][key]
+        x = g["arms"]["ours"]["budgets"][pub]
+        rows.append(f"| {label} | {len(g['tickers'])} | {pct(g['bh_mean'])} | {pct(x['iqm'])} "
+                    f"`[{pct(x['iqm_low'])}, {pct(x['iqm_high'])}]` | {pct(x['diff_vs_bh'])} | "
+                    f"{_p(x['p_vs_bh'])[4:] if x['p_vs_bh'] >= 1e-4 else '< 0.0001'} | {x['win_rate']:.0%} |")
+    rows += ["", "*Published PPO, 150k steps, seeds 200–209, each ticker scored on its held-out "
+             "40%. The Dow list is the one in force from 2015-03-19 to 2017-09-01; United "
+             "Technologies and DuPont are carried by their successor listings (RTX, DD). Its data "
+             "run 2016-11-14 to 2026-08-28; SPY is the market index only.*"]
+    return "\n".join(rows)
+
+
+def multiple_testing() -> Optional[str]:
+    """Every p-value the paper reports, with Holm per question and across the paper."""
+    mt = _asset("multiple_testing.json")
+    if not mt:
+        return None
+    rows = ["| Section | Test | Claim | p | Holm, per question | Holm, whole paper |",
+            "|---|---|---|---:|---:|---:|"]
+    for r in mt["rows"]:
+        def adj(p: float, ok: bool) -> str:
+            return f"**{pval(p)}**" if ok else pval(p)
+        rows.append(f"| {r['family']} | {r['test']} | {r['claimed']} | {pval(r['p'])} | "
+                    f"{adj(r['p_family'], r['survives_family'] and r['significant_raw'])} | "
+                    f"{adj(r['p_paper'], r['survives_paper'] and r['significant_raw'])} |")
+    rows += ["", f"*{mt['raw_significant']} of {mt['n_tests']} tests are significant at 0.05 "
+             f"unadjusted, {mt['survive_family']} after Holm within their question, "
+             f"{mt['survive_paper']} after Holm across all {mt['n_tests']}. Bold: still significant "
+             "after adjustment. For a claim of no difference, adjustment only strengthens it.*"]
+    return "\n".join(rows)
+
+
+def tex_rigor_bench() -> Optional[str]:
+    """Body rows for tab:bench."""
+    b = _asset("ppo_benchmark.json")
+    if not b:
+        return None
+    rows = []
+    for t in _BENCH_ORDER:
+        task = b["tasks"].get(t)
+        if not task or not all(k in task["arms"] for k in ("ours", "ours_sb3like", "sb3")):
+            continue
+        a = task["arms"]
+
+        def f(v: float, worse: bool = False) -> str:
+            mark = r"^\downarrow" if worse else ""
+            return f"${'-' if v < 0 else ''}{abs(v):,.0f}{mark}$".replace(",", "{,}")
+        vs = task["vs_sb3"]
+        rows.append(f"{t} & {f(task['random'])} & {f(a['ours']['iqm'], vs['ours']['high'] < 0)} & "
+                    f"{f(a['ours_sb3like']['iqm'], vs['ours_sb3like']['high'] < 0)} & "
+                    f"{f(a['sb3']['iqm'])}" + r"\\")
+    return "\n".join(rows)
+
+
+def tex_rigor_trading() -> Optional[str]:
+    """Body rows for tab:robust."""
+    tr = _asset("trading_rigor.json")
+    if not tr:
+        return None
+    pub = str(tr["published"])
+    names = {"main/stock": "Stocks", "main/crypto": "Crypto, leaky",
+             "main-common/crypto": "Crypto, leak-free"}
+    rows = []
+    for key, label in names.items():
+        g = tr["groups"].get(key)
+        if not g:
+            continue
+        cells = []
+        for arm, _ in _TRADE_ARMS:
+            x = g["arms"].get(arm, {}).get("budgets", {}).get(pub)
+            cells.append(_tex_pc(x["iqm"], 0) if x else "--")
+        rows.append(f"{label} & {_tex_pc(g['bh_mean'], 0)} & " + " & ".join(cells) + r"\\")
+    return "\n".join(rows)
+
+
 BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "significance-full": significance_full,
     "significance-brief": significance_brief,
@@ -786,6 +1026,14 @@ BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "hedging-sim": hedging_sim,
     "tex-hedging": tex_hedging,
     "hedging-real": hedging_real,
+    "rigor-benchmark": rigor_benchmark,
+    "rigor-diagnosis": rigor_diagnosis,
+    "rigor-implementations": rigor_implementations,
+    "rigor-budget": rigor_budget,
+    "rigor-survivorship": rigor_survivorship,
+    "multiple-testing": multiple_testing,
+    "tex-rigor-bench": tex_rigor_bench,
+    "tex-rigor-trading": tex_rigor_trading,
 }
 
 TARGETS = ("README.md", "RESULTS.md", os.path.join("paper", "rl_trader.tex"))
