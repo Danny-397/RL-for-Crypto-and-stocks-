@@ -11,8 +11,30 @@ higher effective costs, so its defaults differ from equities.
 
 from __future__ import annotations
 
+import os
 from dataclasses import asdict, dataclass, field
 from typing import Tuple
+
+# The seven PPO implementation details RESULTS.md §10a found to matter. The
+# repaired values are the defaults from v2.3.0; the published values are what
+# every result up to v2.2.1 was produced with.
+REPAIRED_PPO = {
+    "bootstrap_truncation": True, "shared_trunk": False, "normalize_at_collection": True,
+    "squash_mean": False, "value_loss": "clipped", "adam_eps": 1e-5, "advantage_norm": "minibatch",
+}
+PUBLISHED_PPO = {
+    "bootstrap_truncation": False, "shared_trunk": True, "normalize_at_collection": False,
+    "squash_mean": True, "value_loss": "max", "adam_eps": 1e-8, "advantage_norm": "rollout",
+}
+
+
+def published_mode() -> bool:
+    """True when ``RL_TRADER_PUBLISHED=1``: reproduce the v2.2.1 numbers.
+
+    Restores the published PPO (every ``PPOConfig`` built while it is set) and the
+    published per-ticker real-data split (``tools/real_significance.load_real_basket``).
+    """
+    return os.environ.get("RL_TRADER_PUBLISHED", "").strip().lower() in ("1", "true", "yes")
 
 
 @dataclass
@@ -75,31 +97,39 @@ class PPOConfig:
     normalize_obs: bool = True        # running mean/std normalisation of observations
     obs_clip: float = 10.0            # clip normalised observations to +/- this many std
     normalize_reward: bool = False    # running-std reward scaling (off: return_scale handles it)
-    bootstrap_truncation: bool = False  # bootstrap V(s) when data runs out (off: as published)
-    shared_trunk: bool = True         # one trunk for policy and value (on: as published)
-    squash_mean: bool = True          # tanh on the policy mean (on: as published)
-    normalize_at_collection: bool = False  # store obs normalised as the policy saw them
-    value_loss: str = "max"           # "max" (as published) | "clipped" (SB3's form)
-    adam_eps: float = 1e-8            # Adam epsilon (1e-8 as published; SB3 uses 1e-5)
-    advantage_norm: str = "rollout"   # "rollout" (as published) | "minibatch" (SB3)
+    # The repaired update (RESULTS.md §10a). Each line notes the v2.2.1 value;
+    # RL_TRADER_PUBLISHED=1 restores all of them at once.
+    bootstrap_truncation: bool = True  # bootstrap V(s) when data runs out (published: False)
+    shared_trunk: bool = False        # separate critic trunk (published: True, shared)
+    squash_mean: bool = False         # tanh on the policy mean (published: True)
+    normalize_at_collection: bool = True  # store obs normalised as seen (published: False)
+    value_loss: str = "clipped"       # SB3's value loss (published: "max")
+    adam_eps: float = 1e-5            # Adam epsilon (published: 1e-8)
+    advantage_norm: str = "minibatch"  # per-minibatch advantages (published: "rollout")
+
+    def __post_init__(self) -> None:
+        if published_mode():
+            for k, v in PUBLISHED_PPO.items():
+                setattr(self, k, v)
 
 
 def repaired_ppo(ppo: "PPOConfig") -> "PPOConfig":
-    """Switch a PPOConfig to the repaired update (RESULTS.md §10).
+    """Switch a PPOConfig to the repaired update (RESULTS.md §10a).
 
-    The published runs used the defaults. Benchmarked against Stable-Baselines3
-    under the same hyper-parameters, the defaults trail it on HalfCheetah and
-    Pendulum; with all seven of these changes the PPO matches SB3 on
-    InvertedPendulum, Hopper and HalfCheetah. The defaults are kept so every
-    published number still reproduces.
+    The default since v2.3.0. Benchmarked against Stable-Baselines3 under the same
+    hyper-parameters, the published PPO trails it on HalfCheetah and Pendulum;
+    with these seven changes it matches SB3 on InvertedPendulum, Hopper and
+    HalfCheetah.
     """
-    ppo.bootstrap_truncation = True
-    ppo.shared_trunk = False
-    ppo.normalize_at_collection = True
-    ppo.squash_mean = False
-    ppo.value_loss = "clipped"
-    ppo.adam_eps = 1e-5
-    ppo.advantage_norm = "minibatch"
+    for k, v in REPAIRED_PPO.items():
+        setattr(ppo, k, v)
+    return ppo
+
+
+def published_ppo(ppo: "PPOConfig") -> "PPOConfig":
+    """Switch a PPOConfig to the update every v2.2.1 result was produced with."""
+    for k, v in PUBLISHED_PPO.items():
+        setattr(ppo, k, v)
     return ppo
 
 

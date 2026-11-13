@@ -7,10 +7,9 @@ checkpoint into ``server/models/ppo_<market>.npz``.
 
 The policy is a small MLP::
 
-    h = obs
-    for each trunk Linear (Tanh after all but the last):  h = act(h @ W.T + b)
-    action = tanh(h @ W_mean.T + b_mean)      # target position in [-1, 1]
-    value  = h @ W_value.T + b_value          # the critic, sharing the trunk
+    h = trunk(obs)                            # Tanh after every Linear but the last
+    action = h @ W_mean.T + b_mean            # tanh-squashed if squash_mean (v2.2.1)
+    value  = vtrunk(obs) @ W_value.T + b_value  # own trunk (v2.3.0) or h (v2.2.1)
 
 Both heads are exported. The critic is what lets the lab's X-Ray show the
 agent's own value estimate at a bar; archives produced before it was added
@@ -34,12 +33,18 @@ from rl_trader.models.ppo_agent import PPOAgent
 
 def export(market: str, ckpt_dir: str = "checkpoints", out_dir: str = "server/models") -> None:
     agent = PPOAgent.from_checkpoint(os.path.join(ckpt_dir, f"ppo_{market}.pt"))
-    if not getattr(agent.ac, "shared_trunk", True) or not getattr(agent.ac, "squash_mean", True):
-        raise SystemExit("export supports the published architecture only (shared trunk, tanh mean)")
     trunk_linears = [m for m in agent.ac.trunk if isinstance(m, nn.Linear)]
 
     arrays = {"n_trunk": np.array(len(trunk_linears)),
-              "obs_dim": np.array(agent.obs_dim)}
+              "obs_dim": np.array(agent.obs_dim),
+              "squash_mean": np.array(int(getattr(agent.ac, "squash_mean", True)))}
+    # The repaired PPO (v2.3.0) gives the critic its own trunk.
+    if not getattr(agent.ac, "shared_trunk", True):
+        v_linears = [m for m in agent.ac.value_trunk if isinstance(m, nn.Linear)]
+        arrays["n_vtrunk"] = np.array(len(v_linears))
+        for i, lin in enumerate(v_linears):
+            arrays[f"vw{i}"] = lin.weight.detach().cpu().numpy().astype(np.float32)
+            arrays[f"vb{i}"] = lin.bias.detach().cpu().numpy().astype(np.float32)
     for i, lin in enumerate(trunk_linears):
         arrays[f"w{i}"] = lin.weight.detach().cpu().numpy().astype(np.float32)
         arrays[f"b{i}"] = lin.bias.detach().cpu().numpy().astype(np.float32)

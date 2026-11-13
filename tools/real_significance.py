@@ -53,7 +53,7 @@ def common_split_date(frames: dict, train_frac: float = 0.6):
     return shortest.iloc[int(len(shortest) * train_frac)]
 
 
-def load_real_basket(data_dir: str, market: str, train_frac: float = 0.6, split: str = "ticker") -> dict:
+def load_real_basket(data_dir: str, market: str, train_frac: float = 0.6, split: str | None = None) -> dict:
     """Load every ticker CSV under ``data_dir/market`` into train/test splits.
 
     Chronological split with the scaler fit on the training slice only.
@@ -65,7 +65,14 @@ def load_real_basket(data_dir: str, market: str, train_frac: float = 0.6, split:
     stock basket every series covers the same dates and the two modes coincide;
     for crypto they do not. ``split="common"`` cuts every ticker on one calendar
     date (:func:`common_split_date`), so no training date is a test date anywhere.
+
+    The default is ``"common"`` from v2.3.0, and ``"ticker"`` under
+    ``RL_TRADER_PUBLISHED=1``.
     """
+    from rl_trader.config.training_config import published_mode
+
+    if split is None:
+        split = "ticker" if published_mode() else "common"
     from rl_trader.data.data_loader import add_technical_indicators
 
     frames = {}

@@ -141,13 +141,16 @@ def train_ours(env_id: str, seed: int, steps: int, hp: HP, variant: dict) -> dic
 
     torch.set_num_threads(1)
     set_seed(seed)
+    from rl_trader.config.training_config import PUBLISHED_PPO
+
+    # Every arm starts from the published PPO and changes what its variant says.
     cfg = PPOConfig(
         learning_rate=hp.learning_rate, gamma=hp.gamma, gae_lambda=hp.gae_lambda,
         clip_ratio=hp.clip_ratio, value_coef=hp.value_coef, entropy_coef=hp.entropy_coef,
         max_grad_norm=hp.max_grad_norm, update_epochs=hp.update_epochs,
         minibatch_size=hp.minibatch_size, hidden_sizes=tuple(hp.hidden_sizes),
         init_log_std=hp.init_log_std, normalize_obs=True, obs_clip=hp.obs_clip,
-        **{k: v for k, v in variant.items() if k != "bootstrap_truncation"},
+        **{**PUBLISHED_PPO, **{k: v for k, v in variant.items() if k != "bootstrap_truncation"}},
     )
     env = make_env(env_id, seed)
     obs_dim, act_dim = env.observation_space.shape[0], env.action_space.shape[0]

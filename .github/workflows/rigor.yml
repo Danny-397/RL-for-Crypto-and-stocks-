@@ -27,7 +27,7 @@ env:
 jobs:
   benchmark:
     # Stage 1: is this PPO correct? 4 tasks x 3 arms x 10 seeds.
-    if: (github.event_name == 'push' && !contains(github.ref_name, 'trading') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'trading')
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'trading') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired') && !contains(github.ref_name, 'headline')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'trading')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -54,7 +54,7 @@ jobs:
   trading:
     # Stages 2-4: other implementations/algorithms, training budget, time-limit
     # handling, and the hindsight-free universe. Needs the archived data.
-    if: (github.event_name == 'push' && !contains(github.ref_name, 'benchmark') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'benchmark')
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'benchmark') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired') && !contains(github.ref_name, 'headline')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'benchmark')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -230,8 +230,56 @@ jobs:
           name: trading-repaired-${{ matrix.market }}-${{ matrix.seeds }}
           path: results/trading_rigor/
 
+  headline:
+    # v2.3.0: rebuild the headline artefacts with the repaired PPO and the
+    # leak-free split (now the defaults): the 10-seed significance study, the
+    # dashboard run, the deployed policies and the reports read from them.
+    if: github.event_name == 'push' && contains(github.ref_name, 'headline')
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [significance, site]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e .
+      - name: Unpack the archived data
+        env:
+          KEY: ${{ secrets.RIGOR_DATA_KEY }}
+        run: |
+          test -n "$KEY" || { echo "RIGOR_DATA_KEY is not set"; exit 1; }
+          gpg --batch --quiet --pinentry-mode loopback --passphrase "$KEY" -d data/encrypted/rigor-data-2026-11-13.tgz.gpg > /tmp/d.tgz
+          mkdir -p data/raw && tar xzf /tmp/d.tgz -C data/raw stock crypto
+          python tools/fetch_data.py --verify --out data/raw --snapshot docs/preregistration/2026-10-28-fresh-seeds.SNAPSHOT.json
+      - name: Significance (10 seeds)
+        if: matrix.part == 'significance'
+        run: python tools/real_significance.py --seeds 10 --seed-base 100 --timesteps 150000
+      - name: Dashboard run, deployed policies, reports
+        if: matrix.part == 'site'
+        run: |
+          python tools/build_site_data.py --real --timesteps 200000 --seed 42
+          python tools/export_policy.py
+          python tools/make_figures.py
+          python tools/attribution_report.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: headline-${{ matrix.part }}
+          path: |
+            docs/significance.js
+            docs/results.js
+            docs/assets/*.json
+            docs/assets/*.png
+            server/models/*.npz
+
   aggregate:
-    needs: [benchmark, trading, diagnose, retrade, leakfree, repaired]
+    needs: [benchmark, trading, diagnose, retrade, leakfree, repaired, headline]
     if: always()
     runs-on: ubuntu-latest
     steps:

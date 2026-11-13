@@ -168,9 +168,14 @@ def run_one(market: str, arm: str, seed: int, data_dir: str, out_dir: str,
     t0 = time.time()
 
     if arm in ("ours", "ours_tb", "ours_fixed", "ours_repaired"):
+        from rl_trader.config.training_config import published_ppo
         from rl_trader.training.utils import run_ppo_training
 
-        cfg.ppo.bootstrap_truncation = arm == "ours_tb"
+        # The registered arms are defined against the published PPO, whatever the
+        # current defaults are.
+        if arm != "ours_repaired":
+            published_ppo(cfg.ppo)
+            cfg.ppo.bootstrap_truncation = arm == "ours_tb"
         if arm == "ours_fixed":
             for k, v in FIXED.items():
                 setattr(cfg.ppo, k, v)
