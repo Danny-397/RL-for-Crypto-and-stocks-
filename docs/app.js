@@ -826,6 +826,9 @@
     const method = document.getElementById("view-method");
     const market = document.getElementById("view-market");
     const lab = document.getElementById("view-lab");
+    const hedging = document.getElementById("view-hedging");
+    if (hedging) hedging.classList.toggle("active", view === "hedging");
+    if (view === "hedging" && window.loadHedging) window.loadHedging();
     if (home) home.classList.toggle("active", view === "home");
     if (method) method.classList.toggle("active", view === "how");
     if (market) market.classList.toggle("active", isMarket);
@@ -853,6 +856,7 @@
     "view-method": () => "how",
     "view-market": () => (explorer.market === "crypto" ? "crypto" : "stocks"),
     "view-lab": () => "lab",
+    "view-hedging": () => "hedging",
   };
 
   // A hash that names a section rather than a view is an in-page anchor.
@@ -877,7 +881,7 @@
   }
 
   function initRouter() {
-    const valid = ["home", "how", "stocks", "crypto", "lab"];
+    const valid = ["home", "how", "stocks", "crypto", "lab", "hedging"];
     document.querySelectorAll(".navtab").forEach((a) => {
       a.addEventListener("click", (e) => {
         e.preventDefault();
