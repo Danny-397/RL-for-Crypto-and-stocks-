@@ -1,0 +1,194 @@
+{
+ "created_utc": "2026-11-13T13:20:27Z",
+ "files": {
+  "stock/AAPL": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "01c59b273415bb4b3a6aaa102a2674e25add8a2d5f51da57d3b8fdea9dd4b409"
+  },
+  "stock/AXP": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "ca899b8be7ac4542fa9bdf84b18d4ca6124a620879c161d288a6a924c2888c5a"
+  },
+  "stock/BA": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "65483cbcfd6ceeab74a64e1a4d61abc5361a12f8fb29ccccf713366b701e7f00"
+  },
+  "stock/CAT": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "ce978eedf85c6dda59f7779bba7e6c38ea79b2e1b98a1efde303c91af6e7ed34"
+  },
+  "stock/CSCO": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "6f761ef2098ff0a9e8c30bed336629d333da9636e972a84d1f214de0fe49f1f0"
+  },
+  "stock/CVX": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "43ae4a09198c654624390923e3b0bd0c9554f7daea5f5cede3b0bb9f4eafaf0d"
+  },
+  "stock/DD": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "0efd182a122b27a8cf70c8498dad997c88927cc6e7d32f6b52698ccce71db069"
+  },
+  "stock/DIS": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "a8f5c8cb9d003ab3e6879cebd363445ed80074b98004f9b566535f31e38dba20"
+  },
+  "stock/GE": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "520e3807e8a3cd30c0d24efea6805581f97ec0e7dceda0b099707adbb172dbcc"
+  },
+  "stock/GS": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "c6bc9e8d0aaa22779582bbf395e9acd635e6e5b7b447fce66be19088b8e12e4b"
+  },
+  "stock/HD": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "966cb317b584a5080f4688e79bbda5ce80660096e6c304105856ab1963b812f1"
+  },
+  "stock/IBM": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "d82b988b8a3e7611ba0548427998524f94efa5eedafab4e60a4cd8ba070f2b4f"
+  },
+  "stock/INTC": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "7db9c39e96bacbd8a816e01d1852bb9fd3100759c90f7b69e47342c299496664"
+  },
+  "stock/JNJ": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "403c4e2757585e1b4d1368876f93c88e3d6a58a2ef304604748654bf91f25b9b"
+  },
+  "stock/JPM": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "9c5f05ac601802faca54e36f472fa94db2dbb4c56becc9d91e654d35755b001d"
+  },
+  "stock/KO": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "d262ea9fabcffdd43376c48babb85d9a26aa510a82848a79558e50557a19d613"
+  },
+  "stock/MCD": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "2c6b333af7a92eef9ed21495b91e9003a811fcd71fced5e34f41aca34cfc5873"
+  },
+  "stock/MMM": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "293bb8e8523a8c16a465ff823e903b603b31b950a231d31ea87ba7ae3a7e43e2"
+  },
+  "stock/MRK": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "b3027ee8e18dad5ede954ddd6f85523bc54833211b6d99a760d8295e6b3040b7"
+  },
+  "stock/MSFT": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "25fdf5b41770ca050598d1bb32974c6776981583961ab200bc64eca858c5ebf5"
+  },
+  "stock/NKE": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "c36436b183ca28fbca3739e139a2648d838d698c18e887bab571959484cb21ab"
+  },
+  "stock/PFE": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "dbbcd3bbdb31ae61ad4c5ef66965c44faf31f9f1fdd6f5c08ef11d21a6fa6360"
+  },
+  "stock/PG": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "ba7a96b3a005d0cf1a08410e1b379ff862768e34f67552d5230403cecf545511"
+  },
+  "stock/RTX": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "9efaf7322a9babce55bebb47983b7b146d53e2b01e00769d7eac5cb34dda423e"
+  },
+  "stock/SPY": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "3916bf3ff252705a5cd7b420b9671d91dfc974250ffc0ada4010cb1c8ac65911"
+  },
+  "stock/TRV": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "176c8dc4b76717bcc229a6e1bdb2df71da6bf1321c635a493840417a4efa5e96"
+  },
+  "stock/UNH": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "bd753e88e51b1087b2e98445881977ef284baa3be9466d2e946164d8fa96f147"
+  },
+  "stock/V": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "084e166175474f10483686069b59fb73c3bc90553f1c36010e3be3ecdb39ce38"
+  },
+  "stock/VZ": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "802ba4efafaeb50422b52bdf698df7f8a549c2f64a48dcc68a02648f5772b385"
+  },
+  "stock/WMT": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "590c54c4376b8e354d86cb7172cbacf985e76a4aec70e8c0c28017390aaa0d37"
+  },
+  "stock/XOM": {
+   "first_date": "2016-11-14",
+   "last_date": "2026-08-28",
+   "rows": 2460,
+   "sha256": "c211a8d2155e49baa2b7d0a1caa1886ce943a3786ebc062f2130677f82e29cbc"
+  }
+ },
+ "pinned_end": "2026-08-28",
+ "pinned_start": "2016-08-29",
+ "root": "data/raw_pit"
+}

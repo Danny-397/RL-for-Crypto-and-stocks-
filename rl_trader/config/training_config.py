@@ -75,6 +75,7 @@ class PPOConfig:
     normalize_obs: bool = True        # running mean/std normalisation of observations
     obs_clip: float = 10.0            # clip normalised observations to +/- this many std
     normalize_reward: bool = False    # running-std reward scaling (off: return_scale handles it)
+    bootstrap_truncation: bool = False  # bootstrap V(s) when data runs out (off: as published)
 
 
 @dataclass

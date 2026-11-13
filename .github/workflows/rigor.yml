@@ -1,0 +1,129 @@
+name: Rigor experiments
+
+# The heavy runs behind RESULTS.md §12 (pre-registered in
+# docs/preregistration/2026-11-13-rigor.md). Hours of CPU, so never on PRs:
+# push a branch named experiments/<anything> (a name containing 'benchmark'
+# or 'trading' runs only that suite), or dispatch by hand once this
+# file is on main. Each job uploads its run files; the last job aggregates them.
+
+on:
+  push:
+    branches: ["experiments/**"]
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "benchmark, trading or all"
+        default: all
+
+concurrency:
+  group: rigor-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHONWARNINGS: ignore
+  OMP_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+
+jobs:
+  benchmark:
+    # Stage 1: is this PPO correct? 4 tasks x 3 arms x 10 seeds.
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'trading')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'trading')
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [Pendulum-v1, InvertedPendulum-v5, HalfCheetah-v5, Hopper-v5]
+        arm: [ours, ours_tb, sb3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e . "stable-baselines3==2.9.2" "gymnasium[mujoco]"
+      - name: Train 10 seeds
+        run: python tools/ppo_benchmark.py run-many --env ${{ matrix.env }} --arm ${{ matrix.arm }} --seeds 0-9 --jobs 4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ matrix.env }}-${{ matrix.arm }}
+          path: results/ppo_benchmark/
+
+  trading:
+    # Stages 2-4: other implementations/algorithms, training budget, time-limit
+    # handling, and the hindsight-free universe. Needs the archived data.
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'benchmark')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'benchmark')
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        market: [stock, crypto]
+        arm: [ours, ours_tb, sb3_ppo, sb3_sac]
+        seeds: ["200-203", "204-207", "208-209"]
+        universe: [main]
+        include:
+          - {market: stock, arm: ours, seeds: "200-204", universe: pit}
+          - {market: stock, arm: ours, seeds: "205-209", universe: pit}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e . "stable-baselines3==2.9.2"
+      - name: Unpack the archived data
+        env:
+          KEY: ${{ secrets.RIGOR_DATA_KEY }}
+        run: |
+          test -n "$KEY" || { echo "RIGOR_DATA_KEY is not set"; exit 1; }
+          gpg --batch --quiet --pinentry-mode loopback --passphrase "$KEY" -d data/encrypted/rigor-data-2026-11-13.tgz.gpg > /tmp/d.tgz
+          mkdir -p data/raw data/raw_pit && tar xzf /tmp/d.tgz -C data/raw stock crypto && tar xzf /tmp/d.tgz -C data/raw_pit --strip-components=1 pit/stock
+          python tools/fetch_data.py --verify --out data/raw --snapshot docs/preregistration/2026-10-28-fresh-seeds.SNAPSHOT.json
+          python tools/fetch_data.py --verify --out data/raw_pit --snapshot data/SNAPSHOT_pit.json
+      - name: Train
+        run: |
+          MAX=""
+          if [ "${{ matrix.universe }}" = "pit" ]; then MAX="--max-steps 150000"; fi
+          python tools/trading_rigor.py run-many --market ${{ matrix.market }} --arm ${{ matrix.arm }} \
+            --universe ${{ matrix.universe }} --seeds ${{ matrix.seeds }} --jobs 4 $MAX
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trading-${{ matrix.universe }}-${{ matrix.market }}-${{ matrix.arm }}-${{ matrix.seeds }}
+          path: results/trading_rigor/
+
+  aggregate:
+    needs: [benchmark, trading]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e . "gymnasium[mujoco]"
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Aggregate
+        run: |
+          mkdir -p results/ppo_benchmark results/trading_rigor
+          find artifacts -path '*bench-*' -name '*.json' -exec cp {} results/ppo_benchmark/ \;
+          find artifacts -path '*trading-*' -name '*.json' -exec cp {} results/trading_rigor/ \;
+          ls results/ppo_benchmark | wc -l; ls results/trading_rigor | wc -l
+          if ls results/ppo_benchmark/*.json >/dev/null 2>&1; then python tools/ppo_benchmark.py aggregate; fi
+          if ls results/trading_rigor/*.json >/dev/null 2>&1; then python tools/trading_rigor.py aggregate; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rigor-results
+          path: |
+            results/
+            docs/assets/ppo_benchmark.json
+            docs/assets/trading_rigor.json
