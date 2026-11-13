@@ -79,6 +79,9 @@ class PPOConfig:
     shared_trunk: bool = True         # one trunk for policy and value (on: as published)
     squash_mean: bool = True          # tanh on the policy mean (on: as published)
     normalize_at_collection: bool = False  # store obs normalised as the policy saw them
+    value_loss: str = "max"           # "max" (as published) | "clipped" (SB3's form)
+    adam_eps: float = 1e-8            # Adam epsilon (1e-8 as published; SB3 uses 1e-5)
+    advantage_norm: str = "rollout"   # "rollout" (as published) | "minibatch" (SB3)
 
 
 @dataclass

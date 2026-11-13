@@ -71,6 +71,13 @@ VARIANTS = {
     "ours_nosquash": {"squash_mean": False},
     "ours_fixed": {"bootstrap_truncation": True, "shared_trunk": False,
                    "normalize_at_collection": True, "squash_mean": False},
+    # Second diagnosis round: the three remaining differences in the update.
+    "ours_vloss": {"value_loss": "clipped"},
+    "ours_eps": {"adam_eps": 1e-5},
+    "ours_mbadv": {"advantage_norm": "minibatch"},
+    "ours_sb3like": {"bootstrap_truncation": True, "shared_trunk": False,
+                     "normalize_at_collection": True, "squash_mean": False,
+                     "value_loss": "clipped", "adam_eps": 1e-5, "advantage_norm": "minibatch"},
 }
 ARMS = (*VARIANTS, "sb3")
 EVAL_EVERY = 10_000

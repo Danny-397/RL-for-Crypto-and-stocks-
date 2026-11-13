@@ -114,15 +114,17 @@ class RolloutBuffer:
         self.returns = self.advantages + self.values
 
     def iter_minibatches(
-        self, minibatch_size: int, device: torch.device
+        self, minibatch_size: int, device: torch.device, normalize_advantages: bool = True
     ) -> Iterator[Dict[str, torch.Tensor]]:
         """Yield shuffled mini-batches of tensors for the PPO update.
 
         Advantages are normalised across the whole rollout, which materially
-        stabilises PPO updates.
+        stabilises PPO updates (``normalize_advantages=False`` leaves them raw,
+        for an agent that normalises per minibatch instead).
         """
         adv = self.advantages
-        adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+        if normalize_advantages:
+            adv = (adv - adv.mean()) / (adv.std() + 1e-8)
 
         indices = np.random.permutation(self.size)
         for start in range(0, self.size, minibatch_size):

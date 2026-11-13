@@ -106,7 +106,8 @@ jobs:
       fail-fast: false
       matrix:
         env: [Pendulum-v1, InvertedPendulum-v5, HalfCheetah-v5, Hopper-v5]
-        arm: [ours_sep, ours_norm, ours_nosquash, ours_fixed]
+        # Round 2 (branch experiments/diagnose2): the update-step differences.
+        arm: ${{ fromJSON(contains(github.ref_name, 'diagnose2') && '["ours_vloss","ours_eps","ours_mbadv","ours_sb3like"]' || '["ours_sep","ours_norm","ours_nosquash","ours_fixed"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -124,7 +125,7 @@ jobs:
           path: results/ppo_benchmark/
 
   retrade:
-    if: github.event_name == 'push' && contains(github.ref_name, 'diagnose')
+    if: github.event_name == 'push' && contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'diagnose2')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
