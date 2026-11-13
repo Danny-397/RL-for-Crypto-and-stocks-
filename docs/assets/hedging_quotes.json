@@ -1,0 +1,100 @@
+{
+ "generated": "2026-11-13",
+ "archive": {
+  "first": "2026-11-06",
+  "last": "2026-11-12",
+  "days": 5,
+  "source": "Danny-397/Tradeski data/options-archive (SPY)"
+ },
+ "vix_to_atm_assumed": 0.875,
+ "part_a": {
+  "rows": [
+   {
+    "date": "2026-11-06",
+    "expiry": "2026-12-04",
+    "trading_days": 19,
+    "spot": 735.29,
+    "atm_iv": 0.2234,
+    "vix": 25.64,
+    "model_iv": 0.2244,
+    "ratio_to_vix": 0.8712,
+    "model_price_error_median": 0.1142
+   },
+   {
+    "date": "2026-11-09",
+    "expiry": "2026-11-27",
+    "trading_days": 13,
+    "spot": 752.69,
+    "atm_iv": 0.1682,
+    "vix": 19.92,
+    "model_iv": 0.1743,
+    "ratio_to_vix": 0.8443,
+    "model_price_error_median": 0.0727
+   },
+   {
+    "date": "2026-11-10",
+    "expiry": "2026-11-30",
+    "trading_days": 13,
+    "spot": 749.92,
+    "atm_iv": 0.1682,
+    "vix": 19.46,
+    "model_iv": 0.1703,
+    "ratio_to_vix": 0.8641,
+    "model_price_error_median": 0.0137
+   },
+   {
+    "date": "2026-11-11",
+    "expiry": "2026-12-04",
+    "trading_days": 16,
+    "spot": 759.81,
+    "atm_iv": 0.1507,
+    "vix": 17.49,
+    "model_iv": 0.153,
+    "ratio_to_vix": 0.8616,
+    "model_price_error_median": 0.018
+   },
+   {
+    "date": "2026-11-12",
+    "expiry": "2026-12-11",
+    "trading_days": 20,
+    "spot": 757.12,
+    "atm_iv": 0.1678,
+    "vix": 18.7,
+    "model_iv": 0.1636,
+    "ratio_to_vix": 0.8974,
+    "model_price_error_median": -0.0261
+   }
+  ],
+  "ratio_median": 0.8641
+ },
+ "part_b": {
+  "n": 1187,
+  "day_pairs": [
+   "2026-11-06",
+   "2026-11-09",
+   "2026-11-10",
+   "2026-11-11"
+  ],
+  "rms": {
+   "none": 0.6187,
+   "delta": 0.0805,
+   "agent_s0": 0.1009,
+   "agent_s1": 0.0858,
+   "agent_s2": 0.0926,
+   "agent_s3": 0.0976,
+   "agent_s4": 0.0993,
+   "agent_s5": 0.0974,
+   "agent_s6": 0.0897,
+   "agent_s7": 0.0952,
+   "agent_s8": 0.0808,
+   "agent_s9": 0.0997
+  },
+  "agent_rms_median": 0.0963,
+  "agent_vs_delta": 1.1966,
+  "agent_hedge_gap_to_delta": 0.0417
+ },
+ "part_c": {
+  "n": 0,
+  "episodes": []
+ }
+}

@@ -11,13 +11,15 @@ Run from the repo root (after a --real build):
 
 from __future__ import annotations
 
-import glob
 import os
+import sys
 
 import numpy as np
 
+# Run as a script, tools/ is on the path but the repository root is not.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from rl_trader.config.training_config import crypto_config, stock_config
-from rl_trader.data.data_loader import attach_market_index, load_ohlcv_csv, prepare_market_data
 from rl_trader.envs import make_env
 from rl_trader.evaluation.baselines import evaluate_baselines
 from rl_trader.evaluation.evaluate_agent import backtest
@@ -25,15 +27,10 @@ from rl_trader.models.ppo_agent import PPOAgent
 
 
 def _basket(market: str, data_dir: str = "data/raw"):
-    out = {}
-    for path in sorted(glob.glob(os.path.join(data_dir, market, "*.csv"))):
-        ticker = os.path.splitext(os.path.basename(path))[0]
-        # merge the market index so the cross-asset features match how the agent trained
-        df = attach_market_index(load_ohlcv_csv(path), data_dir, market)
-        splits = prepare_market_data(df, market=market, train_frac=0.6, val_frac=0.0)
-        if len(splits["test"]) > 60:
-            out[ticker] = splits
-    return out
+    # The same split the agent was trained and scored on (build_site_data.py).
+    from tools.real_significance import load_real_basket
+
+    return load_real_basket(data_dir, market)
 
 
 def main() -> None:

@@ -16,7 +16,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import torch
 
-from ..config.training_config import PPOConfig
+from ..config.training_config import PUBLISHED_PPO, PPOConfig
 from ..models.ppo_agent import PPOAgent
 from ..training.utils import set_seed
 from .core import OBS_DIM, HedgeSpec, VecHedgeEnv, action_to_hedge, simulate_paths
@@ -32,7 +32,10 @@ class HedgeTrainConfig:
     lr_anneal: bool = True            # linear decay to zero: settles the policy at the end
     ppo: PPOConfig = field(default_factory=lambda: PPOConfig(
         learning_rate=3e-4, entropy_coef=0.0, init_log_std=-1.0, hidden_sizes=(64, 64),
-        update_epochs=8, minibatch_size=512, normalize_obs=True))
+        update_epochs=8, minibatch_size=512, normalize_obs=True,
+        # Part 2's published results were trained with the v2.2.1 update; it was
+        # not re-run with the repaired one (RESULTS.md §10a), so it is pinned.
+        **PUBLISHED_PPO))
 
 
 class _Batch:

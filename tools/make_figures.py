@@ -14,22 +14,20 @@ Run from the repo root (after a ``--real`` build + an ablation run):
 
 from __future__ import annotations
 
-import glob
 import json
 import os
+import sys
 
 import matplotlib
 import numpy as np
+
+# Run as a script, tools/ is on the path but the repository root is not.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 from rl_trader.config.training_config import crypto_config, stock_config  # noqa: E402
-from rl_trader.data.data_loader import (  # noqa: E402
-    attach_market_index,
-    load_ohlcv_csv,
-    prepare_market_data,
-)
 from rl_trader.envs import make_env  # noqa: E402
 from rl_trader.evaluation.baselines import evaluate_baselines  # noqa: E402
 from rl_trader.evaluation.evaluate_agent import backtest  # noqa: E402
@@ -70,15 +68,11 @@ def _basket(market, data_dir="data/raw"):
     RESULTS.md carried two different held-out returns for the same run: -14.1%
     here against -4.7% from the headline and supervised tables.
     """
-    out = {}
-    for path in sorted(glob.glob(os.path.join(data_dir, market, "*.csv"))):
-        ticker = os.path.splitext(os.path.basename(path))[0]
-        df = attach_market_index(load_ohlcv_csv(path), data_dir, market)
-        splits = prepare_market_data(df, market=market,
-                                     train_frac=0.6, val_frac=0.0)
-        if len(splits["test"]) > 60:
-            out[ticker] = splits
-    return out
+    # The shared loader: same split as build_site_data.py trained on (one calendar
+    # cut by default, RESULTS.md §10c), with the market index merged.
+    from tools.real_significance import load_real_basket
+
+    return load_real_basket(data_dir, market)
 
 
 # --------------------------------------------------------------------------- #

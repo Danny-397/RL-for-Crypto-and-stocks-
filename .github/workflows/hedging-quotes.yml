@@ -1,0 +1,42 @@
+name: Real-quote hedging
+
+# Re-runs Part 2 on real SPY option quotes (tools/hedging_quotes.py, RESULTS.md
+# §9b) as Tradeski's archive grows, and commits the regenerated section when it
+# changed. Full one-month episodes appear on their own as contracts complete.
+
+on:
+  schedule:
+    - cron: "30 13 * * 6"     # Saturdays, after the week's last capture
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hedging-quotes
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e .
+      - name: Run on the archive
+        run: python tools/hedging_quotes.py run
+      - name: Regenerate the documents
+        run: python tools/sync_docs.py
+      - name: Commit if anything changed
+        run: |
+          git add docs/assets/hedging_quotes.json RESULTS.md README.md paper/rl_trader.tex
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Real-quote hedging: weekly update from the options archive"
+          git push

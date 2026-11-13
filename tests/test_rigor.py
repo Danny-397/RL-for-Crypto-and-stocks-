@@ -86,10 +86,44 @@ def test_published_budget_checkpoint_is_the_published_run():
     assert 150_000 // ROLLOUT == 73
 
 
-def test_bootstrap_truncation_is_off_by_default():
-    from rl_trader.config.training_config import PPOConfig
+def test_defaults_are_the_repaired_ppo():
+    from rl_trader.config.training_config import REPAIRED_PPO, PPOConfig
 
-    assert PPOConfig().bootstrap_truncation is False
+    cfg = PPOConfig()
+    assert {k: getattr(cfg, k) for k in REPAIRED_PPO} == REPAIRED_PPO
+
+
+def test_published_switch_restores_the_v221_ppo(monkeypatch):
+    from rl_trader.config.training_config import PUBLISHED_PPO, PPOConfig
+
+    monkeypatch.setenv("RL_TRADER_PUBLISHED", "1")
+    cfg = PPOConfig()
+    assert {k: getattr(cfg, k) for k in PUBLISHED_PPO} == PUBLISHED_PPO
+
+
+def test_published_switch_restores_the_per_ticker_split(monkeypatch, tmp_path):
+    # Two series on different dates: the default cuts both on one date, the
+    # published switch cuts each on its own history.
+    from tools.real_significance import load_real_basket
+
+    d = tmp_path / "crypto"
+    d.mkdir()
+    # Same last date, different first dates (BBB starts 600 days later).
+    for name, start, n, seed in (("AAA", "2015-01-01", 1500, 1), ("BBB", "2016-08-23", 900, 2)):
+        _frame(start, n, seed).to_csv(d / f"{name}.csv", index=False)
+    common = load_real_basket(str(tmp_path), "crypto")
+    assert len(common["AAA"]["test"]) == len(common["BBB"]["test"])
+    monkeypatch.setenv("RL_TRADER_PUBLISHED", "1")
+    per = load_real_basket(str(tmp_path), "crypto")
+    assert len(per["AAA"]["test"]) != len(per["BBB"]["test"])
+
+
+def test_hedging_keeps_its_published_ppo():
+    from rl_trader.config.training_config import PUBLISHED_PPO
+    from rl_trader.hedging.train import HedgeTrainConfig
+
+    ppo = HedgeTrainConfig().ppo
+    assert {k: getattr(ppo, k) for k in PUBLISHED_PPO} == PUBLISHED_PPO
 
 
 def test_training_callback_sees_every_update():
@@ -139,3 +173,27 @@ def test_per_ticker_split_overlaps_when_histories_start_apart():
     early_test_start = early.iloc[int(len(early) * 0.6)]
     late_train_end = late.iloc[int(len(late) * 0.6) - 1]
     assert late_train_end > early_test_start
+
+
+def test_a_v221_checkpoint_still_loads(tmp_path):
+    """Configs pickled before the repair fields existed must load as published.
+
+    Without the upgrade, the missing fields fall through to the v2.3.0 class
+    defaults, the agent is rebuilt with a separate critic trunk, and every old
+    checkpoint (the 40 hedging agents among them) fails to load.
+    """
+    import torch
+
+    from rl_trader.config.training_config import PUBLISHED_PPO, PPOConfig, published_ppo
+    from rl_trader.models.ppo_agent import PPOAgent
+
+    cfg = published_ppo(PPOConfig(hidden_sizes=(8, 8)))
+    agent = PPOAgent(4, 1, cfg)
+    for k in PUBLISHED_PPO:                      # what a v2.2.1 pickle looks like
+        vars(cfg).pop(k, None)
+    path = tmp_path / "old.pt"
+    agent.save(str(path))
+    loaded = PPOAgent.from_checkpoint(str(path))
+    assert loaded.ac.shared_trunk and loaded.ac.squash_mean
+    obs = torch.randn(4).numpy()
+    assert loaded.select_action(obs, deterministic=True)[0] == agent.select_action(obs, deterministic=True)[0]

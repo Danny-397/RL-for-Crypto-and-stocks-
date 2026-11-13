@@ -181,11 +181,11 @@
   // Built from window.RL_SIGNIFICANCE rather than written down. These two
   // sentences carried hand-typed statistics that a rebuild silently invalidated
   // -- they still quoted a +275% run and a p of 0.97 after both had moved.
-  // The crypto study split each coin on its own history, so coins were trained on
-  // dates that were already test dates for others (RESULTS.md §10c).
-  const LEAK_NOTE = ' <b>Caveat:</b> these crypto figures use per-coin splits that ' +
-    'leak across coins in calendar time; on a leak-free split every agent tested ' +
-    'loses money (<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md#10c-a-calendar-leak-in-the-crypto-split" ' +
+  // v2.3.0: these figures come from the repaired PPO on a leak-free split. The
+  // v2.2.1 crypto figures were inflated by a calendar leak (RESULTS.md §10c).
+  const LEAK_NOTE = ' Since v2.3.0 these come from the repaired PPO with one calendar ' +
+    'cut for every coin; the earlier per-coin split leaked across coins and had ' +
+    'shown crypto <em>making</em> money (<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md#10c-a-calendar-leak-in-the-crypto-split" ' +
     'target="_blank" rel="noopener">RESULTS.md §10c</a>).';
 
   function verdictFor(market) {
@@ -211,6 +211,12 @@
     const here = DATA && DATA.markets[market]
       ? ` This dashboard's run (${p1(DATA.markets[market].metrics.total_return)}) ` +
         "is one draw from that spread, not the centre of it." : "";
+    if (spread.length && Math.max(...spread) < 0) {
+      return `${lead} Every one of the <b>${n} seeds</b> lost money (the best ` +
+        `returned <b>${p1(Math.max(...spread))}</b>); the mean is <b>${p1(r.mean)}</b> ` +
+        `(${ci}). Against buy-&amp;-hold across the held-out tickers the difference ` +
+        `is <b>not distinguishable</b> (p = ${pv}).${here}${market === "crypto" ? LEAK_NOTE : ""}`;
+    }
     return `${lead} A single seed can look spectacular${best}, but across ` +
       `<b>${n} seeds</b> the mean is <b>${p1(r.mean)}</b> (${ci}), and against ` +
       `buy-&amp;-hold across the held-out tickers the difference is <b>not ` +
@@ -475,7 +481,10 @@
         `random seed. Crypto runs ranged from <b>${sgn(Math.min(...c.seed_returns))}</b> ` +
         `to <b>${sgn(Math.max(...c.seed_returns))}</b>. Across ${n} runs crypto is ` +
         `${verdict(c)} from buy-&amp;-hold and stocks are ${verdict(st)} ` +
-        `(p = ${st.p.toFixed(3)}). Pick one dot and you can tell either story.` +
+        `(p = ${st.p.toFixed(3)}). ` +
+        (Math.max(...c.seed_returns) < 0
+          ? "Every crypto run lost money; how much depended on the seed."
+          : "Pick one dot and you can tell either story.") +
         LEAK_NOTE;
     }
 

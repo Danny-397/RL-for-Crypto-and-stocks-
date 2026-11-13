@@ -506,7 +506,10 @@ def test_datasets_expose_the_single_seed_headline(client):
     floor = 2.0 / (2 ** stats["n_seeds"])
     assert resolution["min_attainable_p"] == pytest.approx(floor, abs=1e-6)
     assert resolution["can_reach_05"] is bool(floor <= 0.05)
-    assert stats["benchmark"]["p_value"] > 0.05
+    # Whether the seeds separate from buy-and-hold is a property of the build too:
+    # they did not in v2.2.1, and every crypto seed is below it from v2.3.0 (the
+    # leak-free split). What holds either way is that p cannot beat the floor.
+    assert stats["benchmark"]["p_value"] >= floor - 1e-9
     assert {"mean", "ci_low", "ci_high", "std"} <= set(stats["multi_seed"])
 
 
