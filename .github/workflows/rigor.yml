@@ -27,7 +27,7 @@ env:
 jobs:
   benchmark:
     # Stage 1: is this PPO correct? 4 tasks x 3 arms x 10 seeds.
-    if: (github.event_name == 'push' && !contains(github.ref_name, 'trading') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'trading')
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'trading') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'trading')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -54,7 +54,7 @@ jobs:
   trading:
     # Stages 2-4: other implementations/algorithms, training budget, time-limit
     # handling, and the hindsight-free universe. Needs the archived data.
-    if: (github.event_name == 'push' && !contains(github.ref_name, 'benchmark') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'benchmark')
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'benchmark') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'benchmark')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -192,8 +192,46 @@ jobs:
           name: trading-common-crypto-${{ matrix.arm }}-${{ matrix.seeds }}
           path: results/trading_rigor/
 
+  repaired:
+    # The PPO with every repair (matches SB3 on 3 of 4 benchmarks) on the
+    # trading study: stocks, and crypto on the leak-free cut.
+    if: github.event_name == 'push' && contains(github.ref_name, 'repaired')
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {market: stock, split: ticker, seeds: "200-204"}
+          - {market: stock, split: ticker, seeds: "205-209"}
+          - {market: crypto, split: common, seeds: "200-204"}
+          - {market: crypto, split: common, seeds: "205-209"}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e .
+      - name: Unpack the archived data
+        env:
+          KEY: ${{ secrets.RIGOR_DATA_KEY }}
+        run: |
+          test -n "$KEY" || { echo "RIGOR_DATA_KEY is not set"; exit 1; }
+          gpg --batch --quiet --pinentry-mode loopback --passphrase "$KEY" -d data/encrypted/rigor-data-2026-11-13.tgz.gpg > /tmp/d.tgz
+          mkdir -p data/raw && tar xzf /tmp/d.tgz -C data/raw stock crypto
+          python tools/fetch_data.py --verify --out data/raw --snapshot docs/preregistration/2026-10-28-fresh-seeds.SNAPSHOT.json
+      - name: Train
+        run: python tools/trading_rigor.py run-many --market ${{ matrix.market }} --arm ours_repaired --split ${{ matrix.split }} --seeds ${{ matrix.seeds }} --jobs 5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trading-repaired-${{ matrix.market }}-${{ matrix.seeds }}
+          path: results/trading_rigor/
+
   aggregate:
-    needs: [benchmark, trading, diagnose, retrade, leakfree]
+    needs: [benchmark, trading, diagnose, retrade, leakfree, repaired]
     if: always()
     runs-on: ubuntu-latest
     steps:

@@ -47,7 +47,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 BUDGETS = [25_000, 50_000, 100_000, 150_000, 300_000, 600_000, 1_000_000]
 PUBLISHED = 150_000
-ARMS = ("ours", "ours_tb", "ours_fixed", "sb3_ppo", "sb3_sac")
+ARMS = ("ours", "ours_tb", "ours_fixed", "ours_repaired", "sb3_ppo", "sb3_sac")
 # ``ours_fixed``: the PPO with every repair from the benchmark diagnosis
 # (RESULTS.md §12): separate critic trunk, observations stored as the policy saw
 # them, no tanh on the mean, and time-limit bootstrapping.
@@ -167,13 +167,16 @@ def run_one(market: str, arm: str, seed: int, data_dir: str, out_dir: str,
     checkpoints: dict = {}
     t0 = time.time()
 
-    if arm in ("ours", "ours_tb", "ours_fixed"):
+    if arm in ("ours", "ours_tb", "ours_fixed", "ours_repaired"):
         from rl_trader.training.utils import run_ppo_training
 
         cfg.ppo.bootstrap_truncation = arm == "ours_tb"
         if arm == "ours_fixed":
             for k, v in FIXED.items():
                 setattr(cfg.ppo, k, v)
+        if arm == "ours_repaired":
+            from rl_trader.config.training_config import repaired_ppo
+            repaired_ppo(cfg.ppo)
         cfg.train.total_timesteps = budgets[-1]
         random.seed(seed)
 

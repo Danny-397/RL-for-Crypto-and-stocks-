@@ -84,6 +84,25 @@ class PPOConfig:
     advantage_norm: str = "rollout"   # "rollout" (as published) | "minibatch" (SB3)
 
 
+def repaired_ppo(ppo: "PPOConfig") -> "PPOConfig":
+    """Switch a PPOConfig to the repaired update (RESULTS.md §10).
+
+    The published runs used the defaults. Benchmarked against Stable-Baselines3
+    under the same hyper-parameters, the defaults trail it on HalfCheetah and
+    Pendulum; with all seven of these changes the PPO matches SB3 on
+    InvertedPendulum, Hopper and HalfCheetah. The defaults are kept so every
+    published number still reproduces.
+    """
+    ppo.bootstrap_truncation = True
+    ppo.shared_trunk = False
+    ppo.normalize_at_collection = True
+    ppo.squash_mean = False
+    ppo.value_loss = "clipped"
+    ppo.adam_eps = 1e-5
+    ppo.advantage_norm = "minibatch"
+    return ppo
+
+
 @dataclass
 class TrainConfig:
     """Outer training-loop settings and I/O locations."""
