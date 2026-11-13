@@ -114,15 +114,17 @@ class RolloutBuffer:
         self.returns = self.advantages + self.values
 
     def iter_minibatches(
-        self, minibatch_size: int, device: torch.device
+        self, minibatch_size: int, device: torch.device, normalize_advantages: bool = True
     ) -> Iterator[Dict[str, torch.Tensor]]:
         """Yield shuffled mini-batches of tensors for the PPO update.
 
         Advantages are normalised across the whole rollout, which materially
-        stabilises PPO updates.
+        stabilises PPO updates (``normalize_advantages=False`` leaves them raw,
+        for an agent that normalises per minibatch instead).
         """
         adv = self.advantages
-        adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+        if normalize_advantages:
+            adv = (adv - adv.mean()) / (adv.std() + 1e-8)
 
         indices = np.random.permutation(self.size)
         for start in range(0, self.size, minibatch_size):
@@ -142,6 +144,7 @@ def run_ppo_training(
     df: Optional["pd.DataFrame"] = None,
     logger: Optional[logging.Logger] = None,
     train_series_factory=None,
+    callback=None,
 ):
     """Train a PPO agent on a single market end-to-end.
 
@@ -163,6 +166,11 @@ def run_ppo_training(
         given, the agent is trained with **domain randomization** — a new path is
         drawn between episodes — while validation/test stay on the fixed held-out
         splits. This is the primary overfitting control for the synthetic setup.
+
+    callback:
+        Optional ``callback(agent, steps)`` called after every PPO update with the
+        number of environment steps so far. Used to score checkpoints during one
+        long run (tools/trading_rigor.py); it must not touch the training RNGs.
 
     Returns
     -------
@@ -233,7 +241,12 @@ def run_ppo_training(
             if reward_rms is not None:
                 reward_rms.update(np.array([[reward]], dtype=np.float64))
                 train_reward = float(reward / (np.sqrt(reward_rms.var[0]) + 1e-8))
-            buffer.add(obs, action, log_prob, train_reward, value, done)
+            # Off by default (the published runs did not do this): when an episode
+            # is cut by the end of its data rather than by bankruptcy, credit the
+            # value of the state it was cut at instead of treating it as final.
+            if truncated and not terminated and getattr(config.ppo, "bootstrap_truncation", False):
+                train_reward += config.ppo.gamma * agent.value(next_obs)
+            buffer.add(agent.buffer_obs(obs), action, log_prob, train_reward, value, done)
             obs = next_obs
             ep_return += reward
             if done:
@@ -248,6 +261,8 @@ def run_ppo_training(
         last_value = 0.0 if done else agent.value(obs)
         buffer.compute_gae(last_value, config.ppo.gamma, config.ppo.gae_lambda)
         stats = agent.update(buffer)
+        if callback is not None:
+            callback(agent, update * config.train.rollout_length)
 
         mean_ret = float(np.mean(ep_returns[-20:])) if ep_returns else 0.0
         mean_eq = float(np.mean(ep_equities[-20:])) if ep_equities else config.env.initial_balance

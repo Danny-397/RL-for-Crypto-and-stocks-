@@ -76,6 +76,7 @@ to reliably positive** in both markets, across ten seeds.
 | **RQ2** | How severely does an RL agent overfit a single price trajectory, and does **domain randomization** restore generalization? | [`tools/ablation.py`](tools/ablation.py), [RESULTS §1](RESULTS.md) |
 | **RQ3** | Does an apparent out-of-sample edge survive **multi-seed** resampling and a permutation test — or is it seed luck? | [`tools/real_significance.py`](tools/real_significance.py), [RESULTS §5](RESULTS.md) |
 | **RQ4** | Do the same conclusions hold on the harder problem of **cross-sectional allocation** (long/short weights over a basket)? | [`tools/portfolio_experiment.py`](tools/portfolio_experiment.py), [RESULTS §6](RESULTS.md) |
+| **Rigor** | Does the study survive standard deep-RL evaluation practice: a correct PPO, other implementations and algorithms, more training, no hindsight in the universe, multiple-testing correction? | [`tools/ppo_benchmark.py`](tools/ppo_benchmark.py), [`tools/trading_rigor.py`](tools/trading_rigor.py), [RESULTS §10](RESULTS.md) |
 
 **Findings in one line:** the recipe transfers across regimes (RQ1); a single-path
 agent memorises catastrophically and domain randomization flips its held-out return
@@ -103,6 +104,9 @@ significance test on it:
 | Crypto | **+56.8%** `[+16%, +106%]` | +33% | indistinguishable (p = 0.79) |
 | Stock | **−19.1%** `[−27%, −11%]` | +240% | significantly **worse** (p = 0.0021) |
 <!-- END GENERATED: significance-brief -->
+
+*The crypto row uses per-coin splits that leak across coins in calendar time; on a
+leak-free split every agent loses money on crypto (see "Does it hold up?" below).*
 
 Read the spread, not the mean. The individual seeds returned:
 
@@ -148,6 +152,45 @@ benchmarked against equal-weight and a cross-sectional-momentum factor through t
 identical cost model. Building and fairly evaluating that is the contribution; on
 real daily data it lands in the same place as the single-asset agent — diversified
 benchmarks are hard to beat, measured honestly.
+
+---
+
+## Does it hold up? The study under the same scrutiny
+
+A negative result is only as good as the machinery behind it, so the study was put
+through the checks a reviewer applying current deep-RL evaluation practice would ask
+for, each **pre-registered** before it ran
+([registration](docs/preregistration/2026-11-13-rigor.md),
+[outcomes](docs/preregistration/2026-11-13-rigor.results.md),
+[RESULTS §10](RESULTS.md)). It found two real flaws and reports both:
+
+- **The PPO was not fully correct.** Benchmarked against Stable-Baselines3 under
+  identical hyper-parameters, it trailed on HalfCheetah and Pendulum. Seven standard
+  implementation details, together, close the gap on HalfCheetah, Hopper and
+  InvertedPendulum; Pendulum stays unexplained. The repairs ship as
+  `repaired_ppo()`, with the published defaults kept so every number reproduces.
+- **The crypto split leaked.** Coins were cut 60/40 on their own histories, so some
+  were trained on dates that were already test dates for others. That inflated
+  every published crypto number; stocks were unaffected.
+
+Neither changes the conclusion. Held-out return at the published budget, mean
+basket return (IQM over 10 seeds):
+
+<!-- BEGIN GENERATED: rigor-implementations -->
+| Market | Buy & hold | PPO as published | PPO repaired | SB3 PPO | SB3 SAC |
+|---|---:|---:|---:|---:|---:|
+| Stocks | +239.5% | −22.8% (p = 0.0021) | −29.8% (p = 0.0021) | −18.4% (p = 0.0021) | −25.1% (p = 0.0021) |
+| Crypto, per-coin cut (as published; leaks) | +33.5% | +13.2% (p = 0.66) | – | +27.8% (p = 0.85) | +224.3% (p = 0.47) |
+| Crypto, one calendar cut (leak-free) | +10.3% | −29.1% (p = 0.50) | −38.4% (p = 0.31) | −63.5% (p = 0.03) | −30.2% (p = 0.22) |
+
+*Basket-mean held-out return at 150k steps (the published budget), IQM over seeds 200–209; p from a paired permutation test of agent vs. buy-and-hold across the held-out tickers (10 stocks, 6 coins). Same archived data (2026-10-28 snapshot) and 60/40 split as the pre-registered replication.*
+<!-- END GENERATED: rigor-implementations -->
+
+The same holds at every budget from 25k to 1M steps, and on a stock universe chosen
+without hindsight (the Dow 30 of 2016), where buy-and-hold falls from +240% to +101%
+and the agent still loses to it. Of the 14 p-values the paper reports, every claim
+of a difference survives Holm–Bonferroni within its question; two (hedging at 0.2%
+cost, the crypto surrogate control) do not survive one family of all fourteen.
 
 ---
 

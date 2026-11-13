@@ -75,6 +75,32 @@ class PPOConfig:
     normalize_obs: bool = True        # running mean/std normalisation of observations
     obs_clip: float = 10.0            # clip normalised observations to +/- this many std
     normalize_reward: bool = False    # running-std reward scaling (off: return_scale handles it)
+    bootstrap_truncation: bool = False  # bootstrap V(s) when data runs out (off: as published)
+    shared_trunk: bool = True         # one trunk for policy and value (on: as published)
+    squash_mean: bool = True          # tanh on the policy mean (on: as published)
+    normalize_at_collection: bool = False  # store obs normalised as the policy saw them
+    value_loss: str = "max"           # "max" (as published) | "clipped" (SB3's form)
+    adam_eps: float = 1e-8            # Adam epsilon (1e-8 as published; SB3 uses 1e-5)
+    advantage_norm: str = "rollout"   # "rollout" (as published) | "minibatch" (SB3)
+
+
+def repaired_ppo(ppo: "PPOConfig") -> "PPOConfig":
+    """Switch a PPOConfig to the repaired update (RESULTS.md §10).
+
+    The published runs used the defaults. Benchmarked against Stable-Baselines3
+    under the same hyper-parameters, the defaults trail it on HalfCheetah and
+    Pendulum; with all seven of these changes the PPO matches SB3 on
+    InvertedPendulum, Hopper and HalfCheetah. The defaults are kept so every
+    published number still reproduces.
+    """
+    ppo.bootstrap_truncation = True
+    ppo.shared_trunk = False
+    ppo.normalize_at_collection = True
+    ppo.squash_mean = False
+    ppo.value_loss = "clipped"
+    ppo.adam_eps = 1e-5
+    ppo.advantage_norm = "minibatch"
+    return ppo
 
 
 @dataclass

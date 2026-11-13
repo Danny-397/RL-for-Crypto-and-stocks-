@@ -32,3 +32,6 @@ data/processed/
 .vscode/
 *.swp
 docs/assets/ablation_multiseed_raw.json
+
+# Rigor experiment run files (aggregated into docs/assets/)
+results/

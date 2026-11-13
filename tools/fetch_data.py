@@ -45,6 +45,16 @@ BASKETS = {
     "stock": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "JPM", "JNJ", "XOM", "SPY", "QQQ"],
     "crypto": ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "LTC-USD", "ADA-USD"],
 }
+# A hindsight-free stock universe for the survivorship check (RESULTS.md §10e):
+# the 30 Dow Jones Industrial Average members on the first day of the stock data
+# (2016-08-29; the list in force 2015-03-19 to 2017-09-01), chosen by an index
+# committee at the time rather than by this project in 2026. Two have since been
+# merged; their successor listings carry the history (UTX -> RTX, DuPont -> DD).
+# SPY is fetched as the market index only and is not part of the basket.
+DOW_2016 = ["MMM", "AXP", "AAPL", "BA", "CAT", "CVX", "CSCO", "KO", "DD", "XOM", "GE", "GS",
+            "HD", "IBM", "INTC", "JNJ", "JPM", "MCD", "MRK", "MSFT", "NKE", "PFE", "PG", "TRV",
+            "UNH", "RTX", "VZ", "V", "WMT", "DIS"]
+UNIVERSES = {"main": BASKETS, "pit": {"stock": DOW_2016 + ["SPY"]}}
 # yfinance 1.x is far more reliable with a relative ``period`` than an absolute
 # start date for long histories.
 PERIOD = {"stock": "10y", "crypto": "max"}
@@ -164,6 +174,8 @@ def main() -> None:
     parser.add_argument("--out", default="data/raw", help="Output directory root.")
     parser.add_argument("--force", action="store_true", help="Ignore the cache.")
     parser.add_argument("--delay", type=float, default=3.0, help="Seconds between tickers.")
+    parser.add_argument("--universe", choices=list(UNIVERSES), default="main",
+                        help="main: the study's baskets; pit: the 2016 Dow 30 (survivorship check)")
     parser.add_argument("--start", default=None, help="Pin the first date (YYYY-MM-DD).")
     parser.add_argument("--end", default=None, help="Pin the last date (YYYY-MM-DD).")
     parser.add_argument("--snapshot", default=DEFAULT_SNAPSHOT,
@@ -185,7 +197,7 @@ def main() -> None:
         return
 
     got, missed = 0, []
-    for market, tickers in BASKETS.items():
+    for market, tickers in UNIVERSES[args.universe].items():
         out_dir = os.path.join(args.out, market)
         os.makedirs(out_dir, exist_ok=True)
         for ticker in tickers:

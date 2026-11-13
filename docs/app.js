@@ -181,6 +181,13 @@
   // Built from window.RL_SIGNIFICANCE rather than written down. These two
   // sentences carried hand-typed statistics that a rebuild silently invalidated
   // -- they still quoted a +275% run and a p of 0.97 after both had moved.
+  // The crypto study split each coin on its own history, so coins were trained on
+  // dates that were already test dates for others (RESULTS.md §10c).
+  const LEAK_NOTE = ' <b>Caveat:</b> these crypto figures use per-coin splits that ' +
+    'leak across coins in calendar time; on a leak-free split every agent tested ' +
+    'loses money (<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md#10c-a-calendar-leak-in-the-crypto-split" ' +
+    'target="_blank" rel="noopener">RESULTS.md §10c</a>).';
+
   function verdictFor(market) {
     const lead = "Every figure here is the <b>real held-out backtest</b> for the " +
       "asset you picked — out-of-sample, costs included, no cherry-picking.";
@@ -207,7 +214,7 @@
     return `${lead} A single seed can look spectacular${best}, but across ` +
       `<b>${n} seeds</b> the mean is <b>${p1(r.mean)}</b> (${ci}), and against ` +
       `buy-&amp;-hold across the held-out tickers the difference is <b>not ` +
-      `distinguishable</b> (p = ${pv}).${here}`;
+      `distinguishable</b> (p = ${pv}).${here}${market === "crypto" ? LEAK_NOTE : ""}`;
   }
   const VERDICT_TAIL = ' <b>The methodology is the point:</b> a multi-seed permutation study (<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>) holds the model to a real statistical bar — the rigor a quant or researcher would actually demand, rather than a cherry-picked backtest.';
 
@@ -468,7 +475,8 @@
         `random seed. Crypto runs ranged from <b>${sgn(Math.min(...c.seed_returns))}</b> ` +
         `to <b>${sgn(Math.max(...c.seed_returns))}</b>. Across ${n} runs crypto is ` +
         `${verdict(c)} from buy-&amp;-hold and stocks are ${verdict(st)} ` +
-        `(p = ${st.p.toFixed(3)}). Pick one dot and you can tell either story.`;
+        `(p = ${st.p.toFixed(3)}). Pick one dot and you can tell either story.` +
+        LEAK_NOTE;
     }
 
     const total = Math.max(c.seed_returns.length, st.seed_returns.length);

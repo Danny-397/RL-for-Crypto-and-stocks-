@@ -54,8 +54,11 @@ class PPOAgent:
             act_dim,
             hidden_sizes=config.hidden_sizes,
             init_log_std=config.init_log_std,
+            shared_trunk=getattr(config, "shared_trunk", True),
+            squash_mean=getattr(config, "squash_mean", True),
         ).to(self.device)
-        self.optimizer = torch.optim.Adam(self.ac.parameters(), lr=config.learning_rate)
+        self.optimizer = torch.optim.Adam(
+            self.ac.parameters(), lr=config.learning_rate, eps=getattr(config, "adam_eps", 1e-8))
 
         # Running observation normaliser (fitted during training, frozen at eval).
         self.obs_rms = (
@@ -71,6 +74,24 @@ class PPOAgent:
 
     def _norm(self, observation: np.ndarray) -> np.ndarray:
         return self.obs_rms.normalize(observation) if self.obs_rms is not None else observation
+
+    @property
+    def _frozen_norm(self) -> bool:
+        return self.obs_rms is not None and getattr(self.cfg, "normalize_at_collection", False)
+
+    def buffer_obs(self, observation: np.ndarray) -> np.ndarray:
+        """What the rollout buffer should store for ``observation``.
+
+        Published behaviour: the raw observation, normalised at update time with
+        the statistics as they stand *after* the rollout, which differ from the
+        ones the action was sampled under, so the first PPO epoch starts with a
+        probability ratio that is not 1. With ``normalize_at_collection`` the
+        observation is stored already normalised, exactly as the policy saw it
+        (what Stable-Baselines3's VecNormalize does).
+        """
+        if self._frozen_norm:
+            return np.asarray(self._norm(observation), dtype=np.float32)
+        return observation
 
     # ------------------------------------------------------------------ #
     # Acting                                                             #
@@ -117,20 +138,24 @@ class PPOAgent:
         # The buffer stores *raw* observations; normalise them here with the stats
         # accumulated over the rollout (frozen for the duration of the update).
         norm_mean = norm_std = None
-        if self.obs_rms is not None:
+        if self.obs_rms is not None and not self._frozen_norm:
             norm_mean = torch.as_tensor(self.obs_rms.mean, dtype=torch.float32, device=self.device)
             norm_std = torch.as_tensor(
                 np.sqrt(self.obs_rms.var + self.obs_rms.epsilon), dtype=torch.float32, device=self.device
             )
 
+        per_minibatch = getattr(self.cfg, "advantage_norm", "rollout") == "minibatch"
         for _ in range(self.cfg.update_epochs):
-            for batch in buffer.iter_minibatches(self.cfg.minibatch_size, self.device):
+            extra = {"normalize_advantages": False} if per_minibatch else {}
+            for batch in buffer.iter_minibatches(self.cfg.minibatch_size, self.device, **extra):
                 obs = batch["observations"]
                 if norm_mean is not None:
                     obs = torch.clamp((obs - norm_mean) / norm_std, -self.obs_rms.clip, self.obs_rms.clip)
                 log_probs, entropy, values = self.ac.evaluate(obs, batch["actions"])
                 ratio = torch.exp(log_probs - batch["old_log_probs"])
                 adv = batch["advantages"]
+                if per_minibatch:
+                    adv = (adv - adv.mean()) / (adv.std() + 1e-8)
 
                 # Clipped surrogate policy objective.
                 unclipped = ratio * adv
@@ -143,7 +168,12 @@ class PPOAgent:
                 )
                 v_loss_unclipped = (values - batch["returns"]) ** 2
                 v_loss_clipped = (v_clipped - batch["returns"]) ** 2
-                value_loss = 0.5 * torch.max(v_loss_unclipped, v_loss_clipped).mean()
+                if getattr(self.cfg, "value_loss", "max") == "clipped":
+                    # Stable-Baselines3's form: squared error of the clipped value.
+                    value_loss = v_loss_clipped.mean()
+                else:
+                    # Published form (OpenAI Baselines): half the larger of the two.
+                    value_loss = 0.5 * torch.max(v_loss_unclipped, v_loss_clipped).mean()
 
                 entropy_loss = entropy.mean()
                 loss = (

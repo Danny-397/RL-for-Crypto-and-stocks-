@@ -38,6 +38,14 @@ respectively.
    domain: the framework's own significance tooling exposed a false positive that a
    naive project would have shipped as a win. The contribution is the **rigorous,
    honest methodology**, not a fantasy return.
+5. **Then the study was put through the same scrutiny (§10).** Pre-registered
+   checks against current deep-RL evaluation practice found two real flaws: the
+   from-scratch PPO trailed Stable-Baselines3 on two of four standard benchmarks
+   (seven implementation details close the gap on three of the four), and the
+   crypto split leaked across coins in calendar time, inflating every published
+   crypto number. Neither changes the conclusion. With the repaired PPO, with
+   Stable-Baselines3's PPO and SAC, at budgets up to 1M steps, on a leak-free crypto
+   split and on a hindsight-free stock universe, no agent beats buy-and-hold.
 
 The point of the project is the **methodology and the honest evaluation**, not a
 fantasy money-machine.
@@ -160,6 +168,8 @@ synthetic paths. That is exactly the discipline I apply to the real-data win bel
 > run the dashboard displays. It happens to be *favorable* for crypto. §5 shows
 > what happens across many seeds, and the honest picture is very different. This
 > single-seed table is shown for transparency, not as the headline result.
+
+> ⚠️ **Crypto rows below use per-coin 60/40 cuts, which leak across coins in calendar time** (§10c). They are left as published so they still reproduce; the leak-free crypto result is in §10b. Stock rows are unaffected.
 
 **The published run:**
 
@@ -339,6 +349,8 @@ vs. buy-&-hold *across the held-out tickers*.
 
 `python tools/real_significance.py --seeds 10 --timesteps 150000`
 
+> ⚠️ **Crypto rows below use per-coin 60/40 cuts, which leak across coins in calendar time** (§10c). They are left as published so they still reproduce; the leak-free crypto result is in §10b. Stock rows are unaffected.
+
 <!-- BEGIN GENERATED: significance-full -->
 | Market | Agent return (95% CI across seeds) | Buy & hold | Agent − B&H | p-value | Verdict |
 |---|---:|---:|---:|---:|---|
@@ -441,7 +453,7 @@ if it ever happens.
 
 §5 varies the **seed** and holds the split fixed. It cannot tell you whether the
 result is an artifact of *which* 40% of history happened to be the test block.
-This section closes that gap — it is the "multi-*fold*" item §10 listed as an
+This section closes that gap — it is the "multi-*fold*" item §11 listed as an
 extension, now run.
 
 `tools/walk_forward_report.py` drives `rl_trader.evaluation.walk_forward`, whose
@@ -542,6 +554,9 @@ the situation where it is tempting to quietly re-run until it looks better. The
 budget was chosen to match §2's protocol, not chosen after seeing this p-value.
 
 **Applying the validated test to real markets:**
+
+> ⚠️ The crypto arm uses per-coin cuts, which leak across coins in calendar time
+> (§10c); the stock arm is unaffected.
 
 `python tools/surrogate_test.py --mode real --seeds 3 --timesteps 120000`
 
@@ -733,7 +748,249 @@ price prediction does solve a well-posed decision problem, checked against theor
 Reproduce: `python tools/hedging_experiment.py train` (about 50 minutes on 8 CPU
 cores), then `simulate`, `real` and `site`.
 
-## 10. Limitations & next steps
+## 10. Does it hold up? Standard deep-RL evaluation, applied
+
+Sections 1–9 test whether the agent has an edge. This section tests the study
+itself, against the checks a reviewer applying current deep-RL evaluation practice
+would ask for (Henderson et al. 2018; Agarwal et al. 2021; Patterson et al. 2023):
+is the from-scratch PPO actually correct, is the result a property of this code or
+of RL, would more training have helped, is the stock basket biased by hindsight,
+and do the reported p-values survive a correction for multiple testing?
+
+Every check was **pre-registered** before its runs, and every prediction is
+reported whether it held or not
+([registration and four dated amendments](docs/preregistration/2026-11-13-rigor.md),
+[outcomes](docs/preregistration/2026-11-13-rigor.results.md)). The runs are on
+GitHub-hosted runners (`.github/workflows/rigor.yml`), on the archived data of the
+2026-10-28 replication with seeds 200–209.
+
+**What it found.** The PPO as published was *not* fully correct: under identical
+hyper-parameters it trails Stable-Baselines3 on two of four standard tasks. Seven
+implementation details together close the gap on three of the four (Pendulum
+remains unexplained). Separately, the crypto study had a **calendar leak** — coins
+were split on their own histories, so some were trained on dates that were already
+test dates for others — which inflated every published crypto number. Neither
+changes the headline: with the repaired PPO, with Stable-Baselines3's PPO, with
+SAC, at every budget from 25k to 1M steps, on a leak-free crypto split and on a
+hindsight-free stock universe, **no agent beats buy-and-hold**. On stocks every
+configuration is significantly worse.
+
+### 10a. Is the PPO correct?
+
+`python tools/ppo_benchmark.py run-many --env HalfCheetah-v5 --arm ours --seeds 0-9`
+
+The trading study's PPO, trained on four standard continuous-control tasks with the
+trading study's own hyper-parameters, against Stable-Baselines3 (SB3) 2.9.2's PPO
+configured identically:
+
+<!-- BEGIN GENERATED: rigor-benchmark -->
+| Task | Steps | Random policy | This PPO, as published | Repaired | Stable-Baselines3 | Repaired − SB3 |
+|---|---:|---:|---:|---:|---:|---:|
+| Pendulum-v1 | 300k | −1,161 | −1,112 `[−1,158, −1,076]` ↓ | −1,094 `[−1,141, −1,048]` ↓ | −407 `[−550, −301]` | −661 `[−771, −541]`, p < 0.0001 |
+| InvertedPendulum-v5 | 300k | 5 | 1,000 `[1,000, 1,000]` | 1,000 `[1,000, 1,000]` | 997 `[873, 1,000]` | 66 `[0, 154]`, p = 0.21 |
+| HalfCheetah-v5 | 1,000k | −292 | 1,495 `[1,201, 2,122]` ↓ | 4,176 `[3,497, 4,561]` | 3,755 `[3,200, 4,246]` | 310 `[−451, 1,031]`, p = 0.45 |
+| Hopper-v5 | 1,000k | 17 | 1,246 `[827, 1,833]` | 1,499 `[1,332, 2,069]` | 1,691 `[1,178, 2,093]` | 84 `[−422, 646]`, p = 0.78 |
+
+*Interquartile mean (IQM) of the final return over 10 seeds, with a 95% bootstrap CI; final return is the mean of the last three evaluations of 10 deterministic episodes. ↓: significantly worse than SB3 (the CI of the difference of means lies below zero). The last column is a difference of means with a bootstrap CI and a permutation p. All arms use the trading study's hyper-parameters, not values tuned for these tasks.*
+<!-- END GENERATED: rigor-benchmark -->
+
+**Reading it.** As published, the PPO learns — it solves InvertedPendulum, and on
+HalfCheetah and Hopper it is far above a random policy — but it is significantly
+behind SB3 on HalfCheetah (less than half SB3's score) and barely learns Pendulum.
+That is a defect, and the registration required it to be found. Changing one thing
+at a time:
+
+<!-- BEGIN GENERATED: rigor-diagnosis -->
+| Change from the published PPO | Pendulum | InvertedPendulum | HalfCheetah | Hopper |
+|---|---:|---:|---:|---:|
+| As published | −1,112 ↓ | 1,000 | 1,495 ↓ | 1,246 |
+| + time-limit bootstrapping | −1,187 ↓ | 1,000 | 2,081 ↓ | 1,346 |
+| + separate critic trunk | −1,067 ↓ | 1,000 | 1,258 ↓ | 2,077 |
+| + observations stored as seen | −1,120 ↓ | 1,000 | 2,007 ↓ | 1,070 ↓ |
+| + no tanh on the mean | −1,187 ↓ | 1,000 | 1,232 ↓ | 1,219 |
+| + SB3's value loss | −1,416 ↓ | 1,000 | 2,307 ↓ | 1,865 |
+| + Adam ε = 1e-5 | −1,159 ↓ | 1,000 | 1,949 ↓ | 1,720 |
+| + per-minibatch advantages | −1,132 ↓ | 1,000 | 2,255 ↓ | 1,510 |
+| first four together | −1,049 ↓ | 1,000 | 1,879 ↓ | 2,075 |
+| **all seven (repaired)** | −1,094 ↓ | 1,000 | 4,176 | 1,499 |
+| Stable-Baselines3 PPO | −407 | 997 | 3,755 | 1,691 |
+
+*IQM of final return over 10 seeds. ↓: significantly worse than Stable-Baselines3 (CI of the difference of means below zero). Every row but the last two is this repository's PPO with one change, or the stated set.*
+<!-- END GENERATED: rigor-diagnosis -->
+
+No single change closes the gap; all seven together do, on three of the four tasks.
+On HalfCheetah the repaired PPO scores 4,176 against SB3's 3,755, and on no task
+but Pendulum is it distinguishable from SB3. The seven are standard PPO
+implementation details (Huang et al. 2022, *The 37 Implementation Details of
+PPO*): a separate trunk for the critic; storing observations normalised exactly as
+the policy saw them (the published code re-normalised them after the rollout with
+statistics that had since moved, so each update started from a probability ratio
+that was not 1); no tanh on the policy mean; bootstrapping the value of a state cut
+off by a time limit; SB3's value loss; Adam ε = 1e-5; and normalising advantages
+per minibatch. **Pendulum is not explained:** every variant stays near a random
+policy while SB3 reaches −407. We report that rather than keep searching.
+
+The repairs are available as `repaired_ppo()` in `rl_trader/config` and as
+individual `PPOConfig` flags. The defaults are left as published, so every number
+in §1–§9 still reproduces.
+
+### 10b. Is it this PPO, or RL?
+
+`python tools/trading_rigor.py run-many --market stock --arm sb3_sac --seeds 200-209`
+
+The real-data study of §5 at its published budget (150k steps), trained four ways:
+the PPO as published, the repaired PPO, SB3's PPO, and SB3's **SAC**, an
+off-policy algorithm from a different family (SB3's default settings, same network
+size).
+
+<!-- BEGIN GENERATED: rigor-implementations -->
+| Market | Buy & hold | PPO as published | PPO repaired | SB3 PPO | SB3 SAC |
+|---|---:|---:|---:|---:|---:|
+| Stocks | +239.5% | −22.8% (p = 0.0021) | −29.8% (p = 0.0021) | −18.4% (p = 0.0021) | −25.1% (p = 0.0021) |
+| Crypto, per-coin cut (as published; leaks) | +33.5% | +13.2% (p = 0.66) | – | +27.8% (p = 0.85) | +224.3% (p = 0.47) |
+| Crypto, one calendar cut (leak-free) | +10.3% | −29.1% (p = 0.50) | −38.4% (p = 0.31) | −63.5% (p = 0.03) | −30.2% (p = 0.22) |
+
+*Basket-mean held-out return at 150k steps (the published budget), IQM over seeds 200–209; p from a paired permutation test of agent vs. buy-and-hold across the held-out tickers (10 stocks, 6 coins). Same archived data (2026-10-28 snapshot) and 60/40 split as the pre-registered replication.*
+<!-- END GENERATED: rigor-implementations -->
+
+On stocks all four lose money while buy-and-hold more than triples, and every one is
+significantly worse than buy-and-hold. On the leak-free crypto split (§10c) all four
+lose money while buy-and-hold makes a little; none is distinguishable from it
+except SB3's PPO, which is significantly worse. The negative result is not a
+property of this implementation.
+
+### 10c. A calendar leak in the crypto split
+
+The middle row above is the crypto study as published, and SAC's result in it is
+what exposed the flaw. §3 and §5 cut each ticker 60/40 **on its own history**.
+Every stock series covers the same dates, so their cuts coincide. Crypto histories
+start in different years, so theirs do not:
+
+| Coins | Trained until | Tested from |
+|---|---|---|
+| BTC, LTC | 2022-01-03 | 2022-01-04 |
+| ETH, ADA, XRP | 2023-04-08 | 2023-04-09 |
+| SOL | 2024-03-26 | 2024-03-27 |
+
+Training draws a random coin per episode, so the agent was trained on ETH, ADA, XRP
+and SOL through 15–27 months that are BTC's and LTC's test period — coins that move
+together, with every crypto observation carrying BTC's own market-index features
+for those months. That is look-ahead across tickers. A per-date check on the
+features finds none, because the leak is in *which dates are training dates*. SAC,
+which takes a gradient step per environment step, exploited it hardest: +1,044% on
+BTC and +505% on LTC, averaged over seeds. Cut every coin on one calendar date
+instead (60% of the window all six trade in: train before 2024-03-27, test to
+2026-08-28) and its result falls to a loss.
+
+**What this changes.** Every crypto number in §3, §5 (including the replication)
+and §6's real-data arm used per-coin cuts and is inflated by the leak; the
+published PPO's crypto result at 150k steps, for example, goes from a gain to a
+loss (table above). The direction of the conclusion is unchanged, because the
+published conclusion was already that there is no edge: §5's "the crypto agent
+made money on average across seeds" was partly seed luck (the replication said so)
+and partly this leak. The stock results are untouched.
+`load_real_basket(..., split="common")` is the fix; the default is left as
+published so the original numbers still reproduce.
+
+### 10d. Would more training have helped?
+
+`python tools/trading_rigor.py run-many --market stock --arm ours --seeds 200-209`
+
+One run per seed to 1M steps, scored at seven budgets along the way (the PPO has
+no learning-rate schedule, so a checkpoint at *n* steps is a run of *n* steps):
+
+<!-- BEGIN GENERATED: rigor-budget -->
+| Steps | Stocks, PPO | Stocks, repaired | Stocks, SB3 | Crypto, PPO | Crypto, repaired | Crypto, SB3 |
+|---:|---:|---:|---:|---:|---:|---:|
+| 25k | −14.6% | −21.8% | −19.4% | −22.2% | −35.9% | −36.5% |
+| 50k | −20.4% | −26.6% | −19.2% | −29.5% | −35.1% | −44.3% |
+| 100k | −20.7% | −24.0% | −18.6% | −36.5% | −37.5% | −53.9% |
+| 150k *(published)* | −22.8% | −29.8% | −18.4% | −29.1% | −38.4% | −63.5% |
+| 300k | −16.5% | −27.0% | −18.6% | −37.9% | −52.5% | −55.4% |
+| 600k | −10.5% | −26.3% | −16.3% | −39.8% | −51.8% | −55.0% |
+| 1,000k | −15.8% | −18.1% | −7.5% | −32.2% | −49.3% | −49.0% |
+
+*Basket-mean held-out return (IQM over 10 seeds) scored during one long run per seed; the PPO has no learning-rate schedule, so the checkpoint at n steps is a run of n steps. Buy-and-hold: stocks +239.5%, crypto (leak-free cut) +10.3%. Across these columns no arm is ahead of buy-and-hold at any budget.*
+<!-- END GENERATED: rigor-budget -->
+
+More training does not produce an edge. On stocks the loss narrows somewhat with
+budget, but at 1M steps every arm still loses money against a +240% benchmark; on
+crypto nothing improves.
+
+### 10e. Survivorship: is the stock basket biased by hindsight?
+
+The ten stocks were chosen in 2026 and include the decade's biggest winners (NVDA,
+AAPL, MSFT), which inflates buy-and-hold. The replacement is a universe chosen
+without hindsight: the 30 members of the Dow Jones Industrial Average on the first
+day of the data, as selected by S&P Dow Jones Indices at the time.
+
+`python tools/fetch_data.py --universe pit --out data/raw_pit --start 2016-08-29 --end 2026-08-28`
+
+<!-- BEGIN GENERATED: rigor-survivorship -->
+| Universe | Tickers | Buy & hold | Agent (IQM, 95% CI) | Agent − B&H | p | Tickers where agent beats B&H |
+|---|---:|---:|---:|---:|---:|---:|
+| This study's basket (chosen 2026) | 10 | +239.5% | −22.8% `[−28.9%, −15.7%]` | −262.0% | 0.0021 | 0% |
+| Dow 30 of 2016-08-29 (chosen then) | 30 | +101.1% | −25.3% `[−29.4%, −19.5%]` | −125.2% | < 0.0001 | 8% |
+
+*Published PPO, 150k steps, seeds 200–209, each ticker scored on its held-out 40%. The Dow list is the one in force from 2015-03-19 to 2017-09-01; United Technologies and DuPont are carried by their successor listings (RTX, DD). Its data run 2016-11-14 to 2026-08-28; SPY is the market index only.*
+<!-- END GENERATED: rigor-survivorship -->
+
+Selection did inflate the benchmark (buy-and-hold makes +101% on the 2016 Dow
+against +240% on the hand-picked basket), but the agent loses about a quarter of
+its capital on both and is still significantly worse than buy-and-hold, beating it
+on 8% of tickers. The negative result is not an artifact of a winners-only basket.
+
+### 10f. Do the p-values survive a correction for multiple testing?
+
+`python tools/multiple_testing.py`
+
+<!-- BEGIN GENERATED: multiple-testing -->
+| Section | Test | Claim | p | Holm, per question | Holm, whole paper |
+|---|---|---|---:|---:|---:|
+| §2 synthetic multi-seed | stock: agent vs buy-and-hold, synthetic paths | no difference | 0.60 | 1.00 | 1.00 |
+| §2 synthetic multi-seed | crypto: agent vs buy-and-hold, synthetic paths | no difference | 0.57 | 1.00 | 1.00 |
+| §5 real-data significance | stock: agent vs buy-and-hold, held-out tickers | worse than buy-and-hold | 0.0021 | **0.0042** | **0.03** |
+| §5 pre-registered replication | stock: replication, seeds 200-209 | worse than buy-and-hold | 0.0021 | **0.0042** | **0.03** |
+| §5 real-data significance | crypto: agent vs buy-and-hold, held-out tickers | no difference | 0.79 | 0.79 | 1.00 |
+| §5 pre-registered replication | crypto: replication, seeds 200-209 | no difference | 0.88 | 0.88 | 1.00 |
+| §6 surrogate test | stock: positive control, structured vs shuffled | test has power (difference) | 0.0026 | **0.01** | **0.03** |
+| §6 surrogate test | stock: real vs shuffled prices | no difference | 0.41 | 0.41 | 1.00 |
+| §6 surrogate test | crypto: positive control, structured vs shuffled | test has power (difference) | 0.0075 | **0.02** | 0.07 |
+| §6 surrogate test | crypto: real vs shuffled prices | no difference | 0.12 | 0.24 | 0.98 |
+| §9 hedging vs tuned band | cost none: agent vs tuned band, across seeds | no difference | 0.32 | 0.63 | 1.00 |
+| §9 hedging vs tuned band | cost 0.05%: agent vs tuned band, across seeds | no difference | 0.80 | 0.80 | 1.00 |
+| §9 hedging vs tuned band | cost 0.2%: agent vs tuned band, across seeds | agent better | 0.0057 | **0.02** | 0.06 |
+| §9 hedging vs tuned band | cost 1%: agent vs tuned band, across seeds | agent better | 0.0021 | **0.0086** | **0.03** |
+
+*6 of 14 tests are significant at 0.05 unadjusted, 6 after Holm within their question, 4 after Holm across all 14. Bold: still significant after adjustment. For a claim of no difference, adjustment only strengthens it.*
+<!-- END GENERATED: multiple-testing -->
+
+Every claim of a difference survives Holm–Bonferroni within its own question. Two
+do not survive the strictest reading, one family of all fourteen: the hedging
+agent's win over the tuned band at 0.2% cost (adjusted p = 0.06) and the crypto
+positive control of the surrogate test (0.07). The hedging result at 1% cost, the
+stock result and its replication, and the stock positive control survive both.
+
+### 10g. Does a rerun on another machine reproduce the replication?
+
+The 150k checkpoint of the published PPO, seeds 200–209 on the same archived data,
+is the pre-registered replication's exact configuration. It gives a basket mean of
+−22.5% on stocks (the replication: −19.8%) and +18.1% on crypto (+26.7%), with the
+same verdicts, but the individual seeds differ. The rerun used Linux runners, a
+newer PyTorch and one thread per process, against the original's Windows laptop;
+we did not isolate which matters. Seeded runs here reproduce on one machine, not
+bit for bit across machines; the conclusions do.
+
+## 11. Limitations & next steps
+
+- **Pendulum is unexplained** (§10a). The repaired PPO matches Stable-Baselines3
+  on three standard tasks but not on Pendulum, where every variant stays near a
+  random policy. Some difference between the two implementations remains.
+- **The published numbers use the published PPO and the per-coin crypto cut**
+  (§10a, §10c). §10 re-runs the central real-data study with both repaired; the
+  other real-data crypto experiments (§3 single seed, §3b–c, §6 real arm) have
+  not been re-run on the leak-free cut. §5c trains and tests on BTC alone, so it
+  is not affected.
 
 - **Signal is the bottleneck, not the agent.** Across single-asset *and*
   cross-sectional setups, the ceiling is the data: raw daily OHLCV carries little
@@ -752,7 +1009,7 @@ cores), then `simulate`, `real` and `site`.
 - **Head-to-head feed-forward vs. LSTM** and cost/turnover-sensitivity sweeps are
   natural extensions the codebase is already structured for.
 
-## 11. Reproduce everything
+## 12. Reproduce everything
 
 Training is fully seeded, so these commands re-derive the numbers above.
 
@@ -769,4 +1026,15 @@ python tools/portfolio_experiment.py --market stock         # cross-sectional al
 python tools/hedging_experiment.py train                    # part 2: 40 hedging policies (§9)
 python tools/hedging_experiment.py simulate && python tools/hedging_experiment.py real
 pytest -q                                                   # the test suite
+```
+
+§10 runs on GitHub-hosted runners (`.github/workflows/rigor.yml`; push a branch
+named `experiments/<name>`); each piece also runs locally:
+
+```bash
+python tools/ppo_benchmark.py run-many --env HalfCheetah-v5 --arm ours --seeds 0-9    # §10a
+python tools/trading_rigor.py run-many --market crypto --arm sb3_sac --split common   # §10b-d
+python tools/trading_rigor.py run-many --market stock --arm ours --universe pit       # §10e
+python tools/ppo_benchmark.py aggregate && python tools/trading_rigor.py aggregate
+python tools/multiple_testing.py                                                      # §10f
 ```

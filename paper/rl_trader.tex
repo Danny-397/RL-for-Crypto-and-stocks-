@@ -57,7 +57,14 @@ turn the same PPO to a problem RL is suited to --- hedging a short option when t
 costs money --- where theory gives answers to check against. The agent approximately
 recovers the Black-Scholes delta without observing it, learns to trade less as costs
 rise, and on 237 real one-month SPY episodes it never trained on, ties a tuned
-no-trade-band hedge at low costs and beats it at high costs.
+no-trade-band hedge at low costs and beats it at high costs. Last (RQ6), we put the
+study through pre-registered checks from current deep-RL evaluation practice. They
+find two real flaws: our PPO trails Stable-Baselines3 on two of four standard
+benchmarks (seven implementation details close the gap on three of the four), and
+the crypto split leaked across coins in calendar time. Neither changes the
+conclusion: with the repaired PPO, Stable-Baselines3's PPO and SAC, at budgets up to
+$10^6$ steps, on a leak-free split and on a stock universe chosen without hindsight,
+no agent beats buy-and-hold.
 \end{abstract}
 
 \section{Introduction}
@@ -91,6 +98,11 @@ be instrumented and trusted. Our contributions are:
   paths, is checked against two known answers (delta at zero cost, a widening
   no-trade band with costs) and then tested on real SPY history
   (\S\ref{sec:hedge}).
+  \item A \textbf{pre-registered audit of the study itself} (\S\ref{sec:rigor}):
+  the PPO benchmarked against a reference implementation, the trading result
+  re-run with other implementations, another algorithm, larger budgets, a
+  leak-free split and a hindsight-free universe, and every reported $p$-value
+  corrected for multiple testing.
 \end{itemize}
 
 \section{Method}
@@ -212,7 +224,7 @@ same budget --- against a data snapshot pinned two months later erased that
 headline entirely. The run was not merely seed-lucky but window-lucky.
 
 \begin{table}[t]\centering\small
-\caption{Real-market multi-seed significance (10 seeds, held-out walk-forward; $p$ from a paired permutation test across held-out tickers). The
+\caption{Real-market multi-seed significance (10 seeds, held-out walk-forward; $p$ from a paired permutation test across held-out tickers). The crypto row uses per-coin splits that leak across coins in calendar time (\S\ref{sec:rigor}); on a leak-free split the agent loses money. The
 lucky single-seed crypto ``win'' does not survive resampling.}
 \label{tab:real}
 \begin{tabular}{@{}lrrl@{}}
@@ -335,6 +347,76 @@ agent's worst 5\pc\ of months are milder than the band's at every cost; we do no
 why. Prices are modelled, only the underlying is used to hedge, and rates and
 dividends are omitted.
 
+\subsection{RQ6: Does the study hold up?}\label{sec:rigor}
+A negative result is only as good as the machinery behind it, so we applied to the
+study the checks current practice asks of deep-RL results
+\cite{henderson2018,agarwal2021}, each pre-registered with dated amendments before
+its runs, on the replication's archived data and seeds 200--209.
+
+\paragraph{Is the PPO correct?} Trained on four standard continuous-control tasks
+with the trading study's own hyper-parameters, our PPO learns, but it is
+significantly behind Stable-Baselines3 (SB3) \cite{sb3} configured identically on
+HalfCheetah and Pendulum (Table~\ref{tab:bench}). No single change closes the gap;
+seven standard implementation details \cite{huang2022} together do, on three of the
+four tasks: a separate critic trunk; storing observations normalised as the policy
+saw them (ours re-normalised them after the rollout with moved statistics, so each
+update began from a ratio $\ne 1$); no tanh on the policy mean; bootstrapping
+time-limit cut-offs; SB3's value loss; Adam $\epsilon=10^{-5}$; per-minibatch
+advantage normalisation. Pendulum stays unexplained.
+
+\begin{table}[t]\centering\footnotesize
+\caption{Our PPO against Stable-Baselines3 under identical hyper-parameters (IQM of
+final return, 10 seeds). $\downarrow$: significantly worse than SB3.}
+\label{tab:bench}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Task & Random & Ours & Repaired & SB3\\
+\midrule
+% BEGIN GENERATED: tex-rigor-bench
+Pendulum-v1 & $-1{,}161$ & $-1{,}112^\downarrow$ & $-1{,}094^\downarrow$ & $-407$\\
+InvertedPendulum-v5 & $5$ & $1{,}000$ & $1{,}000$ & $997$\\
+HalfCheetah-v5 & $-292$ & $1{,}495^\downarrow$ & $4{,}176$ & $3{,}755$\\
+Hopper-v5 & $17$ & $1{,}246$ & $1{,}499$ & $1{,}691$\\
+% END GENERATED: tex-rigor-bench
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{A calendar leak.} SAC's crypto result in the published design (+224\pc)
+exposed a flaw: each coin was cut 60/40 on its own history, and crypto histories
+start in different years, so ETH, ADA, XRP and SOL were trained through 15--27
+months that are BTC's and LTC's test period. Cut on one calendar date, every
+algorithm loses money on crypto (Table~\ref{tab:robust}). Every published crypto
+number is inflated by the leak; stock series share their dates and are unaffected.
+
+\begin{table}[t]\centering\footnotesize
+\caption{Held-out basket return at 150k steps (IQM over seeds 200--209) by
+implementation and algorithm (Rep.: repaired PPO; SB3: Stable-Baselines3 PPO;
+leaky: the published per-coin split). On stocks every agent is significantly worse than
+buy-and-hold ($p=0.002$); on the leak-free crypto split none is better.}
+\label{tab:robust}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+ & B\&H & Ours & Rep. & SB3 & SAC\\
+\midrule
+% BEGIN GENERATED: tex-rigor-trading
+Stocks & $+240\pc$ & $-23\pc$ & $-30\pc$ & $-18\pc$ & $-25\pc$\\
+Crypto, leaky & $+33\pc$ & $+13\pc$ & -- & $+28\pc$ & $+224\pc$\\
+Crypto, leak-free & $+10\pc$ & $-29\pc$ & $-38\pc$ & $-64\pc$ & $-30\pc$\\
+% END GENERATED: tex-rigor-trading
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Budget, universe, multiple testing.} Scored at seven budgets from 25k to
+$10^6$ steps, no arm beats buy-and-hold at any of them. On the 30 Dow members of
+2016-08-29, a universe chosen without hindsight, buy-and-hold falls from $+240\pc$
+to $+101\pc$, and the agent still loses about a quarter of its capital and is
+significantly worse than buy-and-hold. Of the fourteen $p$-values this paper
+reports, every claim of a difference survives Holm--Bonferroni within its research
+question; two (the hedging win at 0.2\pc\ cost and the crypto surrogate control)
+do not survive one family of all fourteen.
+
 \section{Related Work}
 This project reproduces and cross-domain stress-tests results the field already
 considers important. Henderson~et~al.\ \cite{henderson2018} document the unreliability of
@@ -377,6 +459,12 @@ quoted a single run per cell; that version was also stale with respect to a chan
 in the observation feature set, which is the ordinary way such numbers rot and an
 argument for regenerating them from a script rather than transcribing them.
 
+The audit of \S\ref{sec:rigor} adds two limitations of our own making: every
+number in \S\S\ref{sec:sig}--\ref{sec:hedge} was produced by the published PPO,
+which \S\ref{sec:rigor} shows was not equivalent to a reference implementation, and
+the crypto rows used a split that leaked. Both were re-run for the central result
+and did not change it; the remaining real-data crypto experiments have not been.
+
 Our conclusion is deliberately unglamorous and, we argue, more
 valuable than a suspicious backtest: built and evaluated honestly, a from-scratch
 deep-RL trader finds no reliable edge on real markets --- and the methodology that
@@ -385,7 +473,7 @@ the problem is a decision with costs rather than a forecast: hedging an option, 
 recovers what theory predicts and, on real prices, does better than the tuned
 textbook rule where costs are high (\S\ref{sec:hedge}).
 
-\begin{thebibliography}{12}\small
+\begin{thebibliography}{15}\small
 \bibitem{henderson2018} P.~Henderson, R.~Islam, P.~Bachman, J.~Pineau, D.~Precup,
   D.~Meger. Deep Reinforcement Learning that Matters. \emph{AAAI}, 2018.
 \bibitem{ppo} J.~Schulman, F.~Wolski, P.~Dhariwal, A.~Radford, O.~Klimov.
@@ -410,6 +498,15 @@ textbook rule where costs are high (\S\ref{sec:hedge}).
 \bibitem{whalley1997} A.~E.~Whalley, P.~Wilmott. An Asymptotic Analysis of an Optimal
   Hedging Model for Option Pricing with Transaction Costs. \emph{Mathematical
   Finance}, 7(3), 1997.
+\bibitem{agarwal2021} R.~Agarwal, M.~Schwarzer, P.~S.~Castro, A.~Courville,
+  M.~G.~Bellemare. Deep Reinforcement Learning at the Edge of the Statistical
+  Precipice. \emph{NeurIPS}, 2021.
+\bibitem{sb3} A.~Raffin, A.~Hill, A.~Gleave, A.~Kanervisto, M.~Ernestus,
+  N.~Dormann. Stable-Baselines3: Reliable Reinforcement Learning Implementations.
+  \emph{JMLR}, 22(268), 2021.
+\bibitem{huang2022} S.~Huang, R.~F.~J.~Dossa, A.~Raffin, A.~Kanervisto, W.~Wang.
+  The 37 Implementation Details of Proximal Policy Optimization. \emph{ICLR Blog
+  Track}, 2022.
 \end{thebibliography}
 
 \end{document}
