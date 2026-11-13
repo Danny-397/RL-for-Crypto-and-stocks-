@@ -36,17 +36,51 @@ from rl_trader.evaluation.statistics import bootstrap_ci, paired_permutation_tes
 from rl_trader.training.utils import get_logger, run_ppo_training
 
 
-def load_real_basket(data_dir: str, market: str, train_frac: float = 0.6) -> dict:
+def common_split_date(frames: dict, train_frac: float = 0.6):
+    """The date that splits the window *every* ticker trades in at ``train_frac``.
+
+    Used by ``split="common"`` so that no ticker's training period overlaps any
+    ticker's test period. See RESULTS.md §12: with per-ticker splits, tickers
+    whose history starts later are trained on dates that are already test dates
+    for tickers whose history starts earlier.
+    """
+    from rl_trader.data.data_loader import add_technical_indicators
+
+    dates = {t: add_technical_indicators(df)["date"] for t, df in frames.items()}
+    start = max(d.iloc[0] for d in dates.values())
+    end = min(d.iloc[-1] for d in dates.values())
+    shortest = min((d[(d >= start) & (d <= end)] for d in dates.values()), key=len).reset_index(drop=True)
+    return shortest.iloc[int(len(shortest) * train_frac)]
+
+
+def load_real_basket(data_dir: str, market: str, train_frac: float = 0.6, split: str = "ticker") -> dict:
     """Load every ticker CSV under ``data_dir/market`` into train/test splits.
 
-    Chronological split with the scaler fit on the training slice only — a clean
-    walk-forward setup with no look-ahead leakage (mirrors build_site_data.py).
+    Chronological split with the scaler fit on the training slice only.
+
+    ``split="ticker"`` (as published) cuts each ticker at ``train_frac`` of *its
+    own* history. Every ticker's test period follows its own training period, but
+    when histories start on different dates the test periods do not line up, so
+    one ticker can be trained on dates that are another's test period. For the
+    stock basket every series covers the same dates and the two modes coincide;
+    for crypto they do not. ``split="common"`` cuts every ticker on one calendar
+    date (:func:`common_split_date`), so no training date is a test date anywhere.
     """
-    basket = {}
+    from rl_trader.data.data_loader import add_technical_indicators
+
+    frames = {}
     for path in sorted(glob.glob(os.path.join(data_dir, market, "*.csv"))):
         ticker = os.path.splitext(os.path.basename(path))[0]
-        df = attach_market_index(load_ohlcv_csv(path), data_dir, market)
-        splits = prepare_market_data(df, market=market, train_frac=train_frac, val_frac=0.0)
+        frames[ticker] = attach_market_index(load_ohlcv_csv(path), data_dir, market)
+    cut = common_split_date(frames, train_frac) if split == "common" and frames else None
+    basket = {}
+    for ticker, df in frames.items():
+        frac = train_frac
+        if cut is not None:
+            d = add_technical_indicators(df)["date"]
+            k = int((d < cut).sum())
+            frac = (k + 0.5) / len(d)          # so int(n * frac) == k inside the splitter
+        splits = prepare_market_data(df, market=market, train_frac=frac, val_frac=0.0)
         if len(splits["train"]) > 60 and len(splits["test"]) > 60:
             basket[ticker] = splits
     return basket

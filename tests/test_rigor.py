@@ -105,3 +105,37 @@ def test_training_callback_sees_every_update():
     seen = []
     run_ppo_training(cfg, callback=lambda agent, steps: seen.append(steps))
     assert seen == [256, 512]
+
+
+def _frame(start: str, n: int, seed: int):
+    import pandas as pd
+
+    from rl_trader.data.data_loader import generate_synthetic_ohlcv
+
+    df = generate_synthetic_ohlcv(n_steps=n, seed=seed)
+    df["date"] = pd.date_range(start, periods=len(df), freq="D")
+    return df
+
+
+def test_common_split_keeps_every_training_date_before_every_test_date():
+    from rl_trader.data.data_loader import add_technical_indicators
+    from tools.real_significance import common_split_date
+
+    frames = {"early": _frame("2015-01-01", 3000, 1), "late": _frame("2019-01-01", 1500, 2)}
+    cut = common_split_date(frames, 0.6)
+    late = add_technical_indicators(frames["late"])["date"]
+    # 60% of the window both trade in, which is the late series' own window.
+    assert late.iloc[0] < cut < late.iloc[-1]
+    assert abs((late < cut).mean() - 0.6) < 0.01
+
+
+def test_per_ticker_split_overlaps_when_histories_start_apart():
+    # The defect the common split removes: cut each series at 60% of its own rows
+    # and the late series is still training after the early one starts testing.
+    from rl_trader.data.data_loader import add_technical_indicators
+
+    early = add_technical_indicators(_frame("2015-01-01", 3000, 1))["date"]
+    late = add_technical_indicators(_frame("2019-01-01", 1500, 2))["date"]
+    early_test_start = early.iloc[int(len(early) * 0.6)]
+    late_train_end = late.iloc[int(len(late) * 0.6) - 1]
+    assert late_train_end > early_test_start

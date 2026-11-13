@@ -141,7 +141,7 @@ def basket_env(train_slices, market, cfg, seed):
 
 
 def run_one(market: str, arm: str, seed: int, data_dir: str, out_dir: str,
-            universe: str = "main", max_steps: int | None = None) -> str:
+            universe: str = "main", max_steps: int | None = None, split: str = "ticker") -> str:
     import torch
 
     from rl_trader.config.training_config import crypto_config, stock_config
@@ -149,7 +149,7 @@ def run_one(market: str, arm: str, seed: int, data_dir: str, out_dir: str,
 
     torch.set_num_threads(1)
     ddir = data_dir_for(universe, data_dir)
-    basket = load_real_basket(ddir, market)
+    basket = load_real_basket(ddir, market, split=split)
     if universe == "pit":
         basket.pop("SPY", None)          # the market index, not a member
     if not basket:
@@ -234,17 +234,19 @@ def run_one(market: str, arm: str, seed: int, data_dir: str, out_dir: str,
             # score the final update's policy too, under the last budget.
             checkpoints[str(budgets[-1])] = score(adapter)
 
-    rec = {"market": market, "arm": arm, "seed": seed, "universe": universe, "tickers": tickers,
+    rec = {"market": market, "arm": arm, "seed": seed, "universe": universe, "split": split,
+           "test_bars": {t: len(basket[t]["test"]) for t in tickers}, "tickers": tickers,
            "data": data_fingerprint(ddir, market), "bh": [round(x, 5) for x in score.bh],
            "checkpoints": {k: [round(x, 5) for x in v] for k, v in checkpoints.items()},
            "seconds": round(time.time() - t0, 1)}
     os.makedirs(out_dir, exist_ok=True)
-    path = os.path.join(out_dir, f"{universe}__{market}__{arm}__{seed}.json")
+    tag = universe if split == "ticker" else f"{universe}-common"
+    path = os.path.join(out_dir, f"{tag}__{market}__{arm}__{seed}.json")
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(rec, fh)
     pub = rec["checkpoints"].get(str(PUBLISHED))
     msg = f"basket mean at 150k {np.mean(pub):+.1%}" if pub else ""
-    print(f"{universe} {market} {arm} seed {seed}: {msg} ({rec['seconds'] / 60:.0f} min)", flush=True)
+    print(f"{tag} {market} {arm} seed {seed}: {msg} ({rec['seconds'] / 60:.0f} min)", flush=True)
     return path
 
 
@@ -276,14 +278,17 @@ def aggregate(run_dir: str, out: str) -> dict:
 
     recs = [json.load(open(p, encoding="utf-8")) for p in sorted(glob.glob(os.path.join(run_dir, "*.json")))]
     result: dict = {"budgets": BUDGETS, "published": PUBLISHED, "groups": {}}
-    for universe in sorted({r["universe"] for r in recs}):
+    def tag(r):
+        return r["universe"] if r.get("split", "ticker") == "ticker" else f"{r['universe']}-common"
+
+    for universe in sorted({tag(r) for r in recs}):
         for market in ("stock", "crypto"):
-            rows = [r for r in recs if r["universe"] == universe and r["market"] == market]
+            rows = [r for r in recs if tag(r) == universe and r["market"] == market]
             if not rows:
                 continue
             bh = np.array(rows[0]["bh"])
             g = {"tickers": rows[0]["tickers"], "data": rows[0]["data"], "bh_mean": round(float(bh.mean()), 4),
-                 "arms": {}}
+                 "bh": rows[0]["bh"], "arms": {}}
             for arm in ARMS:
                 rs = sorted((r for r in rows if r["arm"] == arm), key=lambda r: r["seed"])
                 if not rs:
@@ -329,6 +334,9 @@ def main() -> None:
         r.add_argument("--data-dir", default=os.path.join("data", "raw"))
         r.add_argument("--out", default=os.path.join("results", "trading_rigor"))
         r.add_argument("--max-steps", type=int, default=None, help="cap the budget (smoke tests)")
+        r.add_argument("--split", choices=["ticker", "common"], default="ticker",
+                       help="ticker: each ticker 60/40 on its own dates (as published); "
+                            "common: one calendar cut for every ticker")
         if name == "run":
             r.add_argument("--seed", type=int, default=200)
         else:
@@ -340,12 +348,13 @@ def main() -> None:
     args = ap.parse_args()
 
     if args.cmd == "run":
-        run_one(args.market, args.arm, args.seed, args.data_dir, args.out, args.universe, args.max_steps)
+        run_one(args.market, args.arm, args.seed, args.data_dir, args.out, args.universe, args.max_steps,
+                args.split)
     elif args.cmd == "run-many":
         from concurrent.futures import ProcessPoolExecutor
         with ProcessPoolExecutor(max_workers=args.jobs) as ex:
             futs = [ex.submit(run_one, args.market, args.arm, s, args.data_dir, args.out,
-                              args.universe, args.max_steps) for s in parse_seeds(args.seeds)]
+                              args.universe, args.max_steps, args.split) for s in parse_seeds(args.seeds)]
             for f in futs:
                 f.result()
     else:
