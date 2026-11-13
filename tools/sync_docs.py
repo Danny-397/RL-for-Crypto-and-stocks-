@@ -1080,7 +1080,8 @@ BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "hedging-quotes": hedging_quotes,
 }
 
-TARGETS = ("README.md", "RESULTS.md", os.path.join("paper", "rl_trader.tex"))
+TARGETS = ("README.md", "RESULTS.md", os.path.join("paper", "rl_trader.tex"),
+           os.path.join("guide", "findings.md"), os.path.join("guide", "lab.md"))
 
 
 # --------------------------------------------------------------------------- #

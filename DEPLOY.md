@@ -59,7 +59,7 @@ Set these in the service's **Settings**, then **Manual Deploy → Deploy latest 
 `/api/meta`, `/api/regimes`, `/api/datasets`, `/api/generalization`,
 `/api/perception/*`, `/api/statistics`, `/api/experiments/*` (including
 attribution and walk-forward), and `/api/human/*`. See the API table in
-[README.md](README.md#api) for the full list.
+[guide/lab.md](guide/lab.md#api) for the full list.
 
 **Memory note:** human-baseline sessions and the experiment registry are both
 held in process memory, capped and time-limited (60 sessions / 200 experiments),

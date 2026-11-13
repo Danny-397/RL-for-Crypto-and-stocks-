@@ -21,6 +21,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DOCS = [
     "README.md", "RESULTS.md", "paper/rl_trader.tex", "paper/README.md",
+    "guide/findings.md", "guide/lab.md", "guide/background.md",
     "docs/index.html", "docs/lab.js", "docs/app.js",
 ]
 

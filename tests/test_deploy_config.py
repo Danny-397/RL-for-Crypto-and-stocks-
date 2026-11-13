@@ -68,7 +68,7 @@ def test_the_site_calls_the_service_the_blueprint_provisions():
 def test_every_documented_hostname_is_the_real_one():
     """A verification command that 404s teaches the reader the wrong lesson."""
     name = _service_name()
-    for doc in ("DEPLOY.md", "README.md"):
+    for doc in ("DEPLOY.md", "README.md", "guide/architecture.md", "guide/lab.md"):
         path = os.path.join(REPO, doc)
         if not os.path.exists(path):
             continue
