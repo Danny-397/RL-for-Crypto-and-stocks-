@@ -268,6 +268,8 @@ jobs:
           python tools/export_policy.py
           python tools/make_figures.py
           python tools/attribution_report.py
+          python tools/supervised_report.py
+          python tools/cost_sensitivity.py
       - uses: actions/upload-artifact@v4
         with:
           name: headline-${{ matrix.part }}
@@ -277,6 +279,7 @@ jobs:
             docs/assets/*.json
             docs/assets/*.png
             server/models/*.npz
+            checkpoints/ppo_*.pt
 
   aggregate:
     needs: [benchmark, trading, diagnose, retrade, leakfree, repaired, headline]
