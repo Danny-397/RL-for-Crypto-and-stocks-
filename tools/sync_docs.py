@@ -685,6 +685,22 @@ def tex_significance() -> Optional[str]:
     return "\n".join(rows)
 
 
+def tex_hedging() -> Optional[str]:
+    """Body rows for tab:hedge (real SPY history)."""
+    art = _asset("hedging_real.json")
+    if not art:
+        return None
+    rows = []
+    for r in art["costs"]:
+        cost = "none" if r["cost"] == 0 else f"{r['cost'] * 100:g}\\pc"
+        b = r["baselines"]
+        rows.append(
+            f"{cost} & ${r['agent_median']['objective']:+.3f}$ & ${b['delta']['objective']:+.3f}$ & "
+            f"${b['band']['objective']:+.3f}$ & {r['vs_band']['wins']}/{r['vs_band']['n']} "
+            f"($p{{=}}{r['vs_band']['p']:.3f}$)" + r"\\")
+    return "\n".join(rows)
+
+
 def _tex_surrogate(name: str) -> Optional[str]:
     art = _asset(f"surrogate_{name}.json")
     if not art:
@@ -768,6 +784,7 @@ BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "tex-surrogate-control": tex_surrogate_control,
     "tex-surrogate-real": tex_surrogate_real,
     "hedging-sim": hedging_sim,
+    "tex-hedging": tex_hedging,
     "hedging-real": hedging_real,
 }
 

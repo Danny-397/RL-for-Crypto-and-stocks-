@@ -1,6 +1,6 @@
 ## Abstract
 
-Deep reinforcement learning is unusually easy to fool yourself with: agents memorize their training trajectory, and a single lucky random seed can masquerade as a real result. We study both failure modes from scratch — a PyTorch implementation of Proximal Policy Optimization (PPO), two custom Gymnasium environments, and a full evaluation suite — using financial markets as a deliberately hard testbed: non-stationary, partially observable, with a noisy reward and near–random-walk signal. We ask (RQ1) whether one fixed recipe generalizes across two market regimes; (RQ2) how severely an agent overfits a single price trajectory and whether *domain randomization* repairs it; (RQ3) whether an apparent out-of-sample edge survives multi-seed significance testing; and (RQ4) whether the same holds for cross-sectional allocation. Our headline result is negative, and that is the point: on real markets the agent has *no seed-robust edge* over buy-and-hold, and our own significance tooling catches it: an earlier build of this study published a `+275%` single-seed crypto run that survived neither reseeding nor a two-month extension of the evaluation window. We further introduce a **surrogate-data falsification test** that separates “the agent is weak” from “there is no signal to find,” and validate it with a positive control on synthetic data with known structure. In doing so the project reproduces, in a new domain, the central methodological finding of Henderson et al. (2018) — that single-run RL evaluation is unreliable. We then apply that finding to our own ablation: we report both arms as distributions over ten seeds, where all four confidence intervals exclude zero, after finding and fixing a seeding bug that had left the domain-randomized arm unreproducible.
+Deep reinforcement learning is unusually easy to fool yourself with: agents memorize their training trajectory, and a single lucky random seed can masquerade as a real result. We study both failure modes from scratch — a PyTorch implementation of Proximal Policy Optimization (PPO), two custom Gymnasium environments, and a full evaluation suite — using financial markets as a deliberately hard testbed: non-stationary, partially observable, with a noisy reward and near–random-walk signal. We ask (RQ1) whether one fixed recipe generalizes across two market regimes; (RQ2) how severely an agent overfits a single price trajectory and whether *domain randomization* repairs it; (RQ3) whether an apparent out-of-sample edge survives multi-seed significance testing; and (RQ4) whether the same holds for cross-sectional allocation. Our headline result is negative, and that is the point: on real markets the agent has *no seed-robust edge* over buy-and-hold, and our own significance tooling catches it: an earlier build of this study published a `+275%` single-seed crypto run that survived neither reseeding nor a two-month extension of the evaluation window. We further introduce a **surrogate-data falsification test** that separates “the agent is weak” from “there is no signal to find,” and validate it with a positive control on synthetic data with known structure. In doing so the project reproduces, in a new domain, the central methodological finding of Henderson et al. (2018) — that single-run RL evaluation is unreliable. We then apply that finding to our own ablation: we report both arms as distributions over ten seeds, where all four confidence intervals exclude zero, after finding and fixing a seeding bug that had left the domain-randomized arm unreproducible. Finally (RQ5) we turn the same PPO to a problem RL is suited to — hedging a short option when trading costs money — where theory gives answers to check against. The agent approximately recovers the Black-Scholes delta without observing it, learns to trade less as costs rise, and on 237 real one-month SPY episodes it never trained on, ties a tuned no-trade-band hedge at low costs and beats it at high costs.
 
 ## Introduction
 
@@ -13,6 +13,8 @@ We build the entire stack from the algorithm up — PPO \[2\] with Generalized A
 - A **multi-seed significance protocol** (bootstrap CIs + paired permutation tests) that reproduces the Henderson et al. \[1\] finding in a new domain: a favorable single-seed “win” does not survive resampling (§3.3).
 
 - An original **surrogate-data falsification test** that distinguishes agent weakness from signal absence, with a synthetic positive control that confirms the test has statistical power (§3.4).
+
+- A **hedging study** in which the same PPO, trained only on simulated paths, is checked against two known answers (delta at zero cost, a widening no-trade band with costs) and then tested on real SPY history (§3.6).
 
 ## Method
 
@@ -105,9 +107,28 @@ Surrogate-data test, synthetic positive control (edge `=` agent `-` buy-and-hold
 
 Single-asset timing is only half the problem. The same PPO agent generalizes to a `PortfolioTradingEnv` that observes a whole basket and emits an `N`-dimensional long/short weight vector under a gross-exposure budget, benchmarked against an equal-weight (`1/N`) portfolio and a cross-sectional momentum factor. On equities the learned allocator clears both random weights and the momentum factor yet is beaten by equal-weight by more than 150 points of return; on crypto it is level with random weights on return, ahead only on a risk-adjusted basis. The contribution is the working, budget-constrained RL allocator and its apples-to-apples evaluation — the same lesson at a harder problem: naive diversification is hard to beat when the per-asset signal is weak.
 
+### RQ5: A decision problem where RL helps
+
+RQ1–RQ4 ask the agent to forecast; it cannot. Hedging is a decision problem whose answer does not require a forecast. Sell one at-the-money call with 21 trading days to expiry; each day choose a hedge `h∈[0,1]` shares per option, paying a proportional cost `c` on the notional traded. A day’s P&L is `h Δ S-Δ V-c |Δ h| S` with `V` marked at Black-Scholes, and the reward is `x-½x^2` for a P&L of `x%` of the notional, a mean-variance objective \[11\]. With `c=0` the optimum is the Black-Scholes delta; with `c>0` it is a no-trade band around delta that widens with `c` \[12\]; in general it has no closed form, which is where deep hedging \[10\] applies. The agent observes `ln(S/K)`, time left, implied volatility and its own hedge — not delta — and is trained only on simulated geometric-Brownian paths with a fresh volatility per path (domain randomization, §3.2), ten seeds per cost. The strongest baseline is delta with a no-trade band whose width is tuned per cost on separate validation paths. The real test uses 237 non-overlapping one-month SPY episodes (2007–2026) with implied volatility `0.875×`VIX.
+
+<div id="tab:hedge">
+
+| Cost  |      Agent |      Delta |       Band | Seeds `>` band      |
+|:------|-----------:|-----------:|-----------:|:----------------------|
+| none  | `-0.107` | `-0.100` | `-0.100` | 4/10 (`p=0.315`)  |
+| 0.05% | `-0.207` | `-0.224` | `-0.216` | 7/10 (`p=0.805`)  |
+| 0.2%  | `-0.506` | `-0.611` | `-0.547` | 9/10 (`p=0.006`)  |
+| 1%    | `-1.776` | `-3.122` | `-2.355` | 10/10 (`p=0.002`) |
+
+Hedging on real SPY history (higher score is better; median of 10 seeds). Seeds beating the tuned band, with a paired permutation `p` across seeds.
+
+</div>
+
+Both checks are met in part or in full. At `c=0` the agent’s hedge stays within about 0.04 shares of delta and removes about 97% of the risk delta removes, but scores below delta in all ten seeds: close, not exact. As `c` rises its turnover falls and the gap it tolerates to delta grows, a learned no-trade band. Against the tuned band (Table 4) the agent ties at low costs and wins at 0.2% and 1%; in simulation, where the band was tuned, the band wins below 1%. On real data the agent’s worst 5% of months are milder than the band’s at every cost; we do not test why. Prices are modelled, only the underlying is used to hedge, and rates and dividends are omitted.
+
 ## Related Work
 
-This project reproduces and cross-domain stress-tests results the field already considers important. Henderson et al. \[1\] document the unreliability of single-run deep-RL evaluation; §3.3 reproduces it on markets. Tobin et al. \[4\] introduce domain randomization for sim-to-real transfer and Cobbe et al. \[5\] formalize train/test generalization in RL; §3.2 measures the gap domain randomization closes. The algorithm is PPO \[2\] with GAE \[3\]; the Differential Sharpe Ratio reward is due to Moody and Saffell \[6\]. The negative real-market result is consistent with weak-form market efficiency \[8\], and surrogate-data testing follows Theiler et al. \[7\].
+This project reproduces and cross-domain stress-tests results the field already considers important. Henderson et al. \[1\] document the unreliability of single-run deep-RL evaluation; §3.3 reproduces it on markets. Tobin et al. \[4\] introduce domain randomization for sim-to-real transfer and Cobbe et al. \[5\] formalize train/test generalization in RL; §3.2 measures the gap domain randomization closes. The algorithm is PPO \[2\] with GAE \[3\]; the Differential Sharpe Ratio reward is due to Moody and Saffell \[6\]. The negative real-market result is consistent with weak-form market efficiency \[8\], and surrogate-data testing follows Theiler et al. \[7\]. The hedging study (§3.6) follows deep hedging \[10\] and RL replication \[11\], and is checked against the no-trade band of Whalley and Wilmott \[12\].
 
 ## Limitations and Conclusion
 
@@ -117,7 +138,7 @@ A second note concerns the ablation of §3.2, because we found the problem in ou
 
 This is why §3.2 reports each arm as a distribution over seeds with bootstrap intervals, and why its conclusion is stated in terms of held-out return — a mean over 30 fixed evaluation paths — rather than the single-path in-sample figure, which averages nothing and compounds along one memorized trajectory. Training additionally does not run under `torch.use_deterministic_algorithms`, so exact bitwise reproducibility is not guaranteed for either arm across machines. An earlier version of this table quoted a single run per cell; that version was also stale with respect to a change in the observation feature set, which is the ordinary way such numbers rot and an argument for regenerating them from a script rather than transcribing them.
 
-Our conclusion is deliberately unglamorous and, we argue, more valuable than a suspicious backtest: built and evaluated honestly, a from-scratch deep-RL trader finds no reliable edge on real markets — and the methodology that establishes this rigorously is the actual result.
+Our conclusion is deliberately unglamorous and, we argue, more valuable than a suspicious backtest: built and evaluated honestly, a from-scratch deep-RL trader finds no reliable edge on real markets — and the methodology that establishes this rigorously is the actual result. The same code is useful where the problem is a decision with costs rather than a forecast: hedging an option, it recovers what theory predicts and, on real prices, does better than the tuned textbook rule where costs are high (§3.6).
 
 ## References
 
@@ -138,3 +159,9 @@ Our conclusion is deliberately unglamorous and, we argue, more valuable than a s
 8.  E. Fama. Efficient Capital Markets. *J. Finance*, 1970.
 
 9.  B. P. Welford. Note on a Method for Calculating Corrected Sums of Squares and Products. *Technometrics*, 1962.
+
+10. H. Buehler, L. Gonon, J. Teichmann, B. Wood. Deep Hedging. *Quantitative Finance*, 19(8), 2019.
+
+11. P. N. Kolm, G. Ritter. Dynamic Replication and Hedging: A Reinforcement Learning Approach. *J. Financial Data Science*, 1(1), 2019.
+
+12. A. E. Whalley, P. Wilmott. An Asymptotic Analysis of an Optimal Hedging Model for Option Pricing with Transaction Costs. *Mathematical Finance*, 7(3), 1997.

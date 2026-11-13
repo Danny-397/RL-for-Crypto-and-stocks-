@@ -146,6 +146,10 @@ def preprocess(tex: str) -> tuple[str, dict]:
 # Inline-math commands the paper uses, mapped to the character a reader
 # expects. Order matters: wrappers that take an argument come first.
 MATH_REPLACEMENTS = [
+    # Used by the hedging section (RQ5).
+    (r"\\tfrac12", "½"),
+    (r"\\ln\b", "ln"),
+    (r"\\in\b", "∈"),
     # Wrappers -- keep the contents, drop the command.
     (r"\\mathbf\{([^{}]*)\}", r"\1"),
     (r"\\mathrm\{([^{}]*)\}", r"\1"),
