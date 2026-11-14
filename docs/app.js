@@ -6,7 +6,7 @@
   "use strict";
 
   const DATA = window.RL_RESULTS || null;
-  const VOLT = "#d4ff3f";
+  const VOLT = "#4da3ff";
   const BENCH = "rgba(140, 152, 168, 0.85)";
 
   // ── formatting helpers ──────────────────────────────────────
@@ -65,8 +65,8 @@
 
       if (s.fill) {
         const grad = ctx.createLinearGradient(0, pad.t, 0, H);
-        grad.addColorStop(0, "rgba(212,255,63,0.16)");
-        grad.addColorStop(1, "rgba(212,255,63,0)");
+        grad.addColorStop(0, "rgba(77, 163, 255, 0.10)");
+        grad.addColorStop(1, "rgba(77, 163, 255, 0)");
         ctx.beginPath();
         ctx.moveTo(X(0, n), Y(s.data[0]));
         for (let i = 1; i < count; i++) ctx.lineTo(X(i, n), Y(s.data[i]));
@@ -79,12 +79,12 @@
       ctx.moveTo(X(0, n), Y(s.data[0]));
       for (let i = 1; i < count; i++) ctx.lineTo(X(i, n), Y(s.data[i]));
       ctx.strokeStyle = s.color; ctx.lineWidth = s.width || 2; ctx.lineJoin = "round";
-      if (s.glow) { ctx.save(); ctx.shadowColor = s.color; ctx.shadowBlur = 10; ctx.stroke(); ctx.restore(); }
+      if (s.glow) { ctx.save(); ctx.shadowColor = s.color; ctx.shadowBlur = 0; ctx.stroke(); ctx.restore(); }
       else ctx.stroke();
 
       if (s.head) {
         const cx = X(count - 1, n), cy = Y(s.data[count - 1]);
-        ctx.save(); ctx.fillStyle = s.color; ctx.shadowColor = s.color; ctx.shadowBlur = 12;
+        ctx.save(); ctx.fillStyle = s.color; ctx.shadowColor = s.color; ctx.shadowBlur = 0;
         ctx.beginPath(); ctx.arc(cx, cy, 3.6, 0, Math.PI * 2); ctx.fill(); ctx.restore();
       }
     });
@@ -105,13 +105,13 @@
     for (let i = 0; i < dd.length; i++) ctx.lineTo(X(i), Y(dd[i]));
     ctx.lineTo(X(dd.length - 1), pad.t); ctx.closePath();
     const grad = ctx.createLinearGradient(0, pad.t, 0, H);
-    grad.addColorStop(0, "rgba(255,107,107,0.05)");
-    grad.addColorStop(1, "rgba(255,107,107,0.4)");
+    grad.addColorStop(0, "rgba(248, 113, 113, 0.05)");
+    grad.addColorStop(1, "rgba(248, 113, 113, 0.4)");
     ctx.fillStyle = grad; ctx.fill();
 
     ctx.beginPath();
     for (let i = 0; i < dd.length; i++) (i ? ctx.lineTo(X(i), Y(dd[i])) : ctx.moveTo(X(i), Y(dd[i])));
-    ctx.strokeStyle = "rgba(255,107,107,0.85)"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = "rgba(248, 113, 113, 0.85)"; ctx.lineWidth = 1.5; ctx.stroke();
   }
 
   // ── action histogram ────────────────────────────────────────
@@ -135,8 +135,8 @@
       const h = (c / maxc) * (H - pad.t - pad.b);
       const x = pad.l + i * bw, y = H - pad.b - h;
       const center = i / (BINS - 1); // 0..1
-      ctx.fillStyle = center < 0.45 ? "rgba(255,107,107,0.7)"
-        : center > 0.55 ? "rgba(212,255,63,0.85)" : "rgba(140,152,168,0.6)";
+      ctx.fillStyle = center < 0.45 ? "rgba(248, 113, 113, 0.7)"
+        : center > 0.55 ? "rgba(52, 211, 153, 0.8)" : "rgba(140,152,168,0.6)";
       ctx.fillRect(x + 1, y, bw - 2, h);
     });
 
@@ -274,7 +274,7 @@
     const X = (i) => pad.l + (i / (n - 1)) * (W - pad.l - pad.r);
     const Y = (v) => pad.t + (1 - (v - lo) / (hi - lo)) * (H - pad.t - pad.b);
     const cx = X(idx);
-    ctx.strokeStyle = "rgba(54,224,255,0.85)"; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.35)"; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, H - pad.b); ctx.stroke();
     [[a, VOLT], [b, BENCH]].forEach(([s, c]) => {
       const v = s[Math.min(idx, s.length - 1)];
@@ -343,7 +343,7 @@
     for (let i = 0; i < n; i++) {
       const a = acts[i];
       if (Math.abs(a) < 0.05) continue;
-      ctx.fillStyle = a > 0 ? "rgba(212,255,63,0.10)" : "rgba(255,107,107,0.13)";
+      ctx.fillStyle = a > 0 ? "rgba(52, 211, 153, 0.12)" : "rgba(248, 113, 113, 0.13)";
       ctx.fillRect(X(i) - colW / 2, pad.t, colW + 1, H - pad.t - pad.b);
     }
     // price line
@@ -352,10 +352,10 @@
     ctx.strokeStyle = "rgba(231,237,245,0.85)"; ctx.lineWidth = 1.8; ctx.lineJoin = "round"; ctx.stroke();
     // cursor
     const cx = X(cursor), a = acts[cursor];
-    ctx.strokeStyle = "rgba(54,224,255,0.9)"; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.35)"; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, H - pad.b); ctx.stroke();
-    ctx.fillStyle = a > 0.05 ? VOLT : (a < -0.05 ? "#ff6b6b" : "#8a97a8");
-    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
+    ctx.fillStyle = a > 0.05 ? "#34d399" : (a < -0.05 ? "#f87171" : "#8a97a8");
+    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.arc(cx, Y(price[cursor]), 4.2, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
   }
@@ -428,7 +428,7 @@
       ctx.fillText(r.label, padL, y - 44);
 
       // 95% CI band and mean
-      ctx.fillStyle = "rgba(212,255,63,0.10)";
+      ctx.fillStyle = "rgba(77, 163, 255, 0.10)";
       ctx.fillRect(X(d.ci_low), y - 26, X(d.ci_high) - X(d.ci_low), 52);
       ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(X(d.mean), y - 26); ctx.lineTo(X(d.mean), y + 26); ctx.stroke();
@@ -445,7 +445,7 @@
       d.seed_returns.forEach((v, i) => {
         if (i >= shown) return;
         const dy = ((i % 5) - 2) * 9;
-        ctx.fillStyle = VOLT; ctx.shadowColor = VOLT; ctx.shadowBlur = 8;
+        ctx.fillStyle = VOLT; ctx.shadowColor = VOLT; ctx.shadowBlur = 0;
         ctx.beginPath(); ctx.arc(X(v), y + dy, 4.5, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
       });
@@ -661,7 +661,7 @@
     ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(W - padR, axisY); ctx.stroke();
 
     // 95% CI band + mean
-    ctx.fillStyle = "rgba(212,255,63,0.12)";
+    ctx.fillStyle = "rgba(77, 163, 255, 0.12)";
     ctx.fillRect(X(d.ci_low), axisY - 30, X(d.ci_high) - X(d.ci_low), 60);
     ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(X(d.mean), axisY - 30); ctx.lineTo(X(d.mean), axisY + 30); ctx.stroke();
@@ -685,7 +685,7 @@
     const nseed = d.seed_returns.length;
     d.seed_returns.forEach((v, i) => {
       const y = axisY + (i - (nseed - 1) / 2) * 11;
-      ctx.fillStyle = VOLT; ctx.shadowColor = VOLT; ctx.shadowBlur = 8;
+      ctx.fillStyle = VOLT; ctx.shadowColor = VOLT; ctx.shadowBlur = 0;
       ctx.beginPath(); ctx.arc(X(v), y, 5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
     });
 
@@ -737,12 +737,12 @@
 
     const line = (arr, color, glow) => {
       ctx.strokeStyle = color; ctx.lineWidth = 2.6;
-      if (glow) { ctx.shadowColor = color; ctx.shadowBlur = 10; }
+      if (glow) { ctx.shadowColor = color; ctx.shadowBlur = 0; }
       ctx.beginPath(); arr.forEach((m, i) => (i ? ctx.lineTo(X(i), Y(m)) : ctx.moveTo(X(i), Y(m)))); ctx.stroke();
       ctx.shadowBlur = 0;
       arr.forEach((m, i) => { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(i), Y(m), 3.3, 0, 7); ctx.fill(); });
     };
-    line(ins, "#ff6b6b", false);   // in-sample: the seductive, fake number
+    line(ins, "#f87171", false);   // in-sample: the seductive, fake number
     line(oos, VOLT, true);         // held-out: the honest one
   }
 
@@ -851,7 +851,8 @@
     if (market) market.classList.toggle("active", isMarket);
     if (lab) lab.classList.toggle("active", view === "lab");
     document.querySelectorAll(".navtab").forEach((a) => {
-      const on = a.dataset.view === view;
+      // "Markets" in the top bar covers both the crypto and the stocks routes.
+      const on = (a.dataset.match || a.dataset.view).split(" ").includes(view);
       a.classList.toggle("active", on);
       if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });

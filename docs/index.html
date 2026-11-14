@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RL·Trader — Generalization &amp; Evaluation Rigor in Deep RL</title>
   <meta name="description" content="A from-scratch deep-RL research study of overfitting, generalization, and honest evaluation — PPO built from the algorithm up, domain randomization, and multi-seed significance testing, with financial markets as a hard non-stationary testbed." />
-  <meta name="theme-color" content="#07090d" />
+  <meta name="theme-color" content="#0b0b0c" />
   <!-- Open Graph / Twitter (nice link unfurls for resumes & shares) -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="RL·Trader — Generalization & Evaluation Rigor in Deep RL" />
@@ -34,21 +34,16 @@
   <header class="nav">
     <a class="brand" href="#top">
       <span class="brand-mark">
-        <svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true">
-          <path d="M10 46 L24 36 L34 41 L54 16" fill="none" stroke="url(#ng)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="54" cy="16" r="5" fill="#d4ff3f"/>
-          <defs><linearGradient id="ng" x1="0" y1="64" x2="64" y2="0">
-            <stop offset="0" stop-color="#36e0ff"/><stop offset="1" stop-color="#d4ff3f"/>
-          </linearGradient></defs>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M3 17l6-5 4 3 8-9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </span>
-      <span class="brand-text">RL<span class="dot">·</span>TRADER</span>
+      <span class="brand-text">RL Trader</span>
     </a>
     <nav class="nav-links" id="nav-tabs">
-      <a href="#home" class="navtab active" data-view="home">Home</a>
-      <a href="#how" class="navtab" data-view="how">How it works</a>
-      <a href="#crypto" class="navtab" data-view="crypto">Crypto</a>
-      <a href="#stocks" class="navtab" data-view="stocks">Stocks</a>
+      <a href="#home" class="navtab active" data-view="home">Overview</a>
+      <a href="#how" class="navtab" data-view="how">Method</a>
+      <a href="#crypto" class="navtab" data-view="crypto" data-match="crypto stocks">Markets</a>
       <a href="#hedging" class="navtab" data-view="hedging">Hedging</a>
       <a href="#lab" class="navtab navtab-lab" data-view="lab">Lab</a>
     </nav>
@@ -65,7 +60,7 @@
     <section class="hero">
       <div class="hero-copy">
         <div class="eyebrow">Deep reinforcement learning research</div>
-        <h1>Is the agent <span class="grad">learning</span>, or just lucky?</h1>
+        <h1>Is the agent learning, or just lucky?</h1>
         <p class="lede">
           A from-scratch study of the two ways deep-RL trading agents fool you:
           memorising the training path, and one lucky seed. Tested on crypto and
@@ -76,8 +71,8 @@
           to wake). Research, not a trading product.
         </p>
         <div class="hero-cta">
-          <a class="btn btn-primary" href="#result">See the result &darr;</a>
-          <a class="btn btn-ghost navtab" data-view="lab" href="#lab">Run an experiment &rarr;</a>
+          <a class="btn btn-primary" href="#result">See the result</a>
+          <a class="btn btn-ghost navtab" data-view="lab" href="#lab">Run an experiment</a>
         </div>
       </div>
 
@@ -117,7 +112,7 @@
       <h2 class="sr-only">What this project is</h2>
       <div class="purpose-grid">
         <article class="purpose-card">
-          <h3><span class="purpose-icon" aria-hidden="true">◆</span> What this is</h3>
+          <h3>What this is</h3>
           <p>
             A research study: does one PPO recipe generalize across market
             regimes, and does an apparent edge survive proper testing? The
@@ -125,7 +120,7 @@
           </p>
         </article>
         <article class="purpose-card purpose-not">
-          <h3><span class="purpose-icon" aria-hidden="true">✕</span> What it is not</h3>
+          <h3>What it is not</h3>
           <p>
             Not a trading bot or investment advice. It places no orders and
             connects to no broker or exchange. The headline finding is negative: no
@@ -133,7 +128,7 @@
           </p>
         </article>
         <article class="purpose-card purpose-data">
-          <h3><span class="purpose-icon" aria-hidden="true">↻</span> Real-time? No.</h3>
+          <h3>Real-time? No.</h3>
           <p>
             Daily closing bars: never intraday, never streaming. The figures here are a
             fixed snapshot that changes only when the pipeline is re-run.
@@ -246,8 +241,7 @@
           <div class="tl-body">
             <h3>Reseeding dissolved it.</h3>
             <p>Retraining the identical recipe under 10 independent seeds gave
-               returns spanning <b class="tl-fig" id="tl-5a">&hellip;</b> — one seed
-               more than tripling capital, another losing money. Against
+               returns spanning <b class="tl-fig" id="tl-5a">&hellip;</b>. Against
                buy-and-hold across the held-out pairs the paired test gives
                <b class="tl-fig" id="tl-5b">&hellip;</b>: not distinguishable. The
                spectacular run was one draw from a wide distribution.</p>
@@ -358,7 +352,6 @@
       </p>
     </section>
 
-    <!-- ═══════════ WHAT YOU CAN RUN (deep links into the lab) ═══════════ -->
     <!-- ═══════════════════ PART 2 ═══════════════════ -->
     <section class="section part2-section" id="part2">
       <div class="section-head">
@@ -369,8 +362,8 @@
           hedging an option you have sold, when every trade costs money. The same PPO code, checked first against the answers
           theory already gives, then tested on twenty years of real S&amp;P 500 prices it never trained on.
         </p>
-        <p><a class="btn btn-ghost navtab" data-view="hedging" href="#hedging">See the hedging study &rarr;</a></p>
       </div>
+      <a class="btn btn-ghost navtab" data-view="hedging" href="#hedging">See the hedging study</a>
     </section>
 
     <section class="section lab-strip-section">
@@ -461,41 +454,6 @@
         experiments, labelled with the command that regenerates them — never
         simulated. The statistics computed over them do run live.
       </p>
-    </section>
-
-    <!-- ─────────────────────── FEATURES ─────────────────────── -->
-    <section id="features" class="section">
-      <div class="section-head">
-        <div class="kicker">The framework</div>
-        <h2>Built from the algorithm up.</h2>
-        <p>PPO, both environments, the data pipeline, and the evaluation are implemented here — no <code>stable-baselines</code>, no wrappers. Each layer is a separate, individually tested module.</p>
-      </div>
-      <div class="grid" tabindex="0" role="region" aria-label="What the framework includes">
-        <article class="card">
-          <h3>PPO, from scratch</h3>
-          <p>Clipped surrogate objective, GAE advantages, entropy bonus, orthogonal init and gradient clipping — implemented in PyTorch, not wrapped from a library.</p>
-        </article>
-        <article class="card">
-          <h3>Dual market environments</h3>
-          <p><code>StockTradingEnv</code> and <code>CryptoTradingEnv</code> share one <code>BaseTradingEnv</code>, so accounting, costs, and rewards never silently diverge.</p>
-        </article>
-        <article class="card">
-          <h3>Leakage control</h3>
-          <p>Chronological train / validation / test splits with scalers fit on training data only. The agent is scored on data it has never seen.</p>
-        </article>
-        <article class="card">
-          <h3>Risk-aware rewards</h3>
-          <p>Return <em>net of</em> transaction costs, plus drawdown and turnover penalties — discouraging reckless, over-leveraged noise-trading.</p>
-        </article>
-        <article class="card">
-          <h3>Honest backtests</h3>
-          <p>Total return, annualised Sharpe, and max drawdown on a held-out split — the metrics a quant actually cares about.</p>
-        </article>
-        <article class="card">
-          <h3>Swap the policy or the market</h3>
-          <p>The same PPO agent trades one asset <em>or</em> allocates across a whole basket (cross-sectional long/short). A recurrent (LSTM) policy is fully implemented, and new markets/algorithms drop in behind the same API.</p>
-        </article>
-      </div>
     </section>
 
     <!-- ─────────────────────── ABOUT ─────────────────────── -->
@@ -599,20 +557,12 @@
     <!-- ═══════════════════════ HOW IT WORKS VIEW ═══════════════════════ -->
     <div class="view" id="view-method">
     <h1 class="sr-only">How RL·Trader works</h1>
-    <section class="section">
+    <section class="section method-intro">
       <div class="section-head">
-        <div class="kicker">How it works</div>
+        <div class="kicker">Method</div>
         <h2>Trading as a reinforcement-learning problem.</h2>
         <p>There's no labelled "right answer" for what to do on a given day — only the consequences of what you did. That's the exact setting reinforcement learning is built for: an <strong>agent</strong> takes <strong>actions</strong> in an <strong>environment</strong>, collects a <strong>reward</strong>, and learns a policy that maximises reward over the long run. Here the environment is a market, the action is a position, and the reward is risk-adjusted profit.</p>
-      </div>
-    </section>
-
-    <!-- the loop: state → action → reward -->
-    <section class="section">
-      <div class="section-head">
-        <div class="kicker">The loop</div>
-        <h2>Observe, act, get rewarded — millions of times.</h2>
-        <p>Every simulated trading day, the agent runs the same three-step loop. Repeat it over millions of steps and a strategy emerges from the consequences alone — no one ever tells it the "correct" trade.</p>
+        <p>Every simulated trading day it runs the same three-step loop. Repeat that over millions of steps and a strategy emerges from the consequences alone; no one ever tells it the "correct" trade.</p>
       </div>
       <div class="grid">
         <article class="card">
@@ -640,24 +590,12 @@
         <h2>What PPO actually does.</h2>
         <p>Proximal Policy Optimization is the learning rule — implemented here from the math up, no <code>stable-baselines</code>.</p>
       </div>
-      <div class="grid">
-        <article class="card">
-          <h3>Try, then nudge</h3>
-          <p>It gathers a batch of experience under the current policy, estimates which actions did better than expected — the <b>advantage</b>, via GAE — and shifts the policy toward those.</p>
-        </article>
-        <article class="card">
-          <h3>But not too far</h3>
-          <p>A <b>clipped surrogate objective</b> caps how much the policy can move in one update — the "proximal" part. It's what makes PPO stable instead of collapsing, the classic failure of naive policy gradients.</p>
-        </article>
-        <article class="card">
-          <h3>Stay curious</h3>
-          <p>An <b>entropy bonus</b> keeps it exploring early instead of locking onto one strategy too soon; orthogonal initialisation and gradient clipping keep the optimisation well-behaved.</p>
-        </article>
-        <article class="card">
-          <h3>Two heads, one network</h3>
-          <p>An <b>actor</b> picks the position; a <b>critic</b> estimates how good the current state is. The critic's value is the baseline the advantage is measured against.</p>
-        </article>
-      </div>
+      <ul class="spec-list">
+        <li><h3>Try, then nudge</h3><p>It gathers a batch of experience under the current policy, estimates which actions did better than expected — the <b>advantage</b>, via GAE — and shifts the policy toward those.</p></li>
+        <li><h3>But not too far</h3><p>A <b>clipped surrogate objective</b> caps how much the policy can move in one update — the "proximal" part. It's what makes PPO stable instead of collapsing, the classic failure of naive policy gradients.</p></li>
+        <li><h3>Stay curious</h3><p>An <b>entropy bonus</b> keeps it exploring early instead of locking onto one strategy too soon; orthogonal initialisation and gradient clipping keep the optimisation well-behaved.</p></li>
+        <li><h3>Two heads, one network</h3><p>An <b>actor</b> picks the position; a <b>critic</b> estimates how good the current state is. The critic's value is the baseline the advantage is measured against.</p></li>
+      </ul>
     </section>
 
     <!-- architecture (moved from home) -->
@@ -665,7 +603,7 @@
       <div class="section-head">
         <div class="kicker">Architecture</div>
         <h2>Unified agent. Separate environments.</h2>
-        <p>The PPO agent speaks only in observations and actions — completely market-agnostic — so the exact same network trains on both stocks and crypto.</p>
+        <p>The PPO agent speaks only in observations and actions — completely market-agnostic — so the exact same network trains on both stocks and crypto. The same agent can also allocate across a whole basket (cross-sectional long/short), and a recurrent (LSTM) policy drops in behind the same API.</p>
       </div>
       <div class="arch">
         <div class="arch-node agent">
@@ -743,7 +681,7 @@
       <div class="section-head">
         <div class="kicker">The honest part</div>
         <h2>And then: does it actually work?</h2>
-        <p>A single training run can look brilliant by luck. So every result is held to a <strong>multi-seed permutation test</strong> — the whole thing is retrained under 10 independent random seeds, and the edge only counts if it survives. Watch it play out per market on the <a href="#crypto" class="navtab" data-view="crypto">Crypto</a> and <a href="#stocks" class="navtab" data-view="stocks">Stocks</a> tabs, or read the full methodology in <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>.</p>
+        <p>A single training run can look brilliant by luck. So every result is held to a <strong>multi-seed permutation test</strong> — the whole thing is retrained under 10 independent random seeds, and the edge only counts if it survives. Watch it play out per market for <a href="#crypto" class="navtab" data-view="crypto">crypto</a> and <a href="#stocks" class="navtab" data-view="stocks">stocks</a>, or read the full methodology in <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">RESULTS.md</a>.</p>
       </div>
     </section>
     </div><!-- /view-method -->
@@ -758,6 +696,11 @@
         <h2 id="market-title">Explore what the agent trades.</h2>
         <p>Click any ticker to see <em>that name's</em> out-of-sample backtest, scrub through the positions the agent held day by day, and run the policy live on fresh prices. <span class="data-note" id="data-note"></span></p>
       </div>
+
+      <nav class="mkt-seg" aria-label="Market">
+        <a href="#crypto" class="navtab" data-view="crypto">Crypto</a>
+        <a href="#stocks" class="navtab" data-view="stocks">Stocks</a>
+      </nav>
 
       <!-- basket: clickable tickers (populated from results.js) -->
       <div class="basket" id="basket" aria-label="Select an asset"></div>
@@ -990,7 +933,7 @@
         <div class="kicker">Watch it</div>
         <h2>Hedge any month since 2007.</h2>
         <p>The agent below is one of the ten (the median one), running in your browser on the real prices of the month you
-          pick. The dashed line is delta; blue is delta with the tuned band; green is the agent.</p>
+          pick. The dashed line is delta, amber is delta with the tuned band, and blue is the agent.</p>
       </div>
       <div class="hg-controls">
         <label>Month <select id="hg-month" aria-label="Month"></select></label>
@@ -999,7 +942,11 @@
         <label>Trading cost <select id="hg-cost" aria-label="Trading cost"></select></label>
       </div>
       <div class="hg-charts">
-        <div><div class="hg-sub">Shares held per option</div><canvas id="hg-chart" class="hg-canvas"></canvas></div>
+        <div>
+          <div class="hg-chart-head"><span class="hg-sub">Shares held per option</span>
+            <span class="chart-legend"><span class="lg lg-agent">RL agent</span><span class="lg lg-band">Delta with a band</span><span class="lg lg-delta">Delta</span></span></div>
+          <canvas id="hg-chart" class="hg-canvas"></canvas>
+        </div>
         <div><div class="hg-sub">SPY over the month</div><canvas id="hg-price" class="hg-canvas hg-canvas-sm"></canvas></div>
       </div>
       <p class="hg-sub" id="hg-month-note"></p>
@@ -1027,7 +974,7 @@
 
         <header class="lab-head">
           <div>
-            <h1>RL&#183;Trader Lab</h1>
+            <h1>Lab</h1>
             <p class="lab-sub">Can an RL agent actually learn a generalizable strategy &mdash; or is it exploiting its training data and getting lucky? Run the experiments yourself.</p>
             <button type="button" class="tour-start" id="tour-start">New here? Take the 3-step tour <span aria-hidden="true">&rarr;</span></button>
           </div>
@@ -1304,8 +1251,8 @@
                     </div>
                     <canvas class="chart-canvas" id="chart-equity"></canvas>
                     <div class="legend">
-                      <span><i style="background:#d4ff3f"></i> Agent</span>
-                      <span><i style="background:#36e0ff"></i> Buy &amp; hold</span>
+                      <span><i style="background:#4da3ff"></i> Agent</span>
+                      <span><i style="background:#8e8e93"></i> Buy &amp; hold</span>
                     </div>
                   </div>
 
@@ -1687,8 +1634,8 @@
             <p class="xr-hint">Resampling the five outcomes with replacement, recomputed live.</p>
             <canvas id="sd-hist" class="chart-canvas"></canvas>
             <div class="legend" style="margin-top:6px">
-              <span><i style="background:#d4ff3f"></i> observed mean</span>
-              <span><i style="background:#36e0ff"></i> zero</span>
+              <span><i style="background:#4da3ff"></i> observed mean</span>
+              <span><i style="background:#8e8e93"></i> zero</span>
             </div>
 
             <div class="gen-stats">
@@ -1906,23 +1853,13 @@
       </div>
     </div><!-- /view-lab -->
 
-    <!-- ─────────────────────── CTA ─────────────────────── -->
-    <section class="cta">
-      <h2>Clone it. Train it. Break my results.</h2>
-      <p>Runs out of the box with zero external data — then point it at real markets and check the numbers yourself.</p>
-      <div class="cta-row">
-        <a class="btn btn-primary" href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">Explore the repo →</a>
-      </div>
-      <pre class="cta-code"><code>pip install -e .
-python -m rl_trader.scripts.compare_markets --plot</code></pre>
-    </section>
   </main>
 
   <footer class="footer">
-    <div class="foot-brand">RL<span class="dot">·</span>TRADER</div>
+    <div class="foot-brand">RL Trader</div>
     <div class="foot-meta">A deep-RL study of generalization &amp; evaluation rigor · PyTorch &amp; Gymnasium · <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md" target="_blank" rel="noopener">methodology &amp; results</a></div>
     <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-" target="_blank" rel="noopener">github.com/Danny-397</a>
-    <a href="https://danny-397.github.io/">Built by Dan Lichtenberger · more projects →</a>
+    <a href="https://danny-397.github.io/">Built by Dan Lichtenberger</a>
   </footer>
 
   <script src="config.js" defer></script>
