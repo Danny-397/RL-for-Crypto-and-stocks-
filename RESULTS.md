@@ -828,17 +828,17 @@ model does.
 `python tools/hedging_quotes.py run`
 
 <!-- BEGIN GENERATED: hedging-quotes -->
-*Archive: 5 trading days, 2026-11-06 to 2026-11-12 (updated 2026-11-13).*
+*Archive: 6 trading days, 2026-11-06 to 2026-11-13 (updated 2026-11-14).*
 
-**A. The volatility assumption.** At-the-money implied volatility of the SPY expiry nearest one month, from real mid quotes, is a median **0.864× the VIX** (range 0.844–0.897 over 5 days); Part 2 assumes 0.875×.
+**A. The volatility assumption.** At-the-money implied volatility of the SPY expiry nearest one month, from real mid quotes, is a median **0.863× the VIX** (range 0.806–0.897 over 6 days); Part 2 assumes 0.875×.
 
-**B. One-day hedging error on real quotes** (RMS, % of notional; 1,187 near-the-money contract-days over 4 day pairs):
+**B. One-day hedging error on real quotes** (RMS, % of notional; 1,536 near-the-money contract-days over 5 day pairs):
 
 | Hedge | RMS error |
 |---|---:|
-| None | 0.619 |
-| Black-Scholes delta (at the option's own implied vol.) | 0.081 |
-| RL agent, zero-cost policies (median of 10; range 0.081–0.101) | 0.096 |
+| None | 0.585 |
+| Black-Scholes delta (at the option's own implied vol.) | 0.138 |
+| RL agent, zero-cost policies (median of 10; range 0.134–0.150) | 0.145 |
 
 **C. Full one-month episodes on real quotes:** none yet. An episode needs one contract quoted on each of its last 22 trading days, and the archive keeps each week's last expiry that far out only from Danny-397/Tradeski#55 on. The first episode completes 21 trading days after that change takes effect (the 2026-12-18 expiry if it is in place by 2026-11-17). A weekly workflow re-runs this section as episodes complete.
 <!-- END GENERATED: hedging-quotes -->
