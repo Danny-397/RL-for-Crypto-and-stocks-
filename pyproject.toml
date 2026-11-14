@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rl-trader"
-version = "0.1.0"
-description = "A modular PPO reinforcement-learning framework for trading stocks and crypto."
+version = "2.3.0"
+description = "Generalization and evaluation rigor in deep RL: a from-scratch PPO study on stocks, crypto and option hedging."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
