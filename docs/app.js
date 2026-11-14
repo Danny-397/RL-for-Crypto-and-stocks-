@@ -239,11 +239,25 @@
       'target="_blank" rel="noopener">RESULTS.md §5d–5e</a>';
     const r = rep[market] || rep.crypto;
     const sh = (v) => (v < 0 ? "\u2212" : "+") + Math.abs(v).toFixed(2);
+    const dep = window.RL_DEPTH;
+    let depth = "";
+    if (dep && dep.seeds && dep.walk_forward && dep.behaviour) {
+      const ds = dep.seeds[market] || dep.seeds.crypto;
+      const wf = dep.walk_forward[market] || dep.walk_forward.crypto;
+      const hit = (dep.behaviour[market] || dep.behaviour.crypto).hit_rate;
+      const link3 = '<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md#10h-thirty-seeds-every-period-a-fuller-sweep" ' +
+        'target="_blank" rel="noopener">§10h</a>';
+      depth = ` With ${ds.n} seeds it trails buy-&amp;-hold on ${ds.tickers_behind} of ` +
+        `${ds.tickers} ${market === "stock" ? "stocks" : "coins"} (p = ${pv(ds.p)}); retrained ` +
+        `across ${wf.folds} periods of history it trails in ${wf.folds_behind} of them. Its ` +
+        `long-or-short calls match the next day's move <b>${(hit * 100).toFixed(1)}%</b> of ` +
+        `the time, a coin flip (${link3}).`;
+    }
     return ` Re-run on other hardware, the same seeds gave p = ${pv(rep.crypto.p)} for ` +
       `crypto (p = ${pv(pub.crypto.p)} here) and an unchanged stock verdict, so the ` +
       `crypto comparison is borderline. Adjusted for risk the agent is worse in both ` +
       `markets: Sharpe <b>${sh(r.risk.agent_sharpe)}</b> against <b>${sh(r.risk.bh_sharpe)}</b> for ` +
-      `buy-&amp;-hold on ${market === "stock" ? "stocks" : "crypto"} (${link}).`;
+      `buy-&amp;-hold on ${market === "stock" ? "stocks" : "crypto"} (${link}).` + depth;
   }
 
   function verdictFor(market) {
@@ -1316,7 +1330,12 @@
       if (r.length) put("tl-5a", `${p1(Math.min(...r))} to ${p1(Math.max(...r))}`);
       put("tl-5b", pv(SIG.crypto.p));
       const rep = window.RL_REPLICATION;
-      if (rep && rep.crypto) {
+      const dep = window.RL_DEPTH;
+      if (rep && rep.crypto && dep && dep.seeds && dep.seeds.crypto) {
+        const d = dep.seeds.crypto;
+        put("tl-5r", ` (re-run on other hardware, ${pv(rep.crypto.p)}; with ${d.n} seeds, ` +
+          `${pv(d.p)}, behind on ${d.tickers_behind} of ${d.tickers} coins: in no run better than holding)`);
+      } else if (rep && rep.crypto) {
         put("tl-5r", ` (re-run on other hardware, the same seeds gave ${pv(rep.crypto.p)}: ` +
           `borderline, but in neither run better than holding)`);
       }

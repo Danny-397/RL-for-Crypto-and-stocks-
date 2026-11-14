@@ -247,6 +247,36 @@ Crypto & $-44.6\pc$ ($p{=}0.22$) & $-45.4\pc$ ($p{=}0.03$) & $-0.61$ / $+0.32$ (
 \end{tabular}
 \end{table}
 
+A pre-registered follow-up (Table~\ref{tab:depth}) answers the remaining
+objections. At 30 seeds, the stock agent trails buy-and-hold in all 300 runs. The
+crypto agent trails on five of six coins, which with six coins is not significant
+($p{=}0.19$; the test's floor is 0.031). Retrained across four periods of
+history on one calendar for every ticker, the agent trails buy-and-hold on stocks in
+every period. On crypto it trails in three of four. In the fourth, a 46\pc\ fall,
+it lost less than holding because its net exposure was small (beta 0.11), and
+its alpha in that period is still negative. Re-run at 10 seeds and the full budget,
+the hyper-parameter sweep finds no configuration with a positive edge. The positions
+the policy holds explain the near-zero beta. It is almost never flat; it is long
+about half the time and short most of the rest. The sign of its position matches the
+next day's move on 50.0\pc\ of days, no better than a coin flip. It also changes
+position by over half its equity daily, at a cost of roughly 11\pc\ (stocks) and
+38\pc\ (crypto) a year, about the size of its negative alpha.
+
+\begin{table}[t]\centering\small
+\caption{The pre-registered depth study. Thirty seeds (100--129): mean basket return against buy-and-hold, paired permutation test across tickers. Walk-forward: four periods, retrained from scratch each time, 10 seeds; mean agent minus buy-and-hold over (ticker, period) pairs, and the number of periods in which the agent trails. Sweep: configurations, of nine, with a positive mean edge (10 seeds, 150k steps). Hit rate: share of non-flat days on which the position's sign matched the next move.}
+\label{tab:depth}
+\begin{tabular}{lrrrrr}
+\toprule
+Market & 30 seeds & Walk-forward & Behind & Sweep & Hit rate\\
+\midrule
+% BEGIN GENERATED: tex-depth
+Stock  & $-29.8\pc$ vs $+239.5\pc$ ($p{=}0.0021$) & $-50.7\pc$ ($p<0.0001$) & 4/4 & 0/9 & 0.498\\
+Crypto & $-40.5\pc$ vs $+10.3\pc$ ($p{=}0.19$) & $-26.1\pc$ ($p{=}0.02$) & 3/4 & 0/9 & 0.500\\
+% END GENERATED: tex-depth
+\bottomrule
+\end{tabular}
+\end{table}
+
 \begin{table}[t]\centering\small
 \caption{Real-market multi-seed significance (10 seeds, held-out walk-forward; $p$ from a paired permutation test across held-out tickers). Repaired PPO and one calendar cut for every ticker (\S\ref{sec:rigor}); seeds 100--109, 150k steps.}
 \label{tab:real}
@@ -461,10 +491,11 @@ the no-trade band of Whalley and Wilmott \cite{whalley1997}.
 \section{Limitations and Conclusion}
 The bottleneck is signal, not the agent: raw daily OHLCV carries little
 exploitable structure, so richer exogenous data (macro series, sentiment) --- not a
-bigger network --- is the natural next lever. A multi-fold walk-forward
-(BTC-USD, 4 expanding-window folds $\times$ 5 seeds, on data through 2026-06-17) finds the agent losing money in
-all four periods, pooled $-30.3\pc$ $[-43.9,-16.0]$; a head-to-head
-feed-forward-vs-LSTM study is supported by the codebase and left as future work.
+bigger network --- is the natural next lever. Six coins also limit the crypto
+test: across six tickers a sign-flip test cannot give $p$ below 0.031, so on total
+return the crypto verdict stays ``not distinguishable'' unless the agent trails on
+every coin (Table~\ref{tab:depth}). A head-to-head feed-forward-vs-LSTM study is
+supported by the codebase and left as future work.
 
 A second note concerns the ablation of \S\ref{sec:ablation}, because we found
 the problem in our own results. The domain-randomized arm draws a fresh path every

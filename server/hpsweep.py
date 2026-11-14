@@ -29,7 +29,15 @@ from typing import List, Optional
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ASSET = os.path.join(_REPO_ROOT, "docs", "assets", "hyperparameter_sweep.json")
 
-GENERATED_BY = "python tools/hyperparameter_sweep.py --seeds 3 --timesteps 60000"
+GENERATED_BY = "python tools/hyperparameter_sweep.py"
+
+
+def _command(payload: dict) -> str:
+    """The command that regenerates this artifact, with the settings it records."""
+    seeds, steps = payload.get("seeds_per_config"), payload.get("timesteps")
+    if seeds and steps:
+        return f"{GENERATED_BY} --seeds {seeds} --timesteps {steps}"
+    return GENERATED_BY
 
 DESIGN_NOTE = (
     "One factor at a time: each hyper-parameter is moved either side of its "
@@ -107,7 +115,7 @@ def results() -> Optional[dict]:
         "design": DESIGN_NOTE,
         "caveats": CAVEATS,
         "source": "docs/assets/hyperparameter_sweep.json",
-        "generated_by": GENERATED_BY,
+        "generated_by": _command(payload),
         "live_computation": False,
         "headline": _headline(markets),
     }

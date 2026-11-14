@@ -195,7 +195,7 @@ def summarise(paths) -> dict:
             "folds": rows, "seeds": folds[0]["seeds"], "seed_base": folds[0]["seed_base"],
             "timesteps": folds[0]["timesteps"],
             "pooled": {
-                "n_pairs": len(a), "diff": round(float(diff), 4), "p": round(float(p), 4),
+                "n_pairs": len(a), "diff": round(float(diff), 4), "p": round(float(p), 6),
                 "pairs_behind": int((a < b).sum()),
                 "folds_behind": sum(1 for r in rows if r["diff"] < 0),
             },

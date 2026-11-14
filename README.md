@@ -100,6 +100,26 @@ asset) makes the agent look worse, not better ([RESULTS §5d–5e](RESULTS.md)):
 *From the replication run (same seeds, data and held-out windows as the published study; RESULTS.md §5d). Sharpe is annualised from daily returns; the test is the same paired permutation across tickers. Alpha and beta come from regressing the agent's daily returns on the traded asset's (zero risk-free rate); alpha is annualised, and its test is a sign-flip test of the per-ticker alphas against zero.*
 <!-- END GENERATED: significance-risk -->
 
+A pre-registered follow-up ([RESULTS §10h](RESULTS.md#10h-thirty-seeds-every-period-a-fuller-sweep))
+answers the remaining questions an expert would ask. It runs 30 seeds, retrains the
+whole basket across four periods of history, and repeats the hyper-parameter sweep
+at the full budget. It also logs the positions the agent holds:
+
+<!-- BEGIN GENERATED: depth-seeds -->
+| Market | Agent, mean (95% CI) | Agent, IQM (95% CI) | Buy & hold | Agent vs buy & hold | Tickers where the agent trails | P(a run beats buy & hold) |
+|---|---:|---:|---:|---|---:|---:|
+| Stocks | **−29.8%** `[−35%, −24%]` | −31.9% `[−38%, −25%]` | +240% | significantly **worse** (p = 0.0021) | 10 of 10 | 0.00 `[0.00, 0.00]` |
+| Crypto | **−40.5%** `[−51%, −28%]` | −49.2% `[−59%, −35%]` | +10% | indistinguishable (p = 0.19) | 5 of 6 | 0.23 `[0.17, 0.28]` |
+
+*Seeds 100–129, 150k steps, archived 2026-10-28 data, leak-free crypto cut; GitHub Actions run 43620358297. The test is the paired permutation test of the seed-averaged return against buy-and-hold across tickers; with six coins it cannot give a p below 0.031. IQM: interquartile mean of the per-seed basket means. P(a run beats buy & hold): the share of (seed, ticker) runs that end above buy-and-hold on their ticker, with a bootstrap CI that resamples seeds within each ticker.*
+<!-- END GENERATED: depth-seeds -->
+
+Stocks trail buy-and-hold in every period. Crypto trails in three of four, and the
+fourth was a 46% fall, in which the agent lost less. The near-zero beta has a
+plain explanation: the agent is long about half the time and short most of the
+rest. Its long-or-short calls match the next day's move as often as a coin flip,
+and it pays to reverse them most days.
+
 Neither the audit nor these checks change the conclusion. Held-out return at the
 published budget, mean basket return (IQM over 10 seeds):
 
