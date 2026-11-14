@@ -91,7 +91,7 @@
 
   /* ── canvas charts ──────────────────────────────────────── */
   const COLORS = {
-    agent: "#4da3ff",
+    agent: "#ff9f0a",
     bench: "#8e8e93",
     pos: "#34d399",
     neg: "#f87171",

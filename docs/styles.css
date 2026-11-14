@@ -2,7 +2,7 @@
    RL Trader — site styles
 
    One design system for every view (lab.css builds on these tokens).
-   Neutral dark surfaces, one blue accent used only for action, selection
+   Neutral dark surfaces, one orange accent used only for action, selection
    and the agent's own data series. Gains are green, losses are red, the
    benchmark is grey. No glows, no gradients, no decorative motion.
    ============================================================ */
@@ -25,9 +25,10 @@
   --faint: #86868b;
 
   /* Colour: one accent, two semantic colours */
-  --accent:      #4da3ff;   /* text, lines, the agent's series */
-  --accent-fill: #0a6fdf;   /* filled controls (white text, 4.9:1) */
-  --accent-soft: rgba(77, 163, 255, 0.12);
+  --accent:      #ff9f0a;   /* text, lines, the agent's series */
+  --accent-fill: #ff9f0a;   /* filled controls (dark text, 9:1) */
+  --on-accent:   #1a1204;
+  --accent-soft: rgba(255, 159, 10, 0.12);
   --pos: #34d399;
   --neg: #f87171;
   --warn: #fbbf24;
@@ -36,7 +37,7 @@
   --volt: var(--accent);
   --cyan: var(--accent);
   --grad: var(--accent-fill);
-  --on-volt: #ffffff;
+  --on-volt: var(--on-accent);
 
   /* Shape */
   --radius: 12px;
@@ -79,7 +80,7 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
 .section-head p a, .hero-note a, .lab-caption a, .about a, .hg-verdict a,
 .honest-note a, .rs-note a {
   color: var(--accent); text-decoration: underline;
-  text-decoration-color: rgba(77, 163, 255, 0.4); text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 159, 10, 0.4); text-underline-offset: 3px;
 }
 .section-head p a:hover, .hero-note a:hover, .lab-caption a:hover, .about a:hover,
 .honest-note a:hover, .rs-note a:hover { text-decoration-color: currentColor; }
@@ -108,15 +109,15 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
   transition: background .15s var(--ease), border-color .15s var(--ease), color .15s var(--ease);
 }
 .btn:active { transform: scale(0.98); }
-.btn-primary { background: var(--accent-fill); color: #fff; }
-.btn-primary:hover { background: #1a7ef0; }
+.btn-primary { background: var(--accent-fill); color: var(--on-accent); }
+.btn-primary:hover { background: #ffb340; }
 .btn-ghost { background: transparent; color: var(--text); border-color: var(--border-2); }
 .btn-ghost:hover { background: var(--surface-2); }
 
 /* ── Focus & skip link ──────────────────────────────────── */
 .skip-link {
   position: absolute; left: 12px; top: -52px; z-index: 100;
-  background: var(--accent-fill); color: #fff; font-weight: 600;
+  background: var(--accent-fill); color: var(--on-accent); font-weight: 600;
   padding: 10px 16px; border-radius: var(--radius-sm); text-decoration: none;
   transition: top .15s ease;
 }
@@ -263,7 +264,7 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
 .arch-node .tag { font-size: 12px; color: var(--faint); display: block; margin-bottom: 4px; }
 .arch-node strong { font-family: var(--font-display); font-size: 17px; font-weight: 600; display: block; }
 .arch-node small { color: var(--faint); font-size: 13px; }
-.arch-node.agent { border-color: rgba(77, 163, 255, 0.45); }
+.arch-node.agent { border-color: rgba(255, 159, 10, 0.45); }
 .arch-flow { display: flex; gap: 40px; font-size: 12px; color: var(--faint); }
 .arch-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 520px; }
 .arch-split .arch-node { max-width: none; }
@@ -305,7 +306,7 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
   font-variant-numeric: tabular-nums;
 }
 .chip:hover { color: var(--text); background: var(--surface-2); }
-.chip.active { color: #fff; background: var(--accent-fill); border-color: var(--accent-fill); }
+.chip.active { color: var(--on-accent); background: var(--accent-fill); border-color: var(--accent-fill); }
 
 .dash-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; }
 .panel {
@@ -516,7 +517,7 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
 .repro-steps li > span { display: block; font-size: 14px; color: var(--muted); line-height: 1.6; }
 .repro-steps li > span code { font-size: 12.5px; color: var(--text); }
 .repro-steps a, .repro-check a {
-  color: var(--accent); text-decoration: underline; text-decoration-color: rgba(77,163,255,.4);
+  color: var(--accent); text-decoration: underline; text-decoration-color: rgba(255, 159, 10, .4);
   text-underline-offset: 3px; white-space: nowrap;
 }
 .repro-steps a:hover, .repro-check a:hover { text-decoration-color: currentColor; }
@@ -561,7 +562,7 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
 .hg-canvas-sm { height: 240px; }
 .hg-month-table { max-width: 560px; }
 .hg-chart-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 12px; flex-wrap: wrap; margin-bottom: 6px; }
-.lg-band::before { background: #e0a458; }
+.lg-band::before { background: #d1d1d6; }
 .lg-delta::before { background: repeating-linear-gradient(90deg, rgba(255,255,255,.55) 0 3px, transparent 3px 6px); }
 .hg-verdict { max-width: 760px; padding: 18px 20px; margin: 0 0 48px; }
 .hg-verdict strong { color: var(--text); }

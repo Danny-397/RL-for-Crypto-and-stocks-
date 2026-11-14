@@ -6,7 +6,7 @@
   "use strict";
 
   const DATA = window.RL_RESULTS || null;
-  const VOLT = "#4da3ff";
+  const VOLT = "#ff9f0a";
   const BENCH = "rgba(140, 152, 168, 0.85)";
 
   // ── formatting helpers ──────────────────────────────────────
@@ -65,8 +65,8 @@
 
       if (s.fill) {
         const grad = ctx.createLinearGradient(0, pad.t, 0, H);
-        grad.addColorStop(0, "rgba(77, 163, 255, 0.10)");
-        grad.addColorStop(1, "rgba(77, 163, 255, 0)");
+        grad.addColorStop(0, "rgba(255, 159, 10, 0.10)");
+        grad.addColorStop(1, "rgba(255, 159, 10, 0)");
         ctx.beginPath();
         ctx.moveTo(X(0, n), Y(s.data[0]));
         for (let i = 1; i < count; i++) ctx.lineTo(X(i, n), Y(s.data[i]));
@@ -428,7 +428,7 @@
       ctx.fillText(r.label, padL, y - 44);
 
       // 95% CI band and mean
-      ctx.fillStyle = "rgba(77, 163, 255, 0.10)";
+      ctx.fillStyle = "rgba(255, 159, 10, 0.10)";
       ctx.fillRect(X(d.ci_low), y - 26, X(d.ci_high) - X(d.ci_low), 52);
       ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(X(d.mean), y - 26); ctx.lineTo(X(d.mean), y + 26); ctx.stroke();
@@ -661,7 +661,7 @@
     ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(W - padR, axisY); ctx.stroke();
 
     // 95% CI band + mean
-    ctx.fillStyle = "rgba(77, 163, 255, 0.12)";
+    ctx.fillStyle = "rgba(255, 159, 10, 0.12)";
     ctx.fillRect(X(d.ci_low), axisY - 30, X(d.ci_high) - X(d.ci_low), 60);
     ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(X(d.mean), axisY - 30); ctx.lineTo(X(d.mean), axisY + 30); ctx.stroke();

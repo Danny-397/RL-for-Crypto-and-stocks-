@@ -186,8 +186,8 @@
     for (const k of ["agent", "delta", "band", "none"]) res[k] = hedgeMonth(S, sig, cost, STRATS[k](cost));
     chart($("hg-chart"), [
       { data: res.delta.deltas, color: "rgba(255,255,255,0.55)", width: 1.5, dash: [4, 4] },
-      { data: res.band.hedges, color: "#e0a458", width: 2 },
-      { data: res.agent.hedges, color: "#4da3ff", width: 2.5 },
+      { data: res.band.hedges, color: "#d1d1d6", width: 2 },
+      { data: res.agent.hedges, color: "#ff9f0a", width: 2.5 },
     ], 0, 1);
     chart($("hg-price"), [{ data: S.slice(0, D.n_steps), color: "rgba(255,255,255,0.7)", width: 1.5 }],
       Math.min(...S) * 0.995, Math.max(...S) * 1.005);
