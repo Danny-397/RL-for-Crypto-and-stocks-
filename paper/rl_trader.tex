@@ -222,6 +222,30 @@ across the held-out tickers, not across seeds. An earlier build of this study
 buy-and-hold's $+19\pc$; rebuilding the identical recipe --- same code, same seed,
 same budget --- against a data snapshot pinned two months later erased that
 headline entirely. The run was not merely seed-lucky but window-lucky.
+Two later checks are in Table~\ref{tab:replication}. Re-running the same ten
+seeds with identical code, budget and archived data on a different machine (same
+PyTorch and NumPy) leaves the means within a point and the equity verdict unchanged,
+but moves the crypto comparison across the 0.05 line: individual seeds diverge
+across hardware, and six coins leave the paired test little margin. The crypto agent
+is not better than buy-and-hold in either run; whether it is worse is not settled.
+Adjusting for risk does not help it: its Sharpe ratio is below buy-and-hold's, and
+regressed on the asset it traded, its alpha is negative in both markets, with a
+crypto beta near zero that rules out ``short in a rising market'' as the explanation.
+
+\begin{table}[t]\centering\small
+\caption{Hardware replication and risk adjustment. Mean basket return and paired-test $p$ against buy-and-hold for the published run and a re-run of the same seeds (100--109) on a different machine; then, from the re-run, annualised Sharpe ratio (agent / buy-and-hold, paired test across tickers) and the agent's annualised alpha (sign-flip test against zero) and beta from regressing its daily returns on the traded asset's.}
+\label{tab:replication}
+\begin{tabular}{lrrrrr}
+\toprule
+Market & Published & Re-run & Sharpe & Alpha & Beta\\
+\midrule
+% BEGIN GENERATED: tex-replication
+Stock  & $-26.5\pc$ ($p{=}0.0021$) & $-25.8\pc$ ($p{=}0.0021$) & $-0.53$ / $+1.12$ ($p{=}0.0021$) & $-12.6\pc$ ($p{=}0.0021$) & $0.14$\\
+Crypto & $-44.6\pc$ ($p{=}0.22$) & $-45.4\pc$ ($p{=}0.03$) & $-0.61$ / $+0.32$ ($p{=}0.03$) & $-32.2\pc$ ($p{=}0.03$) & $0.00$\\
+% END GENERATED: tex-replication
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{table}[t]\centering\small
 \caption{Real-market multi-seed significance (10 seeds, held-out walk-forward; $p$ from a paired permutation test across held-out tickers). Repaired PPO and one calendar cut for every ticker (\S\ref{sec:rigor}); seeds 100--109, 150k steps.}

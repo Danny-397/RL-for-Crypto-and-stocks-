@@ -317,7 +317,8 @@ jobs:
 
   aggregate:
     needs: [benchmark, trading, diagnose, retrade, leakfree, repaired, headline]
-    if: always()
+    # The riskadj job uploads its own artifact and has nothing to aggregate.
+    if: always() && !contains(github.ref_name, 'riskadj')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

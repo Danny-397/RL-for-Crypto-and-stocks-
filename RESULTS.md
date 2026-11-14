@@ -32,7 +32,10 @@ respectively.
    crypto seeds ranged from more than tripling capital to losing it. There is **no
    reliable, seed-robust edge on real markets** — consistent with weak-form market
    efficiency (Fama, 1970), even with the cross-asset features. The numbers are in
-   §5.
+   §5. Replicated on other hardware (§5d) the stock verdict holds and the crypto one
+   becomes borderline (p = 0.22 published, 0.03 replicated); adjusted for risk
+   (§5e), the agent's Sharpe ratio and its alpha on the traded asset are negative in
+   both markets.
 4. **Catching that is the result.** This is Henderson et al.'s (2018) *Deep RL that
    Matters* finding — single-run RL numbers are unreliable — reproduced in a new
    domain: the framework's own significance tooling exposed a false positive that a
@@ -60,7 +63,7 @@ fantasy money-machine.
 | **Environments** | Custom Gymnasium `StockTradingEnv` / `CryptoTradingEnv` over a shared base; continuous target-position actions in `[-1, 1]`; transaction costs + slippage |
 | **Features** | **28 engineered, stationary features** per bar — multi-horizon momentum (1–120 bar), MA/EMA ratios, RSI, MACD, Bollinger %B, Donchian position, ATR, volatility-regime signals, distance-below-trailing-high, volume microstructure, and **cross-asset context** (relative strength vs. SPY/BTC + market trend/momentum) — over a rolling window |
 | **Reward** | Selectable: risk-aware net return (return − drawdown − turnover) **or** the **Differential Sharpe Ratio** (Moody & Saffell, 1998) |
-| **Training** | Running (Welford) observation normalisation, exported and applied at serve time; fully seeded (Torch + NumPy + env RNG) so runs are reproducible |
+| **Training** | Running (Welford) observation normalisation, exported and applied at serve time; fully seeded (Torch + NumPy + env RNG), so a run is bit-identical when repeated on the same hardware and software; across hardware, seeds diverge (§5d) |
 | **Real data** | 10 equities + 6 crypto pairs, daily OHLCV, ~10 yrs (Yahoo Finance). **Frozen evaluation snapshot: data through 2026-08-28** (pinned in `data/SNAPSHOT.json`; §5c's walk-forward predates it and uses data through 2026-06-17) — deliberately fixed so every number below is reproducible; refresh with `tools/fetch_data.py` to re-snapshot to a later date |
 | **Split** | Chronological walk-forward — train on the older 60%, test on the held-out recent 40%; scalers fit on training data only |
 | **Reporting** | Mean across the basket; agent run deterministically; benchmarked vs. buy-&-hold, random, and a moving-average-crossover rule; uncertainty via bootstrap CIs + a permutation test |
@@ -322,7 +325,7 @@ experiment.
 
 - **A favorable draw is not a representative one.** The superseded build at commit
   `d4c0ef9` posted +275% on crypto and won 4 of 6 coins. Training is fully seeded, so
-  that number *reproduces* — but reproducing a lucky seed does not make it typical.
+  on the same hardware that number *reproduces* — but reproducing a lucky seed does not make it typical.
   §5 re-runs the experiment across seeds and finds a spread wide enough that no
   single run carries information about the next one.
 - **And the evaluation window mattered as much as the seed.** Rebuilding the
@@ -518,6 +521,62 @@ fold 0 from -80.0% to +8.4%. A single fold and a single seed could have been
 reported as either a disaster or a modest win.
 
 Run 2026-09-13/14, 356 minutes wall-clock.
+
+### 5d. Does it replicate on other hardware?
+
+Added after publication and not pre-registered. The published run was repeated
+with identical code, seeds, budget and archived data on a different GitHub Actions
+runner (same PyTorch and NumPy; workflow
+`rigor.yml`, job `riskadj`, branch `experiments/riskadj`):
+
+`python tools/real_significance.py --seeds 10 --seed-base 100 --timesteps 150000 --out docs/replication.js --global-name RL_REPLICATION`
+
+<!-- BEGIN GENERATED: significance-replication -->
+| Market | Run | Agent return (95% CI, seeds) | Buy & hold | Verdict vs buy & hold |
+|---|---|---:|---:|---|
+| Stock | published | **−26.5%** `[−35%, −17%]` | +240% | significantly **worse** (p = 0.0021) |
+| Stock | replication | **−25.8%** `[−34%, −14%]` | +240% | significantly **worse** (p = 0.0021) |
+| Crypto | published | **−44.6%** `[−56%, −33%]` | +10% | indistinguishable (p = 0.22) |
+| Crypto | replication | **−45.4%** `[−56%, −35%]` | +10% | significantly **worse** (p = 0.03) |
+
+*Identical code, seeds (100–109), budget and archived data; same PyTorch and NumPy versions; a different GitHub Actions runner. Locally a seeded run is bit-identical when repeated, so the difference is hardware: floating-point differences grow through training until individual seeds diverge (largest per-seed gap: stocks 20.4 percentage points, crypto 53.8).*
+<!-- END GENERATED: significance-replication -->
+
+**Reading it.** The basket means move by less than a percentage point and the stock
+verdict does not move at all: worse than buy-and-hold at the resolution floor in
+both runs. The crypto verdict does move. Individual seeds diverge on different
+hardware, and with only six held-out coins the paired test has little margin, so
+the crypto comparison sits close to the 0.05 line: indistinguishable in the
+published run (p = 0.22), worse in the replication (p = 0.03). The defensible
+statement is that the crypto agent loses money in every seed of both runs and is
+*not better* than buy-and-hold; whether it is significantly worse is not settled by
+six coins. Seeded runs are bit-identical when repeated on one machine, so
+"reproducible" in this project means *same hardware and software*; across
+hardware, the seed-level numbers are draws from the same distribution, not copies.
+
+### 5e. Risk-adjusted: Sharpe ratio and alpha on the traded asset
+
+Total return against buy-and-hold in a rising market mostly measures how much of the
+asset each side held: a strategy that spends time flat or short loses on return
+alone even if its timing is sound. So the replication run also records each side's
+Sharpe ratio, and regresses the agent's daily returns on the asset it traded to
+separate exposure (beta) from what it added beyond that exposure (alpha).
+
+<!-- BEGIN GENERATED: significance-risk -->
+| Market | Sharpe, agent | Sharpe, buy & hold | Sharpe test | Alpha on the traded asset (95% CI, seeds) | Alpha test | Beta |
+|---|---:|---:|---|---:|---|---:|
+| Stock | −0.53 | +1.12 | **lower** (p = 0.0021) | **−12.6%** a year `[−14.8%, −10.2%]` | **negative** (p = 0.0021) | +0.14 |
+| Crypto | −0.61 | +0.32 | **lower** (p = 0.03) | **−32.2%** a year `[−49.9%, −16.8%]` | **negative** (p = 0.03) | +0.00 |
+
+*From the replication run (same seeds, data and held-out windows as the published study; RESULTS.md §5d). Sharpe is annualised from daily returns; the test is the same paired permutation across tickers. Alpha and beta come from regressing the agent's daily returns on the traded asset's (zero risk-free rate); alpha is annualised, and its test is a sign-flip test of the per-ticker alphas against zero.*
+<!-- END GENERATED: significance-risk -->
+
+**Reading it.** Adjusting for risk does not rescue the agent; it sharpens the
+verdict. On both markets the agent's Sharpe ratio is negative and below buy-and-hold's,
+and its alpha on the asset it traded is negative with an interval that excludes
+zero. The crypto agent's beta is essentially zero, so its losses are not the cost of
+being short in a rising market: it carried almost no exposure to the coins and still
+lost money, which is what trading noise net of costs looks like.
 
 ## 6. Signal or noise? — a surrogate-data falsification test
 
@@ -1058,7 +1117,7 @@ bit for bit across machines; the conclusions do.
 
 ## 12. Reproduce everything
 
-Training is fully seeded, so these commands re-derive the numbers above.
+Training is fully seeded, so on the same hardware and software these commands re-derive the numbers above; on other hardware, expect the seed-level numbers to differ and the conclusions to hold (§5d).
 
 ```bash
 pip install -r requirements.txt

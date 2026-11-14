@@ -176,6 +176,72 @@ def significance_brief() -> Optional[str]:
     return "\n".join(rows)
 
 
+def significance_risk() -> Optional[str]:
+    """The same study, risk-adjusted: Sharpe ratios, and alpha/beta on the asset.
+
+    Total return against buy-and-hold in a rising market mostly measures how much
+    of the asset each side held. These separate exposure from skill.
+    """
+    sig = _js_global("replication.js")
+    if not sig or not all("risk" in (sig.get(k) or {}) for k in ("stock", "crypto")):
+        return None
+    rows = ["| Market | Sharpe, agent | Sharpe, buy & hold | Sharpe test | "
+            "Alpha on the traded asset (95% CI, seeds) | Alpha test | Beta |",
+            "|---|---:|---:|---|---:|---|---:|"]
+    for key, label in (("stock", "Stock"), ("crypto", "Crypto")):
+        k = sig[key]["risk"]
+        sh = (f"indistinguishable (p = {pval(k['sharpe_p'])})" if k["sharpe_p"] >= 0.05
+              else f"**{'lower' if k['sharpe_diff'] < 0 else 'higher'}** (p = {pval(k['sharpe_p'])})")
+        al = (f"indistinguishable from 0 (p = {pval(k['alpha_p'])})" if k["alpha_p"] >= 0.05
+              else f"**{'negative' if k['alpha'] < 0 else 'positive'}** (p = {pval(k['alpha_p'])})")
+        rows.append(
+            f"| {label} | {num(k['agent_sharpe'])} | {num(k['bh_sharpe'])} | {sh} | "
+            f"**{pct(k['alpha'])}** a year `[{pct(k['alpha_ci_low'])}, {pct(k['alpha_ci_high'])}]` | "
+            f"{al} | {num(k['beta'])} |")
+    rows.append("")
+    rows.append(
+        "*From the replication run (same seeds, data and held-out windows as the "
+        "published study; RESULTS.md §5d). Sharpe is "
+        "annualised from daily returns; the test is the same paired permutation "
+        "across tickers. Alpha and beta come from regressing the agent's daily "
+        "returns on the traded asset's (zero risk-free rate); alpha is annualised, "
+        "and its test is a sign-flip test of the per-ticker alphas against zero.*")
+    return "\n".join(rows)
+
+
+def _sig_verdict(r: dict) -> str:
+    if r["p"] >= 0.05:
+        return f"indistinguishable (p = {pval(r['p'])})"
+    word = "worse" if r["mean"] < r["bh"] else "better"
+    return f"significantly **{word}** (p = {pval(r['p'])})"
+
+
+def significance_replication() -> Optional[str]:
+    """The published study beside a re-run of the same seeds on other hardware."""
+    pub, rep = _js_global("significance.js"), _js_global("replication.js")
+    if not pub or not rep:
+        return None
+    rows = ["| Market | Run | Agent return (95% CI, seeds) | Buy & hold | Verdict vs buy & hold |",
+            "|---|---|---:|---:|---|"]
+    for key, label in (("stock", "Stock"), ("crypto", "Crypto")):
+        for name, src in (("published", pub), ("replication", rep)):
+            r = src[key]
+            rows.append(
+                f"| {label} | {name} | **{pct(r['mean'])}** `[{pct(r['ci_low'], 0)}, "
+                f"{pct(r['ci_high'], 0)}]` | {pct(r['bh'], 0)} | {_sig_verdict(r)} |")
+    gaps = {k: max(abs(a - b) for a, b in zip(pub[k]["seed_returns"], rep[k]["seed_returns"]))
+            for k in ("stock", "crypto")}
+    rows.append("")
+    rows.append(
+        "*Identical code, seeds (100–109), budget and archived data; same PyTorch and "
+        "NumPy versions; a different GitHub Actions runner. Locally a seeded run is "
+        "bit-identical when repeated, so the difference is hardware: floating-point "
+        "differences grow through training until individual seeds diverge "
+        f"(largest per-seed gap: stocks {gaps['stock'] * 100:.1f} percentage points, "
+        f"crypto {gaps['crypto'] * 100:.1f}).*")
+    return "\n".join(rows)
+
+
 def seed_spread() -> Optional[str]:
     """What the individual seeds did -- the point of the whole exercise."""
     sig = _js_global("significance.js")
@@ -685,6 +751,26 @@ def tex_significance() -> Optional[str]:
     return "\n".join(rows)
 
 
+def tex_replication() -> Optional[str]:
+    """The hardware replication and the risk-adjusted read: body rows for tab:replication."""
+    pub, rep = _js_global("significance.js"), _js_global("replication.js")
+    if not pub or not rep or not all("risk" in rep.get(k, {}) for k in ("stock", "crypto")):
+        return None
+
+    def p(v: float) -> str:
+        return f"{v:.4f}" if v < 0.01 else f"{v:.2f}"
+
+    rows = []
+    for key, label in (("stock", "Stock "), ("crypto", "Crypto")):
+        a, b, k = pub[key], rep[key], rep[key]["risk"]
+        rows.append(
+            f"{label} & {_tex_pc(a['mean'])} ($p{{=}}{p(a['p'])}$) & "
+            f"{_tex_pc(b['mean'])} ($p{{=}}{p(b['p'])}$) & "
+            f"${k['agent_sharpe']:+.2f}$ / ${k['bh_sharpe']:+.2f}$ ($p{{=}}{p(k['sharpe_p'])}$) & "
+            f"{_tex_pc(k['alpha'])} ($p{{=}}{p(k['alpha_p'])}$) & ${k['beta']:.2f}$" + r"\\")
+    return "\n".join(rows)
+
+
 def tex_hedging() -> Optional[str]:
     """Body rows for tab:hedge (real SPY history)."""
     art = _asset("hedging_real.json")
@@ -1046,6 +1132,8 @@ def hedging_quotes() -> Optional[str]:
 BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "significance-full": significance_full,
     "significance-brief": significance_brief,
+    "significance-risk": significance_risk,
+    "significance-replication": significance_replication,
     "seed-spread": seed_spread,
     "headline-run": headline_run,
     "ablation-table": ablation_table,
@@ -1064,6 +1152,7 @@ BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "surrogate-robust": surrogate_robust,
     "tex-ablation": tex_ablation,
     "tex-significance": tex_significance,
+    "tex-replication": tex_replication,
     "tex-surrogate-control": tex_surrogate_control,
     "tex-surrogate-real": tex_surrogate_real,
     "hedging-sim": hedging_sim,

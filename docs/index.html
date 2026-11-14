@@ -175,7 +175,7 @@
       <div class="stat-cell"><div class="num" data-count="16">16</div><div class="lbl">Real tickers backtested</div></div>
       <div class="stat-cell"><div class="num" data-count="10" id="stat-seeds">10</div><div class="lbl">Seeds in the significance study</div></div>
       <div class="stat-cell"><div class="num" data-count="28">28</div><div class="lbl">Engineered features</div></div>
-      <div class="stat-cell"><div class="num" data-count="492">492</div><div class="lbl">Tests passing</div></div>
+      <div class="stat-cell"><div class="num" data-count="496">496</div><div class="lbl">Tests passing</div></div>
     </section>
 
     <!-- ═══════════════════ WHAT I GOT WRONG ═══════════════════ -->
@@ -245,7 +245,7 @@
             <p>Retraining the identical recipe under 10 independent seeds gave
                returns spanning <b class="tl-fig" id="tl-5a">&hellip;</b>. Against
                buy-and-hold across the held-out pairs the paired test gives
-               <b class="tl-fig" id="tl-5b">&hellip;</b>: not distinguishable. The
+               <b class="tl-fig" id="tl-5b">&hellip;</b>: not distinguishable<span id="tl-5r"></span>. The
                spectacular run was one draw from a wide distribution.</p>
             <p class="tl-src"><a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/evaluation/statistics.py">evaluation/statistics.py</a> &middot; <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/real_significance.py">tools/real_significance.py</a></p>
           </div>
@@ -1870,6 +1870,7 @@
   <script src="significance.js" defer></script>
   <script src="learning.js" defer></script>
   <script src="ablation.js" defer></script>
+  <script src="replication.js" defer></script>
   <script src="app.js" defer></script>
   <script src="lab.js" defer></script>
   <script src="hedging-view.js" defer></script>

@@ -82,7 +82,10 @@ This framework is a disciplined attempt to study them *properly*:
 - **Stable, reproducible training.** A running observation normaliser (Welford,
   exported and applied at serve time) keeps inputs well-scaled, and full seeding of
   Torch + NumPy + the environment RNG makes a run **bit-for-bit reproducible on a
-  given dataset** — the same seed over the same bars gives the same numbers.
+  given dataset and machine** — the same seed over the same bars gives the same
+  numbers. On different hardware, floating-point differences grow through training
+  and individual seeds diverge ([RESULTS §5d](../RESULTS.md)), which is one more
+  reason to read the distribution rather than any one run.
   The dataset is the part that needs care: `tools/fetch_data.py` pulls a *relative*
   window, so an unpinned re-fetch shifts the train/test split and the figures move
   with it. `data/SNAPSHOT.json` pins the exact bars behind the published results

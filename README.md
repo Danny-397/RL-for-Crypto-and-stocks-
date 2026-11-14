@@ -23,8 +23,11 @@ capture.</sub>
 ## In brief
 
 - **No edge.** Trained on ten real stocks and six coins and scored on history it never
-  saw, across ten seeds, the agent loses to buy-and-hold on stocks (p = 0.002) and is
-  indistinguishable from it on crypto, where every seed loses money.
+  saw, across ten seeds, the agent loses to buy-and-hold on stocks (p = 0.002). On
+  crypto every seed loses money; against buy-and-hold the verdict is borderline
+  (p = 0.22 in the published run, 0.03 when replicated on other hardware). Adjusted
+  for risk, its Sharpe ratio and its alpha on the traded asset are negative in both
+  markets.
 - **The study was audited, and it held.** A pre-registered audit found two real
   flaws: the PPO trailed Stable-Baselines3, and the crypto split leaked across coins.
   Both are fixed in v2.3.0, and neither changes the conclusion.
@@ -82,8 +85,23 @@ for, each **pre-registered** before it ran
   were trained on dates that were already test dates for others. That inflated every
   published crypto number; stocks were unaffected.
 
-Neither changes the conclusion. Held-out return at the published budget, mean basket
-return (IQM over 10 seeds):
+Two further checks came later. Re-running the published seeds on a different
+machine leaves the stock verdict unchanged and moves the crypto one across the 0.05
+line, because individual seeds diverge across hardware and six coins give the test
+little margin. And adjusting for risk (Sharpe ratio; alpha and beta on the traded
+asset) makes the agent look worse, not better ([RESULTS §5d–5e](RESULTS.md)):
+
+<!-- BEGIN GENERATED: significance-risk -->
+| Market | Sharpe, agent | Sharpe, buy & hold | Sharpe test | Alpha on the traded asset (95% CI, seeds) | Alpha test | Beta |
+|---|---:|---:|---|---:|---|---:|
+| Stock | −0.53 | +1.12 | **lower** (p = 0.0021) | **−12.6%** a year `[−14.8%, −10.2%]` | **negative** (p = 0.0021) | +0.14 |
+| Crypto | −0.61 | +0.32 | **lower** (p = 0.03) | **−32.2%** a year `[−49.9%, −16.8%]` | **negative** (p = 0.03) | +0.00 |
+
+*From the replication run (same seeds, data and held-out windows as the published study; RESULTS.md §5d). Sharpe is annualised from daily returns; the test is the same paired permutation across tickers. Alpha and beta come from regressing the agent's daily returns on the traded asset's (zero risk-free rate); alpha is annualised, and its test is a sign-flip test of the per-ticker alphas against zero.*
+<!-- END GENERATED: significance-risk -->
+
+Neither the audit nor these checks change the conclusion. Held-out return at the
+published budget, mean basket return (IQM over 10 seeds):
 
 <!-- BEGIN GENERATED: rigor-implementations -->
 | Market | Buy & hold | PPO as published | PPO repaired | SB3 PPO | SB3 SAC |
