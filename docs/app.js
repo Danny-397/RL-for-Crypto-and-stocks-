@@ -6,7 +6,7 @@
   "use strict";
 
   const DATA = window.RL_RESULTS || null;
-  const VOLT = "#ff9f0a";
+  const VOLT = "#d97757";
   const BENCH = "rgba(140, 152, 168, 0.85)";
 
   // ── formatting helpers ──────────────────────────────────────
@@ -65,8 +65,8 @@
 
       if (s.fill) {
         const grad = ctx.createLinearGradient(0, pad.t, 0, H);
-        grad.addColorStop(0, "rgba(255, 159, 10, 0.10)");
-        grad.addColorStop(1, "rgba(255, 159, 10, 0)");
+        grad.addColorStop(0, "rgba(217, 119, 87, 0.10)");
+        grad.addColorStop(1, "rgba(217, 119, 87, 0)");
         ctx.beginPath();
         ctx.moveTo(X(0, n), Y(s.data[0]));
         for (let i = 1; i < count; i++) ctx.lineTo(X(i, n), Y(s.data[i]));
@@ -105,13 +105,13 @@
     for (let i = 0; i < dd.length; i++) ctx.lineTo(X(i), Y(dd[i]));
     ctx.lineTo(X(dd.length - 1), pad.t); ctx.closePath();
     const grad = ctx.createLinearGradient(0, pad.t, 0, H);
-    grad.addColorStop(0, "rgba(248, 113, 113, 0.05)");
-    grad.addColorStop(1, "rgba(248, 113, 113, 0.4)");
+    grad.addColorStop(0, "rgba(251, 111, 146, 0.05)");
+    grad.addColorStop(1, "rgba(251, 111, 146, 0.4)");
     ctx.fillStyle = grad; ctx.fill();
 
     ctx.beginPath();
     for (let i = 0; i < dd.length; i++) (i ? ctx.lineTo(X(i), Y(dd[i])) : ctx.moveTo(X(i), Y(dd[i])));
-    ctx.strokeStyle = "rgba(248, 113, 113, 0.85)"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = "rgba(251, 111, 146, 0.85)"; ctx.lineWidth = 1.5; ctx.stroke();
   }
 
   // ── action histogram ────────────────────────────────────────
@@ -135,7 +135,7 @@
       const h = (c / maxc) * (H - pad.t - pad.b);
       const x = pad.l + i * bw, y = H - pad.b - h;
       const center = i / (BINS - 1); // 0..1
-      ctx.fillStyle = center < 0.45 ? "rgba(248, 113, 113, 0.7)"
+      ctx.fillStyle = center < 0.45 ? "rgba(251, 111, 146, 0.7)"
         : center > 0.55 ? "rgba(52, 211, 153, 0.8)" : "rgba(140,152,168,0.6)";
       ctx.fillRect(x + 1, y, bw - 2, h);
     });
@@ -343,7 +343,7 @@
     for (let i = 0; i < n; i++) {
       const a = acts[i];
       if (Math.abs(a) < 0.05) continue;
-      ctx.fillStyle = a > 0 ? "rgba(52, 211, 153, 0.12)" : "rgba(248, 113, 113, 0.13)";
+      ctx.fillStyle = a > 0 ? "rgba(52, 211, 153, 0.12)" : "rgba(251, 111, 146, 0.13)";
       ctx.fillRect(X(i) - colW / 2, pad.t, colW + 1, H - pad.t - pad.b);
     }
     // price line
@@ -354,7 +354,7 @@
     const cx = X(cursor), a = acts[cursor];
     ctx.strokeStyle = "rgba(255, 255, 255, 0.35)"; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, H - pad.b); ctx.stroke();
-    ctx.fillStyle = a > 0.05 ? "#34d399" : (a < -0.05 ? "#f87171" : "#8a97a8");
+    ctx.fillStyle = a > 0.05 ? "#34d399" : (a < -0.05 ? "#fb6f92" : "#8a97a8");
     ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.arc(cx, Y(price[cursor]), 4.2, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
@@ -428,7 +428,7 @@
       ctx.fillText(r.label, padL, y - 44);
 
       // 95% CI band and mean
-      ctx.fillStyle = "rgba(255, 159, 10, 0.10)";
+      ctx.fillStyle = "rgba(217, 119, 87, 0.10)";
       ctx.fillRect(X(d.ci_low), y - 26, X(d.ci_high) - X(d.ci_low), 52);
       ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(X(d.mean), y - 26); ctx.lineTo(X(d.mean), y + 26); ctx.stroke();
@@ -661,7 +661,7 @@
     ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(W - padR, axisY); ctx.stroke();
 
     // 95% CI band + mean
-    ctx.fillStyle = "rgba(255, 159, 10, 0.12)";
+    ctx.fillStyle = "rgba(217, 119, 87, 0.12)";
     ctx.fillRect(X(d.ci_low), axisY - 30, X(d.ci_high) - X(d.ci_low), 60);
     ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(X(d.mean), axisY - 30); ctx.lineTo(X(d.mean), axisY + 30); ctx.stroke();
@@ -742,7 +742,7 @@
       ctx.shadowBlur = 0;
       arr.forEach((m, i) => { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(i), Y(m), 3.3, 0, 7); ctx.fill(); });
     };
-    line(ins, "#f87171", false);   // in-sample: the seductive, fake number
+    line(ins, "#fb6f92", false);   // in-sample: the seductive, fake number
     line(oos, VOLT, true);         // held-out: the honest one
   }
 

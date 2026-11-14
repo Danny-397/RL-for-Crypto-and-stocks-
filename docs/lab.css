@@ -39,7 +39,7 @@
 }
 .api-pill.is-live { color: var(--pos); border-color: rgba(52, 211, 153, 0.4); }
 .api-pill.is-live .dot-led { background: var(--pos);  }
-.api-pill.is-down { color: var(--neg); border-color: rgba(248, 113, 113, 0.4); }
+.api-pill.is-down { color: var(--neg); border-color: rgba(251, 111, 146, 0.4); }
 .api-pill.is-down .dot-led { background: var(--neg); }
 
 /* ── Sub navigation ──────────────────────────────────────── */
@@ -170,7 +170,7 @@
   color: var(--on-accent); background: var(--accent-fill);
   border: 0; border-radius: var(--radius-sm); cursor: pointer; font-variant-numeric: tabular-nums;
 }
-.run-btn:hover:not(:disabled) { background: #ffb340; }
+.run-btn:hover:not(:disabled) { background: #e38a6c; }
 .run-btn:disabled { background: var(--surface-2); color: var(--faint); cursor: not-allowed; }
 .run-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
@@ -196,9 +196,9 @@
 }
 
 .lab-error {
-  border: 1px solid rgba(248, 113, 113, 0.4);
-  background: rgba(248, 113, 113, 0.07);
-  color: #fca5a5; border-radius: var(--radius-sm); padding: 12px 14px;
+  border: 1px solid rgba(251, 111, 146, 0.4);
+  background: rgba(251, 111, 146, 0.07);
+  color: #fda4bc; border-radius: var(--radius-sm); padding: 12px 14px;
   font-size: 13px; margin-top: 14px;
 }
 .lab-empty {
@@ -368,7 +368,7 @@
 }
 .xr-ramp {
   flex: 1; height: 7px; border-radius: 4px;
-  background: linear-gradient(90deg, #f87171, #1d1d20 50%, #34d399);
+  background: linear-gradient(90deg, #fb6f92, #1d1d20 50%, #34d399);
 }
 /* A feature that is structurally zero on this path (e.g. cross-asset features on
    a synthetic series) is dimmed, so a flat row reads as "inert", not "neutral". */
@@ -502,7 +502,7 @@
 .rbar-row.is-reference .rbar-name { color: var(--volt); }
 .ref-tag {
   font-family: var(--font-data); font-size: 9px; font-style: normal; color: var(--volt);
-  border: 1px solid rgba(255, 159, 10, .35); border-radius: 4px; padding: 1px 5px;
+  border: 1px solid rgba(217, 119, 87, .35); border-radius: 4px; padding: 1px 5px;
   margin-left: 6px; vertical-align: middle; font-variant-numeric: tabular-nums;
 }
 /* A mean that does not separate from noise is not coloured as a win or a loss. */
@@ -527,8 +527,8 @@
   border: 1px solid var(--border); border-radius: 12px;
   padding: 20px; background: var(--bg-soft); position: relative;
 }
-.vp-card.is-claim { border-color: rgba(255, 159, 10, 0.35); }
-.vp-card.is-truth { border-color: rgba(255, 159, 10, 0.35); }
+.vp-card.is-claim { border-color: rgba(217, 119, 87, 0.35); }
+.vp-card.is-truth { border-color: rgba(217, 119, 87, 0.35); }
 .vp-kicker {
   font-family: var(--font-data); font-size: 10px; color: var(--faint); margin-bottom: 10px; font-variant-numeric: tabular-nums;
 }
@@ -546,8 +546,8 @@
   font-family: var(--font-data); font-size: 11px;
   padding: 4px 9px; border-radius: 6px; font-variant-numeric: tabular-nums;
 }
-.vp-flag.bad { color: var(--neg); background: rgba(248, 113, 113, .1);
-               border: 1px solid rgba(248, 113, 113, .3); }
+.vp-flag.bad { color: var(--neg); background: rgba(251, 111, 146, .1);
+               border: 1px solid rgba(251, 111, 146, .3); }
 .vp-flag.ok { color: var(--pos); background: rgba(52, 211, 153, .1);
               border: 1px solid rgba(52, 211, 153, .3); }
 
@@ -593,7 +593,7 @@
   border-bottom: 1px solid var(--border);
 }
 .wi-row:last-child { border-bottom: 0; }
-.wi-row.is-agent { background: rgba(255, 159, 10, 0.045); }
+.wi-row.is-agent { background: rgba(217, 119, 87, 0.045); }
 .wi-name { font-family: var(--font-data); font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
 .wi-name small { display: block; color: var(--faint); font-size: 10px; }
 .wi-row.is-agent .wi-name { color: var(--volt); }
@@ -673,8 +673,8 @@
   border-radius: 4px; border: 1px solid var(--border-2); color: var(--muted); font-variant-numeric: tabular-nums;
 }
 .nb-status-chip.done { color: var(--pos); border-color: rgba(52, 211, 153, .35); }
-.nb-status-chip.error { color: var(--neg); border-color: rgba(248, 113, 113, .35); }
-.nb-status-chip.running { color: var(--cyan); border-color: rgba(255, 159, 10, .35); }
+.nb-status-chip.error { color: var(--neg); border-color: rgba(251, 111, 146, .35); }
+.nb-status-chip.running { color: var(--cyan); border-color: rgba(217, 119, 87, .35); }
 .nb-empty {
   padding: 30px 10px; text-align: center; color: var(--muted); font-size: 14px;
 }
@@ -741,8 +741,8 @@
   margin: 0 0 24px;
   padding: 12px 16px;
   color: var(--text);
-  background: rgba(248, 113, 113, 0.08);
-  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: rgba(251, 111, 146, 0.08);
+  border: 1px solid rgba(251, 111, 146, 0.4);
   border-radius: 12px;
   line-height: 1.5;
 }
@@ -751,7 +751,7 @@
 /* the backend is asleep and being woken -- in progress, not a failure */
 .api-pill.is-waking {
   color: var(--cyan);
-  border-color: rgba(255, 159, 10, 0.4);
+  border-color: rgba(217, 119, 87, 0.4);
 }
 .api-pill.is-waking .dot-led {
   background: var(--cyan);
@@ -778,7 +778,7 @@
   border-radius: 12px; padding: 10px 10px 12px;
 }
 .pc-card.is-right { border-color: rgba(52, 211, 153, 0.55); }
-.pc-card.is-wrong { border-color: rgba(248, 113, 113, 0.55); }
+.pc-card.is-wrong { border-color: rgba(251, 111, 146, 0.55); }
 .pc-card-head {
   display: flex; align-items: center; justify-content: space-between;
   min-height: 20px; margin-bottom: 4px;
@@ -912,7 +912,7 @@
   background: rgba(255, 255, 255, 0.035);
 }
 .wf-track > i { position: absolute; top: 0; height: 100%; border-radius: 4px; }
-.wf-train { background: rgba(255, 159, 10, 0.22); }
+.wf-train { background: rgba(217, 119, 87, 0.22); }
 .wf-test { background: var(--volt); }
 
 .wf-table-wrap { overflow-x: auto; margin-bottom: 18px; }

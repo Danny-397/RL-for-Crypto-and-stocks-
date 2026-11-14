@@ -2,7 +2,7 @@
    RL Trader — site styles
 
    One design system for every view (lab.css builds on these tokens).
-   Neutral dark surfaces, one orange accent used only for action, selection
+   Neutral dark surfaces, one coral accent (Claude orange) used only for action, selection
    and the agent's own data series. Gains are green, losses are red, the
    benchmark is grey. No glows, no gradients, no decorative motion.
    ============================================================ */
@@ -25,12 +25,12 @@
   --faint: #86868b;
 
   /* Colour: one accent, two semantic colours */
-  --accent:      #ff9f0a;   /* text, lines, the agent's series */
-  --accent-fill: #ff9f0a;   /* filled controls (dark text, 9:1) */
-  --on-accent:   #1a1204;
-  --accent-soft: rgba(255, 159, 10, 0.12);
+  --accent:      #d97757;   /* text, lines, the agent's series */
+  --accent-fill: #d97757;   /* filled controls (dark text, 6:1) */
+  --on-accent:   #1f0f08;
+  --accent-soft: rgba(217, 119, 87, 0.12);
   --pos: #34d399;
-  --neg: #f87171;
+  --neg: #fb6f92;
   --warn: #fbbf24;
 
   /* Legacy names used by lab.css and the 404 page */
@@ -80,7 +80,7 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
 .section-head p a, .hero-note a, .lab-caption a, .about a, .hg-verdict a,
 .honest-note a, .rs-note a {
   color: var(--accent); text-decoration: underline;
-  text-decoration-color: rgba(255, 159, 10, 0.4); text-underline-offset: 3px;
+  text-decoration-color: rgba(217, 119, 87, 0.4); text-underline-offset: 3px;
 }
 .section-head p a:hover, .hero-note a:hover, .lab-caption a:hover, .about a:hover,
 .honest-note a:hover, .rs-note a:hover { text-decoration-color: currentColor; }
@@ -110,7 +110,7 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
 }
 .btn:active { transform: scale(0.98); }
 .btn-primary { background: var(--accent-fill); color: var(--on-accent); }
-.btn-primary:hover { background: #ffb340; }
+.btn-primary:hover { background: #e38a6c; }
 .btn-ghost { background: transparent; color: var(--text); border-color: var(--border-2); }
 .btn-ghost:hover { background: var(--surface-2); }
 
@@ -264,7 +264,7 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
 .arch-node .tag { font-size: 12px; color: var(--faint); display: block; margin-bottom: 4px; }
 .arch-node strong { font-family: var(--font-display); font-size: 17px; font-weight: 600; display: block; }
 .arch-node small { color: var(--faint); font-size: 13px; }
-.arch-node.agent { border-color: rgba(255, 159, 10, 0.45); }
+.arch-node.agent { border-color: rgba(217, 119, 87, 0.45); }
 .arch-flow { display: flex; gap: 40px; font-size: 12px; color: var(--faint); }
 .arch-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 520px; }
 .arch-split .arch-node { max-width: none; }
@@ -517,7 +517,7 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
 .repro-steps li > span { display: block; font-size: 14px; color: var(--muted); line-height: 1.6; }
 .repro-steps li > span code { font-size: 12.5px; color: var(--text); }
 .repro-steps a, .repro-check a {
-  color: var(--accent); text-decoration: underline; text-decoration-color: rgba(255, 159, 10, .4);
+  color: var(--accent); text-decoration: underline; text-decoration-color: rgba(217, 119, 87, .4);
   text-underline-offset: 3px; white-space: nowrap;
 }
 .repro-steps a:hover, .repro-check a:hover { text-decoration-color: currentColor; }
