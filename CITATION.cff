@@ -10,7 +10,11 @@ abstract: >-
   with weak-form efficiency, and reproduces Henderson et al. (2018) in a new domain.
   Version 2 regenerates every figure against a pinned data snapshot; moving the
   evaluation window alone erased v1's headline single-seed result, which is
-  reported as a finding rather than corrected away.
+  reported as a finding rather than corrected away. Version 2.3 adds a
+  pre-registered audit (a repaired PPO, a leak-free crypto split, other
+  implementations and algorithms, longer training, a hindsight-free universe) and a
+  second pre-registered study (30 seeds, walk-forward across four periods, a full
+  hyper-parameter sweep, position diagnostics); the conclusion holds.
 type: software
 authors:
   - family-names: Lichtenberger
@@ -25,8 +29,8 @@ keywords:
   - quantitative-finance
 license: MIT
 doi: 10.5281/zenodo.23843503
-version: "2.2.1"
-date-released: "2026-11-13"
+version: "2.3.0"
+date-released: "2026-11-14"
 references:
   - type: conference-paper
     title: "Deep Reinforcement Learning that Matters"

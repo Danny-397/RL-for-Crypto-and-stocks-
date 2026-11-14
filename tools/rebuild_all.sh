@@ -90,6 +90,7 @@ run costs        $PY tools/cost_sensitivity.py
 # generated from the artifacts above; skipping this is precisely how those
 # documents came to describe runs that no longer existed.
 run sync         $PY tools/sync_docs.py
+run summary      $PY paper/summary/make_summary.py
 
 echo "ALL STAGES COMPLETE" >> "$SUMMARY"
 cat "$SUMMARY"

@@ -260,6 +260,20 @@
       `buy-&amp;-hold on ${market === "stock" ? "stocks" : "crypto"} (${link}).` + depth;
   }
 
+  // The hero's card is small, so it gets one sentence from the follow-up study;
+  // the market pages carry the full caveat (replicationNote).
+  function heroDepthNote() {
+    const dep = window.RL_DEPTH;
+    if (!dep || !dep.seeds || !dep.seeds.crypto || !dep.behaviour) return "";
+    const d = dep.seeds.crypto, hit = dep.behaviour.crypto.hit_rate;
+    const pv = (p) => (p < 0.01 ? p.toFixed(4) : p.toFixed(2));
+    return ` At ${d.n} seeds crypto trails buy-&amp;-hold on ${d.tickers_behind} of ${d.tickers} ` +
+      `coins (p = ${pv(d.p)}), and the agent's long-or-short calls are right ` +
+      `<b>${(hit * 100).toFixed(1)}%</b> of the time, a coin flip ` +
+      '(<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md#10h-thirty-seeds-every-period-a-fuller-sweep" ' +
+      'target="_blank" rel="noopener">§10h</a>).';
+  }
+
   function verdictFor(market) {
     const lead = "Every figure here is the <b>real held-out backtest</b> for the " +
       "asset you picked — out-of-sample, costs included, no cherry-picking.";
@@ -558,7 +572,7 @@
         (Math.max(...c.seed_returns) < 0
           ? "Every crypto run lost money; how much depended on the seed."
           : "Pick one dot and you can tell either story.") +
-        replicationNote("crypto");
+        heroDepthNote();
     }
 
     const total = Math.max(c.seed_returns.length, st.seed_returns.length);

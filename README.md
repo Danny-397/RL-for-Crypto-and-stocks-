@@ -12,7 +12,17 @@ and one lucky seed, with markets as the testbed and an honest negative result.
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23843503-1682D4)](https://doi.org/10.5281/zenodo.23843503)
 
 **[Live site and lab](https://rl-for-crypto-and-stocks.vercel.app/)** · [Results](RESULTS.md) · [Paper](paper/) ·
-[Guide](guide/README.md) · [Cite](#citing)
+[Guide](guide/README.md) · [One-page summary (PDF)](docs/assets/rl-trader-summary.pdf) · [Cite](#citing)
+
+> **In one minute.** An AI agent that teaches itself to trade stocks and crypto, and a
+> study that then tries hard to prove its own results wrong. One early run looked
+> spectacular, nearly quadrupling its money on crypto. Tested properly, across dozens of
+> independent training runs and four different periods of history, that win turns out
+> to be luck. The agent does no better than simply buying and holding, and its daily
+> bets on up or down are right half the time, like a coin flip. The same code does
+> work on a different problem, hedging an option, where it beats a standard textbook
+> strategy when trading is expensive. The result is negative; what the project shows
+> is how to catch a false result before believing it.
 
 [![The RL Trader lab, recorded live against the backend](docs/assets/lab-demo.gif)](https://rl-for-crypto-and-stocks.vercel.app/#lab)
 
@@ -23,11 +33,12 @@ capture.</sub>
 ## In brief
 
 - **No edge.** Trained on ten real stocks and six coins and scored on history it never
-  saw, across ten seeds, the agent loses to buy-and-hold on stocks (p = 0.002). On
-  crypto every seed loses money; against buy-and-hold the verdict is borderline
-  (p = 0.22 in the published run, 0.03 when replicated on other hardware). Adjusted
-  for risk, its Sharpe ratio and its alpha on the traded asset are negative in both
-  markets.
+  saw, the agent loses to buy-and-hold on stocks (p = 0.002, in all 300 runs of a
+  30-seed follow-up). On crypto it trails on five of six coins, which six coins cannot
+  make significant (p = 0.19 at 30 seeds). Retrained across four periods of history,
+  it trails in every period on stocks and in three of four on crypto; the fourth was a
+  crash, in which it lost less. Adjusted for risk, its Sharpe ratio and its alpha on
+  the traded asset are negative in both markets.
 - **The study was audited, and it held.** A pre-registered audit found two real
   flaws: the PPO trailed Stable-Baselines3, and the crypto split leaked across coins.
   Both are fixed in v2.3.0, and neither changes the conclusion.
