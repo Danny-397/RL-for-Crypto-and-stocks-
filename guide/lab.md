@@ -172,14 +172,15 @@ policy on every out-of-sample block.
 
 **It is not a retrained walk-forward, and it says so on every response.** This
 backend has no PyTorch, so the policy is fixed across folds. What that measures is
-still worth seeing: on a 1,200-bar momentum path with four folds, one unchanged
-policy's excess return over buy-and-hold ran from **−21.7% to +18.7%** across
-chronological blocks. A single backtest would have reported any one of those.
+still worth seeing: on the panel's default synthetic path (crypto policy, momentum
+regime, seed 3, 1,600 bars, four expanding folds), the v2.3.0 policy's excess return
+over buy-and-hold ran from **−61.5% to +65.2%** across chronological blocks. A single
+backtest would have reported any one of those.
 
 Then it runs the identical folds a second time with the scaler fit on the whole
 series, test block included — the standard mistake — and reports the difference
 fold by fold. Same policy, same prices, only the scaler's fitting window changes.
-On that series the largest single-fold gap was **4.1 percentage points**. Nothing
+On that series the largest single-fold gap was **9.4 percentage points**. Nothing
 about that is asserted in advance; it is whatever it comes out as, and a test
 fails if the two arms ever come back identical, because then the comparison would
 be showing nothing and should not be displayed.

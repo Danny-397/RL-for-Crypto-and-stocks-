@@ -34,11 +34,14 @@ SUMMARY="$LOG_DIR/summary.txt"
 # produces are NOT publishable -- too few seeds to say anything -- so it is only
 # for confirming that every stage still runs end to end.
 if [ "${1:-}" = "--quick" ]; then
-  BIG=20000; MID=10000; SEEDS=2; SURR_SEEDS=2
+  BIG=20000; MID=10000; SEEDS=2; SURR_SEEDS=2; SIG_SEEDS=2; ABL_SEEDS="42 43"
   echo "QUICK MODE -- results are for wiring checks only, not for publication" \
     | tee -a "$SUMMARY"
 else
   BIG=200000; MID=150000; SEEDS=5; SURR_SEEDS=3
+  # The two headline studies are published at 10 seeds: at 5, a two-sided
+  # sign-flip test cannot go below p = 0.0625 (RESULTS.md, the paper's RQ3).
+  SIG_SEEDS=10; ABL_SEEDS="42 43 44 45 46 47 48 49 50 51"
 fi
 
 run () {
@@ -66,9 +69,9 @@ echo "dataset verified against the pin" >> "$SUMMARY"
 # --- the experiments -------------------------------------------------------
 run site         $PY tools/build_site_data.py --real --timesteps $BIG --seed 42
 run export       $PY tools/export_policy.py
-run ablation_ms  $PY tools/ablation_multiseed.py --seeds 42 43 44 45 46 --timesteps 60000
+run ablation_ms  $PY tools/ablation_multiseed.py --seeds $ABL_SEEDS --timesteps 60000
 run ablation1    $PY tools/ablation.py --timesteps 60000
-run significance $PY tools/real_significance.py --seeds $SEEDS --timesteps $MID
+run significance $PY tools/real_significance.py --seeds $SIG_SEEDS --timesteps $MID
 run sig_synth_s  $PY tools/significance.py --market stock  --seeds $SEEDS --timesteps 40000
 run sig_synth_c  $PY tools/significance.py --market crypto --seeds $SEEDS --timesteps 40000
 run surr_synth   $PY tools/surrogate_test.py --mode synthetic --seeds $SEEDS --timesteps 60000
