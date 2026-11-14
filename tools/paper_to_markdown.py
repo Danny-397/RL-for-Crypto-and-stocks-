@@ -162,6 +162,8 @@ MATH_REPLACEMENTS = [
     (r"\\geq(?![a-zA-Z])", "\u2265"),
     (r"\\ge(?![a-zA-Z])", "\u2265"),
     (r"\\neq(?![a-zA-Z])", "\u2260"),
+    (r"\\ne(?![a-zA-Z])", "\u2260"),
+    (r"\\downarrow(?![a-zA-Z])", "\u2193"),
     (r"\\gg(?![a-zA-Z])", "\u226b"),
     (r"\\ll(?![a-zA-Z])", "\u226a"),
     (r"\\approx(?![a-zA-Z])", "\u2248"),

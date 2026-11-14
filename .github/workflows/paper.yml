@@ -12,6 +12,7 @@ on:
       # and a rebuild triggered only by source changes would let the committed
       # PDF go stale whenever a figure is regenerated.
       - 'paper/**'
+      - 'tools/paper_to_markdown.py'
       - '.github/workflows/paper.yml'
   workflow_dispatch:
 
@@ -30,6 +31,18 @@ jobs:
           root_file: rl_trader.tex
           working_directory: paper
 
+      # The web version (paper/rl_trader.md) is what the portfolio site renders.
+      # Built here so it cannot fall behind the LaTeX: it did, silently, when two
+      # math commands had no mapping and the converter exited without writing.
+      # An unmapped command now fails this job on the branch that adds it.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Convert to Markdown
+        run: |
+          pip install pypandoc_binary
+          python tools/paper_to_markdown.py
+
       - name: Upload PDF as a build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -46,10 +59,10 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f paper/rl_trader.pdf
+          git add -f paper/rl_trader.pdf paper/rl_trader.md
           if git diff --staged --quiet; then
-            echo "PDF unchanged — nothing to commit."
+            echo "PDF and Markdown unchanged — nothing to commit."
           else
-            git commit -m "Build paper PDF from rl_trader.tex [skip ci]"
+            git commit -m "Build paper PDF and Markdown from rl_trader.tex [skip ci]"
             git push
           fi
