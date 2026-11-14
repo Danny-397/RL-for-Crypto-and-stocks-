@@ -217,7 +217,7 @@ def headline_run() -> Optional[str]:
 
 
 def ablation_table() -> Optional[str]:
-    """Single-asset vs cross-asset training, across seeds."""
+    """One fixed simulated path vs a fresh path every episode, across seeds."""
     art = _asset("ablation_multiseed.json")
     if not art:
         return None
@@ -229,7 +229,7 @@ def ablation_table() -> Optional[str]:
         m = s["markets"].get(market)
         if not m:
             continue
-        for arm, how in (("single", "single asset"), ("domain", "across tickers")):
+        for arm, how in (("single", "one fixed path"), ("domain", "fresh path each episode")):
             d = m[arm]
             rows.append(
                 f"| {label} · {how} | {kpct(d['in_min'])} to {kpct(d['in_max'])} "

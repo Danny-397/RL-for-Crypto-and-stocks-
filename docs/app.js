@@ -1078,7 +1078,7 @@
     }
   }
 
-  // ── the generalization gap: single-asset vs cross-asset training ──
+  // ── the generalization gap: one fixed simulated path vs a fresh path per episode ──
   //
   // Rendered from window.RL_ABLATION (tools/ablation_multiseed.py) rather than
   // typed into the HTML. These four rows used to be hand-written, and a rebuild
@@ -1112,11 +1112,11 @@
   }
 
   const ARMS = [
-    { key: "single", title: "Trained on one asset",
+    { key: "single", title: "Trained on one fixed path",
       badge: "memorised", tone: "bad",
       note: "It saw a single price path often enough to learn that path. The " +
             "in-sample figure is not a strategy — it is a receipt for overfitting." },
-    { key: "domain", title: "Trained across the basket",
+    { key: "domain", title: "A fresh path every episode",
       badge: "generalised", tone: "good",
       note: "Domain randomization removes any single path to memorise, so the " +
             "in-sample number drops by orders of magnitude — and the held-out " +
@@ -1159,8 +1159,8 @@
 
     const meta = document.getElementById("rs-meta");
     if (meta) {
-      meta.textContent = `${nSeeds} seeds \u00b7 ` +
-        `${(ABL.timesteps / 1000).toFixed(0)}k steps each \u00b7 identical held-out paths`;
+      meta.textContent = `Simulated markets \u00b7 ${nSeeds} seeds \u00b7 ` +
+        `${(ABL.timesteps / 1000).toFixed(0)}k steps each \u00b7 30 identical held-out paths`;
     }
 
     const cap = document.getElementById("rs-caption");
@@ -1208,7 +1208,7 @@
     for (const [market, label] of [["crypto", "Crypto"], ["stock", "Stocks"]]) {
       const m = ABL.markets[market];
       if (!m) continue;
-      for (const [key, how] of [["single", "single asset"], ["domain", "across tickers"]]) {
+      for (const [key, how] of [["single", "one fixed path"], ["domain", "fresh path each episode"]]) {
         const d = m[key];
         rows.push(
           `<tr><td class="num-l">${label} &middot; ${how}</td>` +

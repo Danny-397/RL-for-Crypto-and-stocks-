@@ -145,13 +145,15 @@
     <!-- ═══════════════════════ THE RESULT ═══════════════════════ -->
     <section class="section result-section" id="result">
       <div class="section-head">
-        <div class="kicker">The result</div>
+        <div class="kicker">The controlled experiment</div>
         <h2>The most impressive number was the&nbsp;least trustworthy.</h2>
         <p>
-          Trained on one asset, the agent posts returns that look like a bug, then
-          loses money on data it has never seen. Trained across a basket, the
-          headline shrinks to something modest that holds up. The only difference
-          between the two is how many assets they saw.
+          A test on simulated markets with a known momentum signal, so the answer is
+          known in advance. Trained on one fixed price path, the agent posts returns
+          that look like a bug, then loses money on paths it has never seen. Trained
+          on a fresh path every episode, the headline shrinks to something modest
+          that holds up. The only difference between the two is how many paths they
+          saw. Real-market results are in the timeline below.
         </p>
       </div>
 
@@ -195,7 +197,7 @@
           <div class="tl-n">01</div>
           <div class="tl-body">
             <h3>The number was enormous.</h3>
-            <p>A crypto agent trained on one asset finished its training period up
+            <p>A crypto agent trained on one simulated price path finished its training period up
                <b class="tl-fig" id="tl-1">&hellip;</b>, depending on the
                seed. My first instinct was that something had gone right.</p>
           </div>
@@ -205,7 +207,7 @@
           <div class="tl-n">02</div>
           <div class="tl-body">
             <h3>It was a receipt for memorisation.</h3>
-            <p>Scored on held-out tickers it had never traded, the same recipe
+            <p>Scored on 30 simulated paths it had never seen, the same recipe
                averaged <b class="tl-fig neg" id="tl-2">&hellip;</b> across 10 seeds.
                It had not learned to trade; it had learned one price path.</p>
             <p class="tl-src"><a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/ablation.py">tools/ablation.py</a></p>
@@ -216,8 +218,8 @@
           <div class="tl-n">03</div>
           <div class="tl-body">
             <h3>The fix was the data, not the algorithm.</h3>
-            <p>I changed nothing about PPO. Training across the whole basket —
-               domain randomization — left nothing single to memorise, and held-out
+            <p>I changed nothing about PPO. Training on a fresh path every
+               episode — domain randomization — left nothing single to memorise, and held-out
                return moved to <b class="tl-fig pos" id="tl-3">&hellip;</b>. That is
                the contrast at the top of this page.</p>
             <p class="tl-src"><a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/rl_trader/envs/base_env.py">rl_trader/envs/</a> &middot; <a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/tools/ablation_multiseed.py">tools/ablation_multiseed.py</a></p>
@@ -227,7 +229,7 @@
         <li class="tl-step">
           <div class="tl-n">04</div>
           <div class="tl-body">
-            <h3>Then one run looked spectacular again.</h3>
+            <h3>Then, on real prices, one run looked spectacular again.</h3>
             <p>The published crypto agent returned <b class="tl-fig">+275.45%</b>
                against <b class="tl-fig">+19.57%</b> buy-and-hold — a 14&times;
                outperformance. This was the version of the result I nearly wrote up
@@ -302,7 +304,7 @@
         <article class="learned-card">
           <div class="learned-n">01</div>
           <h3>A huge training number is a symptom, not a result.</h3>
-          <p>The single-asset agent's in-sample return moved between
+          <p>The fixed-path agent's in-sample return moved between
              <b class="lr-fig" id="lr-1a">&hellip;</b> and
              <b class="lr-fig" id="lr-1b">&hellip;</b> depending only on the random
              seed. A quantity that unstable is not measuring skill; it is measuring
@@ -313,7 +315,8 @@
           <div class="learned-n">02</div>
           <h3>The fix was the training distribution, not the algorithm.</h3>
           <p>PPO was not touched — no new loss, no tuning. Only the number of
-             assets the agent saw changed, and held-out return moved from
+             price paths the agent saw changed, and held-out return on simulated
+             paths moved from
              <b class="lr-fig neg" id="lr-2a">&hellip;</b> to
              <b class="lr-fig pos" id="lr-2b">&hellip;</b> on crypto. Where the data
              comes from is a modelling decision.</p>
@@ -656,8 +659,8 @@
     <section class="section">
       <div class="section-head">
         <div class="kicker">Overfitting, caught</div>
-        <h2>Why train across many tickers, not one.</h2>
-        <p>Train the agent on a <b>single</b> asset and it posts absurd returns on the data it trained on — then loses money on data it has never seen. It memorised one price path. Training across many tickers (<b>domain randomization</b>) forces it to learn something transferable: in-sample and held-out returns line up.</p>
+        <h2>Why train on many price paths, not one.</h2>
+        <p>On simulated markets with a known momentum signal, an agent trained on a <b>single</b> price path posts absurd returns on that path, then loses money on paths it has never seen. It memorised one path. Drawing a fresh path every episode (<b>domain randomization</b>) forces it to learn something transferable. On real data the agent trains across the whole basket of tickers for the same reason.</p>
       </div>
       <div class="panel">
         <div class="table-scroll">
@@ -672,7 +675,7 @@
             <tbody id="abl-body"></tbody>
           </table>
         </div>
-        <p class="lab-caption">Those astronomical in-sample figures aren't a win — they're the <b>overfitting tell</b>: a single-asset agent memorises the exact training path, so it "earns" impossible returns there and then collapses out of sample. The honest column is <b>held-out</b>, and only domain randomization keeps it positive — across 10 seeds all four intervals exclude zero. In-sample is shown as a <b>range</b> rather than a number because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that isn't there. (<span id="abl-prov"></span>bootstrap 95% CI, 30 held-out paths held identical across arms; reproduced by <code>tools/ablation_multiseed.py</code>.)</p>
+        <p class="lab-caption">Those astronomical in-sample figures aren't a win — they're the <b>overfitting tell</b>: a fixed-path agent memorises the exact training path, so it "earns" impossible returns there and then collapses out of sample. The honest column is <b>held-out</b>, and only domain randomization keeps it positive — across 10 seeds all four intervals exclude zero. In-sample is shown as a <b>range</b> rather than a number because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that isn't there. (<span id="abl-prov"></span>bootstrap 95% CI, 30 held-out paths held identical across arms; reproduced by <code>tools/ablation_multiseed.py</code>.)</p>
       </div>
     </section>
 

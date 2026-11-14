@@ -84,10 +84,10 @@ memorized path and spans orders of magnitude.
 <!-- BEGIN GENERATED: ablation-table -->
 | Training setup | In-sample (range over seeds) | Held-out return (mean, 95% CI) |
 |---|---:|---:|
-| Stocks · single asset | +6k% to +31k% | **−25%** `[−33%, −15%]` |
-| Stocks · across tickers | −22% to +59% | **+31%** `[+21%, +44%]` |
-| Crypto · single asset | +87k% to +4.0M% | **−44%** `[−59%, −21%]` |
-| Crypto · across tickers | +24% to +460% | **+187%** `[+147%, +229%]` |
+| Stocks · one fixed path | +6k% to +31k% | **−25%** `[−33%, −15%]` |
+| Stocks · fresh path each episode | −22% to +59% | **+31%** `[+21%, +44%]` |
+| Crypto · one fixed path | +87k% to +4.0M% | **−44%** `[−59%, −21%]` |
+| Crypto · fresh path each episode | +24% to +460% | **+187%** `[+147%, +229%]` |
 
 *10 seeds × 60k steps, bootstrap 95% CI, held-out paths held identical across arms. In-sample is a range rather than a mean because it varies by an order of magnitude across seeds; quoting one run of it would imply a precision that is not there.*
 <!-- END GENERATED: ablation-table -->
