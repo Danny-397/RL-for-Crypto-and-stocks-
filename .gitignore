@@ -35,3 +35,6 @@ docs/assets/ablation_multiseed_raw.json
 
 # Rigor experiment run files (aggregated into docs/assets/)
 results/
+
+# MuJoCo writes its warning log to the working directory
+MUJOCO_LOG.TXT
