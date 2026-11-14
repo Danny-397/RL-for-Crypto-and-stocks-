@@ -91,10 +91,10 @@
 
   /* ── canvas charts ──────────────────────────────────────── */
   const COLORS = {
-    agent: "#ff9f0a",
+    agent: "#d97757",
     bench: "#8e8e93",
     pos: "#34d399",
-    neg: "#f87171",
+    neg: "#fb6f92",
     grid: "rgba(255,255,255,0.06)",
     axis: "rgba(255,255,255,0.28)",
     text: "#8a97a8",
@@ -191,7 +191,7 @@
           ctx.lineTo(X(s.values.length - 1), Y(o.zero ? 0 : lo));
           ctx.lineTo(X(0), Y(o.zero ? 0 : lo));
           ctx.closePath();
-          ctx.fillStyle = s.fill || "rgba(248, 113, 113, 0.16)";
+          ctx.fillStyle = s.fill || "rgba(251, 111, 146, 0.16)";
           ctx.fill();
         }
         if (s.kind === "bar") {
@@ -882,7 +882,7 @@
         { values: reward, color: COLORS.pos, kind: "bar", negColor: COLORS.neg },
       ]);
       charts.drawdown.setSeries([
-        { values: dd, color: COLORS.neg, kind: "area", fill: "rgba(248, 113, 113, 0.18)", width: 1.2 },
+        { values: dd, color: COLORS.neg, kind: "area", fill: "rgba(251, 111, 146, 0.18)", width: 1.2 },
       ]);
 
       charts._map = idx;
@@ -1286,7 +1286,7 @@
           const t = Math.max(-1, Math.min(1, v / span));
           const c = t >= 0
             ? "rgba(52, 211, 153, " + (t * 0.85).toFixed(3) + ")"
-            : "rgba(248, 113, 113, " + (-t * 0.85).toFixed(3) + ")";
+            : "rgba(251, 111, 146, " + (-t * 0.85).toFixed(3) + ")";
           const px = padL + x * cw;
           const py = y * ch;
           const pw = Math.max(cw - 0.5, 0.5);
@@ -1735,7 +1735,7 @@
       d.counts.forEach(function (c, i) {
         const x = X(d.edges[i]);
         const bh = (c / maxC) * (h - padB - padT);
-        ctx.fillStyle = d.edges[i] >= 0 ? "rgba(52, 211, 153, 0.5)" : "rgba(248, 113, 113, 0.5)";
+        ctx.fillStyle = d.edges[i] >= 0 ? "rgba(52, 211, 153, 0.5)" : "rgba(251, 111, 146, 0.5)";
         ctx.fillRect(x, h - padB - bh, Math.max(bw - 1, 1), bh);
       });
 
