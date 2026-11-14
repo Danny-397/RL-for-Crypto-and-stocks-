@@ -27,6 +27,8 @@ MUTED = "#a1a1a6"
 FAINT = "#86868b"
 LINE = "#2a2a2e"
 ACCENT = "#d97757"   # the agent's series
+POS = "#22c55e"      # a run that made money
+NEG = "#ef4444"      # a run that lost money
 BENCH = "#8e8e93"    # buy & hold
 
 ROWS = [("crypto", "Crypto"), ("stock", "Stocks")]
@@ -94,7 +96,8 @@ def main() -> None:
                          color=ACCENT, alpha=0.14, lw=0, zorder=1)
         n = len(d["seed_returns"])
         offsets = [((j % 5) - 2) * 0.07 for j in range(n)]
-        ax.scatter(d["seed_returns"], [y + o for o in offsets], s=70, color=ACCENT,
+        ax.scatter(d["seed_returns"], [y + o for o in offsets], s=70,
+                   color=[POS if v >= 0 else NEG for v in d["seed_returns"]],
                    edgecolors=BG, linewidths=1.2, zorder=3)
         ax.plot([d["bh"], d["bh"]], [y - 0.28, y + 0.28], color=BENCH, lw=3,
                 solid_capstyle="round", zorder=2)

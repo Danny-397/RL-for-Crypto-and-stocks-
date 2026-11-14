@@ -29,8 +29,8 @@
   --accent-fill: #d97757;   /* filled controls (dark text, 6:1) */
   --on-accent:   #1f0f08;
   --accent-soft: rgba(217, 119, 87, 0.12);
-  --pos: #34d399;
-  --neg: #fb6f92;
+  --pos: #22c55e;
+  --neg: #ef4444;
   --warn: #fbbf24;
 
   /* Legacy names used by lab.css and the 404 page */
@@ -187,7 +187,10 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
 .lg::before { content: ""; width: 12px; height: 2px; border-radius: 1px; }
 .lg-agent::before { background: var(--accent); }
 .lg-bench::before { background: var(--faint); }
-.lg-insample::before { background: var(--neg); }
+.lg-insample::before { background: #d1d1d6; }
+.lg-run-pos::before, .lg-run-neg::before { width: 8px; height: 8px; border-radius: 50%; }
+.lg-run-pos::before { background: var(--pos); }
+.lg-run-neg::before { background: var(--neg); }
 .lg-long::before { background: var(--pos); }
 .lg-short::before { background: var(--neg); }
 .lg-flat::before { background: var(--faint); }
@@ -566,6 +569,10 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
 .lg-delta::before { background: repeating-linear-gradient(90deg, rgba(255,255,255,.55) 0 3px, transparent 3px 6px); }
 .hg-verdict { max-width: 760px; padding: 18px 20px; margin: 0 0 48px; }
 .hg-verdict strong { color: var(--text); }
+
+/* ── Signed figures: green up, red down (set by signColor in app.js) ── */
+.num-pos { color: var(--pos) !important; }
+.num-neg { color: var(--neg) !important; }
 
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 960px) {

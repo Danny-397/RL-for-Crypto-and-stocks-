@@ -8,11 +8,48 @@
   const DATA = window.RL_RESULTS || null;
   const VOLT = "#d97757";
   const BENCH = "rgba(140, 152, 168, 0.85)";
+  const POS = "#22c55e", NEG = "#ef4444";   // gains and losses, as in styles.css
 
   // ── formatting helpers ──────────────────────────────────────
-  const sgn = (v) => (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+  const sgn = (v) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1) + "%";
   const pct = (v) => (v * 100).toFixed(1) + "%";
   const f2 = (v) => v.toFixed(2);
+  // Signed two-decimal figure (Sharpe, Sortino), so its colour follows its sign.
+  const sf2 = (v) => (v > 0 ? "+" : v < 0 ? "\u2212" : "") + Math.abs(v).toFixed(2);
+
+  // Brokerage convention: a figure is green when positive and red when negative,
+  // by its own sign, never by whether it beat something. Applied to the value
+  // elements below whenever they render; an element can state its sign with
+  // data-sign when its text has none (a dollar balance, say).
+  const SIGN_SEL = [
+    ".tl-fig", ".lr-fig", ".chart-foot .v", ".sc-a", ".sc-b", ".sc-a [data-sign]",
+    ".sc-b [data-sign]", ".restable td:not(.num-l):not(.muted-cell)", ".restable td small",
+    ".rs-v:not(.rs-train)", ".hero-note b", ".lab-caption b", ".insight b",
+    ".honest-note b", ".behavior b", ".scrub-readout b", ".period b", ".rs-note b",
+  ].join(",");
+  function signColor(root) {
+    (root || document).querySelectorAll(SIGN_SEL).forEach((el) => {
+      const t = (el.textContent || "").trim();
+      const s = el.dataset.sign ||
+        (/^\+\$?\d/.test(t) ? "pos" : /^[-\u2212]\$?\d/.test(t) ? "neg" : "");
+      el.classList.toggle("num-pos", s === "pos");
+      el.classList.toggle("num-neg", s === "neg");
+    });
+  }
+  window.rlSignColor = signColor;
+  // Most figures are written by render functions all over this file, and some
+  // (hover readouts, ticker switches) rewrite themselves later. One observer on
+  // the page recolours after any of them, at most once per frame. It watches
+  // content only, not attributes, so its own class changes do not re-trigger it.
+  let signPending = false;
+  const signObserver = new MutationObserver(() => {
+    if (signPending) return;
+    signPending = true;
+    requestAnimationFrame(() => { signPending = false; signColor(); });
+  });
+  signObserver.observe(document.querySelector("main") || document.body,
+    { childList: true, subtree: true, characterData: true });
+  requestAnimationFrame(() => signColor());
   const money = (v) => "$" + Math.round(v).toLocaleString("en-US");
 
   // date helpers (ISO "YYYY-MM-DD" -> "Mon YYYY" / "Mon D, YYYY")
@@ -105,13 +142,13 @@
     for (let i = 0; i < dd.length; i++) ctx.lineTo(X(i), Y(dd[i]));
     ctx.lineTo(X(dd.length - 1), pad.t); ctx.closePath();
     const grad = ctx.createLinearGradient(0, pad.t, 0, H);
-    grad.addColorStop(0, "rgba(251, 111, 146, 0.05)");
-    grad.addColorStop(1, "rgba(251, 111, 146, 0.4)");
+    grad.addColorStop(0, "rgba(239, 68, 68, 0.05)");
+    grad.addColorStop(1, "rgba(239, 68, 68, 0.4)");
     ctx.fillStyle = grad; ctx.fill();
 
     ctx.beginPath();
     for (let i = 0; i < dd.length; i++) (i ? ctx.lineTo(X(i), Y(dd[i])) : ctx.moveTo(X(i), Y(dd[i])));
-    ctx.strokeStyle = "rgba(251, 111, 146, 0.85)"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = "rgba(239, 68, 68, 0.85)"; ctx.lineWidth = 1.5; ctx.stroke();
   }
 
   // ── action histogram ────────────────────────────────────────
@@ -135,8 +172,8 @@
       const h = (c / maxc) * (H - pad.t - pad.b);
       const x = pad.l + i * bw, y = H - pad.b - h;
       const center = i / (BINS - 1); // 0..1
-      ctx.fillStyle = center < 0.45 ? "rgba(251, 111, 146, 0.7)"
-        : center > 0.55 ? "rgba(52, 211, 153, 0.8)" : "rgba(140,152,168,0.6)";
+      ctx.fillStyle = center < 0.45 ? "rgba(239, 68, 68, 0.7)"
+        : center > 0.55 ? "rgba(34, 197, 94, 0.8)" : "rgba(140,152,168,0.6)";
       ctx.fillRect(x + 1, y, bw - 2, h);
     });
 
@@ -156,22 +193,25 @@
     const el = document.getElementById("scorecard");
     if (!el) return;
     const a = m.metrics, b = m.bench_metrics;
+    const start = a.final_equity / (1 + a.total_return);
+    const eq = (v) => `<span data-sign="${v >= start ? "pos" : "neg"}">${money(v)}</span>`;
     const rows = [
-      ["Total return", sgn(a.total_return), sgn(b.total_return), a.total_return >= b.total_return],
-      ["Sharpe", f2(a.sharpe), f2(b.sharpe), a.sharpe >= b.sharpe],
-      ["Sortino", f2(a.sortino), "—", null],
-      ["Max drawdown", pct(a.max_drawdown), pct(b.max_drawdown), a.max_drawdown <= b.max_drawdown],
-      ["Final equity", money(a.final_equity), money(b.final_equity), a.final_equity >= b.final_equity],
+      ["Total return", sgn(a.total_return), sgn(b.total_return)],
+      ["Sharpe", sf2(a.sharpe), sf2(b.sharpe)],
+      ["Sortino", sf2(a.sortino), "—"],
+      ["Max drawdown", sgn(-a.max_drawdown), sgn(-b.max_drawdown)],
+      ["Final equity", eq(a.final_equity), eq(b.final_equity)],
     ];
     if (m.win_rate !== undefined) {
-      rows.push(["Win rate vs B&H", (m.win_rate * 100).toFixed(0) + "%", "—", m.win_rate >= 0.5]);
+      rows.push(["Win rate vs B&H", (m.win_rate * 100).toFixed(0) + "%", "—"]);
     }
-    el.innerHTML = rows.map(([k, av, bv, win]) => `
+    el.innerHTML = rows.map(([k, av, bv]) => `
       <div class="sc-row">
         <span class="sc-k">${k}</span>
-        <span class="sc-a ${win === true ? "win" : win === false ? "lose" : ""}">${av}</span>
+        <span class="sc-a">${av}</span>
         <span class="sc-b">${bv}</span>
       </div>`).join("");
+    signColor(el);
   }
 
   // ── markets explorer: state + per-asset rendering ──────────
@@ -202,7 +242,7 @@
     return ` Re-run on other hardware, the same seeds gave p = ${pv(rep.crypto.p)} for ` +
       `crypto (p = ${pv(pub.crypto.p)} here) and an unchanged stock verdict, so the ` +
       `crypto comparison is borderline. Adjusted for risk the agent is worse in both ` +
-      `markets: Sharpe ${sh(r.risk.agent_sharpe)} against ${sh(r.risk.bh_sharpe)} for ` +
+      `markets: Sharpe <b>${sh(r.risk.agent_sharpe)}</b> against <b>${sh(r.risk.bh_sharpe)}</b> for ` +
       `buy-&amp;-hold on ${market === "stock" ? "stocks" : "crypto"} (${link}).`;
   }
 
@@ -362,7 +402,7 @@
     for (let i = 0; i < n; i++) {
       const a = acts[i];
       if (Math.abs(a) < 0.05) continue;
-      ctx.fillStyle = a > 0 ? "rgba(52, 211, 153, 0.12)" : "rgba(251, 111, 146, 0.13)";
+      ctx.fillStyle = a > 0 ? "rgba(34, 197, 94, 0.12)" : "rgba(239, 68, 68, 0.13)";
       ctx.fillRect(X(i) - colW / 2, pad.t, colW + 1, H - pad.t - pad.b);
     }
     // price line
@@ -373,7 +413,7 @@
     const cx = X(cursor), a = acts[cursor];
     ctx.strokeStyle = "rgba(255, 255, 255, 0.35)"; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, H - pad.b); ctx.stroke();
-    ctx.fillStyle = a > 0.05 ? "#34d399" : (a < -0.05 ? "#fb6f92" : "#8a97a8");
+    ctx.fillStyle = a > 0.05 ? "#22c55e" : (a < -0.05 ? "#ef4444" : "#8a97a8");
     ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.arc(cx, Y(price[cursor]), 4.2, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
@@ -464,7 +504,7 @@
       d.seed_returns.forEach((v, i) => {
         if (i >= shown) return;
         const dy = ((i % 5) - 2) * 9;
-        ctx.fillStyle = VOLT; ctx.shadowColor = VOLT; ctx.shadowBlur = 0;
+        ctx.fillStyle = v >= 0 ? POS : NEG; ctx.shadowBlur = 0;
         ctx.beginPath(); ctx.arc(X(v), y + dy, 4.5, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
       });
@@ -620,11 +660,11 @@
       const dpfx = r.diff >= 0 ? "+" : "";
       return `<tr data-idx="${r.i}" class="rt-row${r.ticker === selTicker ? " sel" : ""}">
         <td class="num-l">${r.ticker}</td>
-        <td class="${beat ? "win" : "lose"}">${sgn(r.agent)}</td>
+        <td>${sgn(r.agent)}</td>
         <td>${sgn(r.bench)}</td>
-        <td class="${beat ? "win" : "lose"}">${dpfx}${(r.diff * 100).toFixed(1)}%</td>
-        <td>${f2(r.sharpe)}</td>
-        <td>${pct(r.dd)}</td>
+        <td>${dpfx}${(r.diff * 100).toFixed(1)}%</td>
+        <td>${sf2(r.sharpe)}</td>
+        <td>${sgn(-r.dd)}</td>
         <td>${beat ? '<span class="pill win">beat</span>' : '<span class="pill lose">lagged</span>'}</td>
       </tr>`;
     }).join("");
@@ -704,8 +744,8 @@
     const nseed = d.seed_returns.length;
     d.seed_returns.forEach((v, i) => {
       const y = axisY + (i - (nseed - 1) / 2) * 11;
-      ctx.fillStyle = VOLT; ctx.shadowColor = VOLT; ctx.shadowBlur = 0;
-      ctx.beginPath(); ctx.arc(X(v), y, 5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.fillStyle = v >= 0 ? POS : NEG; ctx.shadowBlur = 0;
+      ctx.beginPath(); ctx.arc(X(v), y, 5, 0, Math.PI * 2); ctx.fill();
     });
 
     const cap = document.getElementById("seedDistCaption");
@@ -761,7 +801,7 @@
       ctx.shadowBlur = 0;
       arr.forEach((m, i) => { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(i), Y(m), 3.3, 0, 7); ctx.fill(); });
     };
-    line(ins, "#fb6f92", false);   // in-sample: the seductive, fake number
+    line(ins, "#d1d1d6", false);   // in-sample: the seductive, fake number (grey, not the loss red)
     line(oos, VOLT, true);         // held-out: the honest one
   }
 
@@ -1025,13 +1065,14 @@
       const a = d.metrics, b = d.bench_metrics;
       const rows = [
         ["Total return", sgn(a.total_return), sgn(b.total_return), a.total_return >= b.total_return],
-        ["Sharpe", f2(a.sharpe), f2(b.sharpe), a.sharpe >= b.sharpe],
-        ["Max drawdown", pct(a.max_drawdown), pct(b.max_drawdown), a.max_drawdown <= b.max_drawdown],
+        ["Sharpe", sf2(a.sharpe), sf2(b.sharpe), a.sharpe >= b.sharpe],
+        ["Max drawdown", sgn(-a.max_drawdown), sgn(-b.max_drawdown), a.max_drawdown <= b.max_drawdown],
       ];
-      scoreEl.innerHTML = rows.map(([k, av, bv, win]) => `
+      scoreEl.innerHTML = rows.map(([k, av, bv]) => `
         <div class="sc-row"><span class="sc-k">${k}</span>
-        <span class="sc-a ${win ? "win" : "lose"}">${av}</span>
+        <span class="sc-a">${av}</span>
         <span class="sc-b">${bv}</span></div>`).join("");
+      signColor(scoreEl);
     }
 
     async function run() {
