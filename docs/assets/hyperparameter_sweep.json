@@ -1,7 +1,7 @@
 {
- "generated": "2026-08-31",
- "timesteps": 60000,
- "seeds_per_config": 3,
+ "generated": "2026-11-14",
+ "timesteps": 150000,
+ "seeds_per_config": 10,
  "design": "one factor at a time around the published defaults",
  "knobs": {
   "learning_rate": [
@@ -28,21 +28,28 @@
      "config": "baseline",
      "knob": null,
      "value": null,
-     "n_seeds": 3,
-     "mean_return": -0.126932,
+     "n_seeds": 10,
+     "mean_return": -0.234147,
      "benchmark_return": 2.395301,
-     "mean_edge": -2.522233,
+     "mean_edge": -2.629449,
      "edge_ci": [
-      -2.522233,
-      -2.562485,
-      -2.488535
+      -2.629449,
+      -2.74103,
+      -2.468311
      ],
-     "worst_seed_edge": -2.562485,
-     "best_seed_edge": -2.488535,
+     "worst_seed_edge": -2.830165,
+     "best_seed_edge": -1.976957,
      "seed_edges": [
-      -2.51568,
-      -2.562485,
-      -2.488535
+      -2.655733,
+      -2.751297,
+      -2.602343,
+      -2.568561,
+      -2.622402,
+      -2.755533,
+      -2.765148,
+      -1.976957,
+      -2.830165,
+      -2.766348
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -51,21 +58,28 @@
      "config": "learning_rate=0.0001",
      "knob": "learning_rate",
      "value": 0.0001,
-     "n_seeds": 3,
-     "mean_return": -0.158693,
+     "n_seeds": 10,
+     "mean_return": -0.174996,
      "benchmark_return": 2.395301,
-     "mean_edge": -2.553994,
+     "mean_edge": -2.570297,
      "edge_ci": [
-      -2.553994,
-      -2.577745,
-      -2.510634
+      -2.570297,
+      -2.62352,
+      -2.514494
      ],
-     "worst_seed_edge": -2.577745,
-     "best_seed_edge": -2.510634,
+     "worst_seed_edge": -2.69157,
+     "best_seed_edge": -2.446477,
      "seed_edges": [
-      -2.573602,
-      -2.577745,
-      -2.510634
+      -2.446477,
+      -2.470552,
+      -2.69157,
+      -2.456667,
+      -2.643638,
+      -2.634474,
+      -2.646261,
+      -2.563458,
+      -2.633273,
+      -2.516597
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -74,21 +88,28 @@
      "config": "learning_rate=0.001",
      "knob": "learning_rate",
      "value": 0.001,
-     "n_seeds": 3,
-     "mean_return": -0.308743,
+     "n_seeds": 10,
+     "mean_return": -0.241195,
      "benchmark_return": 2.395301,
-     "mean_edge": -2.704044,
+     "mean_edge": -2.636496,
      "edge_ci": [
-      -2.704044,
-      -2.736586,
-      -2.671694
+      -2.636496,
+      -2.722982,
+      -2.542455
      ],
-     "worst_seed_edge": -2.736586,
-     "best_seed_edge": -2.671694,
+     "worst_seed_edge": -2.846672,
+     "best_seed_edge": -2.308838,
      "seed_edges": [
-      -2.703853,
-      -2.736586,
-      -2.671694
+      -2.621851,
+      -2.654552,
+      -2.65779,
+      -2.651372,
+      -2.679418,
+      -2.308838,
+      -2.846672,
+      -2.552379,
+      -2.846199,
+      -2.54589
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -97,21 +118,28 @@
      "config": "clip_ratio=0.1",
      "knob": "clip_ratio",
      "value": 0.1,
-     "n_seeds": 3,
-     "mean_return": -0.085072,
+     "n_seeds": 10,
+     "mean_return": -0.221736,
      "benchmark_return": 2.395301,
-     "mean_edge": -2.480373,
+     "mean_edge": -2.617037,
      "edge_ci": [
-      -2.480373,
-      -2.641042,
-      -2.386847
+      -2.617037,
+      -2.697493,
+      -2.531015
      ],
-     "worst_seed_edge": -2.641042,
-     "best_seed_edge": -2.386847,
+     "worst_seed_edge": -2.823556,
+     "best_seed_edge": -2.349896,
      "seed_edges": [
-      -2.641042,
-      -2.413228,
-      -2.386847
+      -2.649292,
+      -2.701243,
+      -2.621513,
+      -2.491382,
+      -2.71754,
+      -2.462723,
+      -2.73507,
+      -2.349896,
+      -2.61816,
+      -2.823556
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -120,21 +148,28 @@
      "config": "clip_ratio=0.3",
      "knob": "clip_ratio",
      "value": 0.3,
-     "n_seeds": 3,
-     "mean_return": -0.297764,
+     "n_seeds": 10,
+     "mean_return": -0.319046,
      "benchmark_return": 2.395301,
-     "mean_edge": -2.693065,
+     "mean_edge": -2.714347,
      "edge_ci": [
-      -2.693065,
-      -2.847349,
-      -2.592922
+      -2.714347,
+      -2.788123,
+      -2.619621
      ],
-     "worst_seed_edge": -2.847349,
-     "best_seed_edge": -2.592922,
+     "worst_seed_edge": -2.85441,
+     "best_seed_edge": -2.358362,
      "seed_edges": [
-      -2.847349,
-      -2.638923,
-      -2.592922
+      -2.770446,
+      -2.603395,
+      -2.85441,
+      -2.657155,
+      -2.822871,
+      -2.729287,
+      -2.834683,
+      -2.358362,
+      -2.761724,
+      -2.751134
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -143,21 +178,28 @@
      "config": "gae_lambda=0.9",
      "knob": "gae_lambda",
      "value": 0.9,
-     "n_seeds": 3,
-     "mean_return": -0.089189,
+     "n_seeds": 10,
+     "mean_return": -0.182479,
      "benchmark_return": 2.395301,
-     "mean_edge": -2.48449,
+     "mean_edge": -2.57778,
      "edge_ci": [
-      -2.48449,
-      -2.570005,
-      -2.427722
+      -2.57778,
+      -2.673793,
+      -2.481198
      ],
-     "worst_seed_edge": -2.570005,
-     "best_seed_edge": -2.427722,
+     "worst_seed_edge": -2.805075,
+     "best_seed_edge": -2.367193,
      "seed_edges": [
-      -2.570005,
-      -2.427722,
-      -2.455743
+      -2.435893,
+      -2.687395,
+      -2.37279,
+      -2.665013,
+      -2.740614,
+      -2.429531,
+      -2.805075,
+      -2.367193,
+      -2.559869,
+      -2.714431
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -166,21 +208,28 @@
      "config": "gae_lambda=0.99",
      "knob": "gae_lambda",
      "value": 0.99,
-     "n_seeds": 3,
-     "mean_return": -0.240641,
+     "n_seeds": 10,
+     "mean_return": -0.263288,
      "benchmark_return": 2.395301,
-     "mean_edge": -2.635942,
+     "mean_edge": -2.658589,
      "edge_ci": [
-      -2.635942,
-      -2.666512,
-      -2.608208
+      -2.658589,
+      -2.70201,
+      -2.610371
      ],
-     "worst_seed_edge": -2.666512,
-     "best_seed_edge": -2.608208,
+     "worst_seed_edge": -2.768816,
+     "best_seed_edge": -2.49341,
      "seed_edges": [
-      -2.666512,
-      -2.633107,
-      -2.608208
+      -2.654505,
+      -2.622215,
+      -2.768816,
+      -2.591038,
+      -2.665754,
+      -2.713087,
+      -2.71186,
+      -2.49341,
+      -2.718832,
+      -2.646373
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -189,21 +238,28 @@
      "config": "entropy_coef=0",
      "knob": "entropy_coef",
      "value": 0.0,
-     "n_seeds": 3,
-     "mean_return": -0.148664,
+     "n_seeds": 10,
+     "mean_return": -0.225722,
      "benchmark_return": 2.395301,
-     "mean_edge": -2.543965,
+     "mean_edge": -2.621023,
      "edge_ci": [
-      -2.543965,
-      -2.57619,
-      -2.481166
+      -2.621023,
+      -2.718465,
+      -2.510708
      ],
-     "worst_seed_edge": -2.57619,
-     "best_seed_edge": -2.481166,
+     "worst_seed_edge": -2.823638,
+     "best_seed_edge": -2.23727,
      "seed_edges": [
-      -2.574538,
-      -2.57619,
-      -2.481166
+      -2.68181,
+      -2.764233,
+      -2.462037,
+      -2.547787,
+      -2.550872,
+      -2.610991,
+      -2.713166,
+      -2.23727,
+      -2.823638,
+      -2.818424
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -212,21 +268,28 @@
      "config": "entropy_coef=0.05",
      "knob": "entropy_coef",
      "value": 0.05,
-     "n_seeds": 3,
-     "mean_return": -0.120024,
+     "n_seeds": 10,
+     "mean_return": -0.181573,
      "benchmark_return": 2.395301,
-     "mean_edge": -2.515325,
+     "mean_edge": -2.576874,
      "edge_ci": [
-      -2.515325,
-      -2.567399,
-      -2.412522
+      -2.576874,
+      -2.676859,
+      -2.465475
      ],
-     "worst_seed_edge": -2.567399,
-     "best_seed_edge": -2.412522,
+     "worst_seed_edge": -2.752467,
+     "best_seed_edge": -2.222191,
      "seed_edges": [
-      -2.566056,
-      -2.567399,
-      -2.412522
+      -2.752467,
+      -2.670582,
+      -2.484733,
+      -2.535157,
+      -2.712221,
+      -2.710174,
+      -2.331464,
+      -2.222191,
+      -2.624421,
+      -2.725333
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -235,17 +298,17 @@
    "summary": {
     "market": "stock",
     "n_configs": 9,
-    "n_seeds": 3,
+    "n_seeds": 10,
     "n_positive": 0,
-    "baseline_edge": -2.522233,
-    "best_config": "clip_ratio=0.1",
-    "best_edge": -2.480373,
-    "worst_config": "learning_rate=0.001",
-    "worst_edge": -2.704044,
-    "spread": 0.223671,
-    "sign_test_floor": 0.25,
-    "verdict": "No configuration produced a positive edge on stock. Across 9 recipes spanning four hyper-parameters, the best still trailed buy-and-hold by 248.0%. The flat result is not an artifact of one unlucky setting.",
-    "power_note": "Each configuration is 3 seeds, so a sign test over them cannot produce a p-value below 0.2500. Nothing here is a significance claim; the sweep answers the descriptive question of whether the conclusion moves when the recipe does."
+    "baseline_edge": -2.629449,
+    "best_config": "learning_rate=0.0001",
+    "best_edge": -2.570297,
+    "worst_config": "clip_ratio=0.3",
+    "worst_edge": -2.714347,
+    "spread": 0.14405,
+    "sign_test_floor": 0.001953125,
+    "verdict": "No configuration produced a positive edge on stock. Across 9 recipes spanning four hyper-parameters, the best still trailed buy-and-hold by 257.0%. The flat result is not an artifact of one unlucky setting.",
+    "power_note": "Each configuration is 10 seeds, so a sign test over them cannot produce a p-value below 0.0020. Nothing here is a significance claim; the sweep answers the descriptive question of whether the conclusion moves when the recipe does."
    }
   },
   "crypto": {
@@ -254,21 +317,28 @@
      "config": "baseline",
      "knob": null,
      "value": null,
-     "n_seeds": 3,
-     "mean_return": -0.083233,
-     "benchmark_return": 0.334891,
-     "mean_edge": -0.418124,
+     "n_seeds": 10,
+     "mean_return": -0.289791,
+     "benchmark_return": 0.102958,
+     "mean_edge": -0.392749,
      "edge_ci": [
-      -0.418124,
-      -0.68054,
-      -0.158779
+      -0.392749,
+      -0.614778,
+      -0.063637
      ],
-     "worst_seed_edge": -0.68054,
-     "best_seed_edge": -0.158779,
+     "worst_seed_edge": -0.821844,
+     "best_seed_edge": 0.901633,
      "seed_edges": [
-      -0.415054,
-      -0.158779,
-      -0.68054
+      -0.777827,
+      0.901633,
+      -0.821844,
+      -0.431151,
+      -0.294797,
+      -0.45543,
+      -0.393336,
+      -0.611472,
+      -0.504826,
+      -0.53844
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -277,21 +347,28 @@
      "config": "learning_rate=0.0001",
      "knob": "learning_rate",
      "value": 0.0001,
-     "n_seeds": 3,
-     "mean_return": 0.023604,
-     "benchmark_return": 0.334891,
-     "mean_edge": -0.311287,
+     "n_seeds": 10,
+     "mean_return": -0.39124,
+     "benchmark_return": 0.102958,
+     "mean_edge": -0.494198,
      "edge_ci": [
-      -0.311287,
-      -0.432788,
-      -0.180056
+      -0.494198,
+      -0.604149,
+      -0.383838
      ],
-     "worst_seed_edge": -0.432788,
-     "best_seed_edge": -0.180056,
+     "worst_seed_edge": -0.799626,
+     "best_seed_edge": -0.208132,
      "seed_edges": [
-      -0.321016,
-      -0.180056,
-      -0.432788
+      -0.449143,
+      -0.627141,
+      -0.367083,
+      -0.650161,
+      -0.799626,
+      -0.622208,
+      -0.243339,
+      -0.531824,
+      -0.443325,
+      -0.208132
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -300,21 +377,28 @@
      "config": "learning_rate=0.001",
      "knob": "learning_rate",
      "value": 0.001,
-     "n_seeds": 3,
-     "mean_return": -0.363076,
-     "benchmark_return": 0.334891,
-     "mean_edge": -0.697967,
+     "n_seeds": 10,
+     "mean_return": -0.51086,
+     "benchmark_return": 0.102958,
+     "mean_edge": -0.613818,
      "edge_ci": [
-      -0.697967,
-      -0.914491,
-      -0.289918
+      -0.613818,
+      -0.666488,
+      -0.550562
      ],
-     "worst_seed_edge": -0.914491,
-     "best_seed_edge": -0.289918,
+     "worst_seed_edge": -0.709324,
+     "best_seed_edge": -0.387484,
      "seed_edges": [
-      -0.889492,
-      -0.914491,
-      -0.289918
+      -0.709324,
+      -0.53557,
+      -0.387484,
+      -0.602224,
+      -0.550588,
+      -0.624671,
+      -0.677494,
+      -0.668458,
+      -0.702128,
+      -0.680245
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -323,21 +407,28 @@
      "config": "clip_ratio=0.1",
      "knob": "clip_ratio",
      "value": 0.1,
-     "n_seeds": 3,
-     "mean_return": 0.004362,
-     "benchmark_return": 0.334891,
-     "mean_edge": -0.330529,
+     "n_seeds": 10,
+     "mean_return": -0.316591,
+     "benchmark_return": 0.102958,
+     "mean_edge": -0.419549,
      "edge_ci": [
-      -0.330529,
-      -0.502439,
-      -0.164547
+      -0.419549,
+      -0.548157,
+      -0.280762
      ],
-     "worst_seed_edge": -0.502439,
-     "best_seed_edge": -0.164547,
+     "worst_seed_edge": -0.735952,
+     "best_seed_edge": -0.009022,
      "seed_edges": [
-      -0.164547,
-      -0.502439,
-      -0.324602
+      -0.488318,
+      -0.296148,
+      -0.735952,
+      -0.123838,
+      -0.568793,
+      -0.664818,
+      -0.363496,
+      -0.009022,
+      -0.395719,
+      -0.549388
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -346,44 +437,58 @@
      "config": "clip_ratio=0.3",
      "knob": "clip_ratio",
      "value": 0.3,
-     "n_seeds": 3,
-     "mean_return": -0.091035,
-     "benchmark_return": 0.334891,
-     "mean_edge": -0.425926,
+     "n_seeds": 10,
+     "mean_return": -0.237724,
+     "benchmark_return": 0.102958,
+     "mean_edge": -0.340683,
      "edge_ci": [
-      -0.425926,
-      -0.846679,
-      -0.189791
+      -0.340683,
+      -0.712093,
+      0.26526
      ],
-     "worst_seed_edge": -0.846679,
-     "best_seed_edge": -0.189791,
+     "worst_seed_edge": -0.805408,
+     "best_seed_edge": 2.170365,
      "seed_edges": [
-      -0.241308,
-      -0.189791,
-      -0.846679
+      -0.767913,
+      2.170365,
+      -0.731988,
+      -0.433498,
+      -0.736765,
+      -0.805408,
+      -0.232916,
+      -0.369472,
+      -0.725021,
+      -0.774212
      ],
      "positive_edge": false,
-     "ci_excludes_zero": true
+     "ci_excludes_zero": false
     },
     {
      "config": "gae_lambda=0.9",
      "knob": "gae_lambda",
      "value": 0.9,
-     "n_seeds": 3,
-     "mean_return": -0.058316,
-     "benchmark_return": 0.334891,
-     "mean_edge": -0.393207,
+     "n_seeds": 10,
+     "mean_return": -0.115799,
+     "benchmark_return": 0.102958,
+     "mean_edge": -0.218758,
      "edge_ci": [
-      -0.393207,
-      -0.686092,
-      0.026946
+      -0.218758,
+      -0.427807,
+      0.0043
      ],
-     "worst_seed_edge": -0.686092,
-     "best_seed_edge": 0.026946,
+     "worst_seed_edge": -0.691307,
+     "best_seed_edge": 0.413441,
      "seed_edges": [
-      -0.686092,
-      0.026946,
-      -0.520475
+      0.138188,
+      -0.372426,
+      0.023761,
+      0.413441,
+      -0.423888,
+      -0.313392,
+      -0.691307,
+      0.064773,
+      -0.677678,
+      -0.349049
      ],
      "positive_edge": false,
      "ci_excludes_zero": false
@@ -392,21 +497,28 @@
      "config": "gae_lambda=0.99",
      "knob": "gae_lambda",
      "value": 0.99,
-     "n_seeds": 3,
-     "mean_return": -0.095887,
-     "benchmark_return": 0.334891,
-     "mean_edge": -0.430778,
+     "n_seeds": 10,
+     "mean_return": -0.460656,
+     "benchmark_return": 0.102958,
+     "mean_edge": -0.563614,
      "edge_ci": [
-      -0.430778,
-      -0.558649,
-      -0.186148
+      -0.563614,
+      -0.656144,
+      -0.455222
      ],
-     "worst_seed_edge": -0.558649,
-     "best_seed_edge": -0.186148,
+     "worst_seed_edge": -0.750487,
+     "best_seed_edge": -0.236918,
      "seed_edges": [
-      -0.547538,
-      -0.558649,
-      -0.186148
+      -0.582707,
+      -0.664688,
+      -0.697411,
+      -0.750487,
+      -0.632594,
+      -0.486888,
+      -0.645007,
+      -0.296011,
+      -0.643434,
+      -0.236918
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -415,21 +527,28 @@
      "config": "entropy_coef=0",
      "knob": "entropy_coef",
      "value": 0.0,
-     "n_seeds": 3,
-     "mean_return": -0.404377,
-     "benchmark_return": 0.334891,
-     "mean_edge": -0.739268,
+     "n_seeds": 10,
+     "mean_return": -0.403505,
+     "benchmark_return": 0.102958,
+     "mean_edge": -0.506463,
      "edge_ci": [
-      -0.739268,
-      -0.831282,
-      -0.661338
+      -0.506463,
+      -0.700899,
+      -0.217531
      ],
-     "worst_seed_edge": -0.831282,
-     "best_seed_edge": -0.661338,
+     "worst_seed_edge": -0.815718,
+     "best_seed_edge": 0.65218,
      "seed_edges": [
-      -0.831282,
-      -0.661338,
-      -0.725184
+      -0.580001,
+      -0.49095,
+      -0.789947,
+      -0.713733,
+      -0.615262,
+      -0.815718,
+      -0.729951,
+      -0.65436,
+      -0.32689,
+      0.65218
      ],
      "positive_edge": false,
      "ci_excludes_zero": true
@@ -438,41 +557,49 @@
      "config": "entropy_coef=0.05",
      "knob": "entropy_coef",
      "value": 0.05,
-     "n_seeds": 3,
-     "mean_return": -0.085756,
-     "benchmark_return": 0.334891,
-     "mean_edge": -0.420647,
+     "n_seeds": 10,
+     "mean_return": -0.424065,
+     "benchmark_return": 0.102958,
+     "mean_edge": -0.527024,
      "edge_ci": [
-      -0.420647,
-      -0.747271,
-      0.221666
+      -0.527024,
+      -0.647279,
+      -0.381893
      ],
-     "worst_seed_edge": -0.747271,
-     "best_seed_edge": 0.221666,
+     "worst_seed_edge": -0.801717,
+     "best_seed_edge": -0.05448,
      "seed_edges": [
-      0.221666,
-      -0.747271,
-      -0.736337
+      -0.614058,
+      -0.686049,
+      -0.801717,
+      -0.599472,
+      -0.444954,
+      -0.68844,
+      -0.05448,
+      -0.396489,
+      -0.680863,
+      -0.303714
      ],
      "positive_edge": false,
-     "ci_excludes_zero": false
+     "ci_excludes_zero": true
     }
    ],
    "summary": {
     "market": "crypto",
     "n_configs": 9,
-    "n_seeds": 3,
+    "n_seeds": 10,
     "n_positive": 0,
-    "baseline_edge": -0.418124,
-    "best_config": "learning_rate=0.0001",
-    "best_edge": -0.311287,
-    "worst_config": "entropy_coef=0",
-    "worst_edge": -0.739268,
-    "spread": 0.427981,
-    "sign_test_floor": 0.25,
-    "verdict": "No configuration produced a positive edge on crypto. Across 9 recipes spanning four hyper-parameters, the best still trailed buy-and-hold by 31.1%. The flat result is not an artifact of one unlucky setting.",
-    "power_note": "Each configuration is 3 seeds, so a sign test over them cannot produce a p-value below 0.2500. Nothing here is a significance claim; the sweep answers the descriptive question of whether the conclusion moves when the recipe does."
+    "baseline_edge": -0.392749,
+    "best_config": "gae_lambda=0.9",
+    "best_edge": -0.218758,
+    "worst_config": "learning_rate=0.001",
+    "worst_edge": -0.613818,
+    "spread": 0.39506,
+    "sign_test_floor": 0.001953125,
+    "verdict": "No configuration produced a positive edge on crypto. Across 9 recipes spanning four hyper-parameters, the best still trailed buy-and-hold by 21.9%. The flat result is not an artifact of one unlucky setting.",
+    "power_note": "Each configuration is 10 seeds, so a sign test over them cannot produce a p-value below 0.0020. Nothing here is a significance claim; the sweep answers the descriptive question of whether the conclusion moves when the recipe does."
    }
   }
- }
+ },
+ "workflow_run": "43620358297"
 }

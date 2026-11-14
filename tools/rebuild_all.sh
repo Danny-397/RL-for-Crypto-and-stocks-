@@ -79,7 +79,7 @@ run surr_real    $PY tools/surrogate_test.py --mode real --seeds $SURR_SEEDS --t
 run learning     $PY tools/learning_dynamics.py --budgets 20000 60000 120000 200000
 run portfolio_s  $PY tools/portfolio_experiment.py --market stock  --timesteps $MID
 run portfolio_c  $PY tools/portfolio_experiment.py --market crypto --timesteps $MID
-run hpsweep      $PY tools/hyperparameter_sweep.py --seeds 3 --timesteps 60000
+run hpsweep      $PY tools/hyperparameter_sweep.py --seeds 10 --timesteps 150000
 run figures      $PY tools/make_figures.py
 run attribution  $PY tools/attribution_report.py
 run supervised   $PY tools/supervised_report.py
@@ -90,6 +90,7 @@ run costs        $PY tools/cost_sensitivity.py
 # generated from the artifacts above; skipping this is precisely how those
 # documents came to describe runs that no longer existed.
 run sync         $PY tools/sync_docs.py
+run summary      $PY paper/summary/make_summary.py
 
 echo "ALL STAGES COMPLETE" >> "$SUMMARY"
 cat "$SUMMARY"

@@ -27,7 +27,7 @@ env:
 jobs:
   benchmark:
     # Stage 1: is this PPO correct? 4 tasks x 3 arms x 10 seeds.
-    if: (github.event_name == 'push' && !contains(github.ref_name, 'trading') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired') && !contains(github.ref_name, 'headline') && !contains(github.ref_name, 'riskadj')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'trading')
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'trading') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired') && !contains(github.ref_name, 'headline') && !contains(github.ref_name, 'riskadj') && !contains(github.ref_name, 'depth')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'trading')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -54,7 +54,7 @@ jobs:
   trading:
     # Stages 2-4: other implementations/algorithms, training budget, time-limit
     # handling, and the hindsight-free universe. Needs the archived data.
-    if: (github.event_name == 'push' && !contains(github.ref_name, 'benchmark') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired') && !contains(github.ref_name, 'headline') && !contains(github.ref_name, 'riskadj')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'benchmark')
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'benchmark') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired') && !contains(github.ref_name, 'headline') && !contains(github.ref_name, 'riskadj') && !contains(github.ref_name, 'depth')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'benchmark')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -315,10 +315,96 @@ jobs:
           name: riskadj
           path: results/riskadj/
 
+  depth:
+    # Pre-registered in docs/preregistration/2026-11-14-depth.md: 30 seeds of the
+    # significance study, the whole basket walk-forward over four folds, and the
+    # hyper-parameter sweep at the published budget with the repaired PPO.
+    if: github.event_name == 'push' && contains(github.ref_name, 'depth')
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {part: sig, market: stock}
+          - {part: sig, market: crypto}
+          - {part: sweep, market: stock}
+          - {part: sweep, market: crypto}
+          - {part: wf, market: stock, fold: 0}
+          - {part: wf, market: stock, fold: 1}
+          - {part: wf, market: stock, fold: 2}
+          - {part: wf, market: stock, fold: 3}
+          - {part: wf, market: crypto, fold: 0}
+          - {part: wf, market: crypto, fold: 1}
+          - {part: wf, market: crypto, fold: 2}
+          - {part: wf, market: crypto, fold: 3}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e .
+      - name: Unpack the archived data
+        env:
+          KEY: ${{ secrets.RIGOR_DATA_KEY }}
+        run: |
+          test -n "$KEY" || { echo "RIGOR_DATA_KEY is not set"; exit 1; }
+          gpg --batch --quiet --pinentry-mode loopback --passphrase "$KEY" -d data/encrypted/rigor-data-2026-11-13.tgz.gpg > /tmp/d.tgz
+          mkdir -p data/raw && tar xzf /tmp/d.tgz -C data/raw stock crypto
+          python tools/fetch_data.py --verify --out data/raw --snapshot docs/preregistration/2026-10-28-fresh-seeds.SNAPSHOT.json
+      - name: Significance, 30 seeds
+        if: matrix.part == 'sig'
+        run: |
+          mkdir -p results/depth
+          python tools/real_significance.py --market ${{ matrix.market }} --seeds 30 --seed-base 100 --timesteps 150000 --out results/depth/sig30-${{ matrix.market }}.js --global-name RL_DEPTH
+      - name: Hyper-parameter sweep, 10 seeds at 150k steps
+        if: matrix.part == 'sweep'
+        run: |
+          mkdir -p results/depth
+          python tools/hyperparameter_sweep.py --markets ${{ matrix.market }} --seeds 10 --timesteps 150000 --out results/depth/sweep-${{ matrix.market }}.json
+      - name: Basket walk-forward, one fold
+        if: matrix.part == 'wf'
+        run: |
+          python tools/basket_walk_forward.py --market ${{ matrix.market }} --fold ${{ matrix.fold }} --folds 4 --seeds 10 --seed-base 100 --timesteps 150000 --out-dir results/depth
+      - uses: actions/upload-artifact@v4
+        with:
+          name: depth-${{ matrix.part }}-${{ matrix.market }}-${{ matrix.fold }}
+          path: results/depth/
+
+  depth-aggregate:
+    needs: [depth]
+    if: always() && github.event_name == 'push' && contains(github.ref_name, 'depth')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e .
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Combine
+        run: |
+          mkdir -p results/depth
+          find artifacts -type f -exec cp {} results/depth/ \;
+          ls -l results/depth
+          python tools/basket_walk_forward.py --summarise results/depth/wf-*.json --out results/depth/basket_walk_forward.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: depth-results
+          path: results/depth/
+
   aggregate:
     needs: [benchmark, trading, diagnose, retrade, leakfree, repaired, headline]
     # The riskadj job uploads its own artifact and has nothing to aggregate.
-    if: always() && !contains(github.ref_name, 'riskadj')
+    if: always() && !contains(github.ref_name, 'riskadj') && !contains(github.ref_name, 'depth')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

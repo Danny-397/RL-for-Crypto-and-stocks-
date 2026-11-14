@@ -545,12 +545,17 @@ def sweep_table() -> Optional[str]:
         out.append("")
     if not out:
         return None
-    out.append(f"*{art.get('seeds_per_config', '?')} seeds per configuration, "
+    n = art.get("seeds_per_config") or 0
+    floor = 2.0 / 2 ** n if n else 1.0
+    power = ("With this many seeds no single row is a significance claim — the sign "
+             "test cannot reach p ≤ 0.05 at that sample size." if floor > 0.05 else
+             "Nine configurations are compared, so a single row with an interval "
+             "that clears zero would still be one of eighteen, not a finding.")
+    out.append(f"*{n or '?'} seeds per configuration, "
                f"{art.get('timesteps', 0) // 1000}k steps each, one knob moved at a "
                "time with everything else held at its default. Not a grid search: "
                "the question is whether the negative result is fragile, not which "
-               "recipe wins. With this many seeds no single row is a significance "
-               "claim — the sign test cannot reach p ≤ 0.05 at that sample size.*")
+               f"recipe wins. {power}*")
     return "\n".join(out)
 
 
@@ -1128,6 +1133,155 @@ def hedging_quotes() -> Optional[str]:
                   "as episodes complete."]
     return "\n".join(lines)
 
+# --------------------------------------------------------------------------- #
+# The depth study (docs/preregistration/2026-11-14-depth.md)                   #
+# --------------------------------------------------------------------------- #
+_MARKETS = (("stock", "Stocks"), ("crypto", "Crypto"))
+
+
+def _pp(p: float) -> str:
+    """A permutation p, where the floor of a Monte Carlo test is not zero."""
+    return "p < 0.0001" if p < 1e-4 else f"p = {pval(p)}"
+
+
+def _depth_verdict(diff: float, p: float) -> str:
+    if p >= 0.05:
+        return f"indistinguishable ({_pp(p)})"
+    return f"significantly **{'worse' if diff < 0 else 'better'}** ({_pp(p)})"
+
+
+def depth_seeds() -> Optional[str]:
+    """D1: the significance study at 30 seeds, with run-level statistics."""
+    d = _asset("depth.json")
+    if not d:
+        return None
+    rows = ["| Market | Agent, mean (95% CI) | Agent, IQM (95% CI) | Buy & hold | "
+            "Agent vs buy & hold | Tickers where the agent trails | P(a run beats buy & hold) |",
+            "|---|---:|---:|---:|---|---:|---:|"]
+    for key, label in _MARKETS:
+        r = d["seeds"][key]
+        sm, rb = r["robust"]["seed_means"], r["robust"]
+        rows.append(
+            f"| {label} | **{pct(r['mean'])}** `[{pct(r['ci_low'], 0)}, {pct(r['ci_high'], 0)}]` | "
+            f"{pct(sm['iqm'])} `[{pct(sm['iqm_low'], 0)}, {pct(sm['iqm_high'], 0)}]` | "
+            f"{pct(r['bh'], 0)} | {_depth_verdict(r['diff'], r['p'])} | "
+            f"{rb['tickers_behind']} of {len(r['tickers'])} | "
+            f"{rb['p_improve']:.2f} `[{rb['p_improve_low']:.2f}, {rb['p_improve_high']:.2f}]` |")
+    n = d["seeds"]["stock"]["seeds"]
+    base = d["seeds"]["stock"]["seed_base"]
+    rows += ["", f"*Seeds {base}–{base + n - 1}, 150k steps, archived 2026-10-28 data, "
+             "leak-free crypto cut; GitHub Actions run "
+             f"{d['workflow_run']}. The test is the paired permutation test of the "
+             "seed-averaged return against buy-and-hold across tickers; with six coins "
+             f"it cannot give a p below {d['seeds']['crypto']['p_floor']:.3f}. IQM: "
+             "interquartile mean of the per-seed basket means. P(a run beats buy & hold): "
+             "the share of (seed, ticker) runs that end above buy-and-hold on their "
+             "ticker, with a bootstrap CI that resamples seeds within each ticker.*"]
+    return "\n".join(rows)
+
+
+def depth_walkforward() -> Optional[str]:
+    """D2: the whole basket across four periods of history."""
+    d = _asset("depth.json")
+    if not d:
+        return None
+    out = []
+    for key, label in _MARKETS:
+        w = d["walk_forward"].get(key)
+        if not w:
+            continue
+        out += [f"**{label}** ({w['folds'][0]['n_tickers']} tickers, {w['seeds']} seeds per fold):", "",
+                "| Fold | Test window | Agent (mean of seeds) | Buy & hold | Agent vs buy & hold | "
+                "Tickers where the agent trails | Beta |",
+                "|---|---|---:|---:|---|---:|---:|"]
+        for f in w["folds"]:
+            out.append(
+                f"| {f['fold']} | {f['test_start']} to {f['test_end']} | {pct(f['agent']['mean'])} | "
+                f"{pct(f['bh'])} | {_depth_verdict(f['diff'], f['p'])} | "
+                f"{f['tickers_behind']} of {f['n_tickers']} | {num(f['beta'])} |")
+        pl = w["pooled"]
+        out += ["", f"Pooled over all {pl['n_pairs']} (ticker, fold) pairs: agent − buy & hold "
+                f"**{pct(pl['diff'])}**, {_depth_verdict(pl['diff'], pl['p'])}; the agent trails on "
+                f"{pl['pairs_behind']} of {pl['n_pairs']} pairs and in {pl['folds_behind']} of "
+                f"{len(w['folds'])} folds.", ""]
+    out.append(
+        "*One calendar for every ticker: the window all of them trade in is split into a "
+        "first 40% (the first fold's training period) and four equal test blocks. Each fold "
+        "trains from scratch on every ticker's history before its block (scaler fit on those "
+        "rows) and scores every ticker on the block; 150k steps, seeds 100–109, archived "
+        "2026-10-28 data. The pooled pairs are not independent (a ticker recurs across "
+        "folds, and tickers in a fold move together), so the pooled p is descriptive.*")
+    return "\n".join(out)
+
+
+def depth_behaviour() -> Optional[str]:
+    """D4: what the policies hold on the test period."""
+    d = _asset("depth.json")
+    if not d:
+        return None
+
+    def share(v: float) -> str:
+        return f"{v * 100:.0f}%"
+
+    rows = ["| | Days long | Days short | Days flat | Mean position | Mean size of position | "
+            "Daily turnover | Hit rate | Beta |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for key, label in _MARKETS:
+        r = d["seeds"][key]["risk"]
+        b = r["behaviour"]
+        rows.append(
+            f"| **{label}** | {share(b['frac_long'])} | {share(b['frac_short'])} | "
+            f"{share(b['frac_flat'])} | {num(b['pos_mean'])} | {b['pos_abs']:.2f} | "
+            f"{b['turnover']:.2f} | {b['hit_rate']:.3f} | {num(r['beta'])} |")
+        if key == "crypto":
+            for t, v in r["per_ticker"].items():
+                rows.append(
+                    f"| {t} | {share(v['frac_long'])} | {share(v['frac_short'])} | "
+                    f"{share(v['frac_flat'])} | {num(v['pos_mean'])} | {v['pos_abs']:.2f} | "
+                    f"{v['turnover']:.2f} | {v['hit_rate']:.3f} | {num(v['beta'])} |")
+    rows += ["", f"*Averages over the {d['seeds']['stock']['seeds']} seeds of D1 on each "
+             "ticker's test period. A position is "
+             "the fraction of equity held, negative when short; flat means |position| < 0.05. "
+             "Turnover: mean absolute day-to-day change in position. Hit rate: the share of "
+             "non-flat days on which the position's sign matched the asset's next move (0.5 is "
+             "a coin flip).*"]
+    return "\n".join(rows)
+
+
+def depth_holm() -> Optional[str]:
+    """The registered family, raw and Holm-adjusted."""
+    d = _asset("depth.json")
+    if not d:
+        return None
+    rows = ["| Test | p | Holm-adjusted p |", "|---|---:|---:|"]
+    for k, v in sorted(d["holm"].items()):
+        rows.append(f"| {k} | {_pp(v['p']).replace('p = ', '').replace('p ', '')} | "
+                    f"{_pp(v['p_holm']).replace('p = ', '').replace('p ', '')} |")
+    return "\n".join(rows)
+
+
+def tex_depth() -> Optional[str]:
+    """Body rows for tab:depth."""
+    d, sw = _asset("depth.json"), _asset("hyperparameter_sweep.json")
+    if not d:
+        return None
+
+    def p(v: float) -> str:
+        return "<0.0001" if v < 1e-4 else (f"{{=}}{v:.4f}" if v < 0.01 else f"{{=}}{v:.2f}")
+
+    rows = []
+    for key, label in (("stock", "Stock "), ("crypto", "Crypto")):
+        r, w = d["seeds"][key], d["walk_forward"][key]["pooled"]
+        pos = ""
+        if sw and key in sw.get("markets", {}):
+            rr = sw["markets"][key]["rows"]
+            pos = f"{sum(1 for x in rr if x['mean_edge'] > 0)}/{len(rr)}"
+        rows.append(
+            f"{label} & {_tex_pc(r['mean'])} vs {_tex_pc(r['bh'])} ($p{p(r['p'])}$) & "
+            f"{_tex_pc(w['diff'])} ($p{p(w['p'])}$) & {w['folds_behind']}/{len(d['walk_forward'][key]['folds'])} & "
+            f"{pos} & {r['risk']['behaviour']['hit_rate']:.3f}" + r"\\")
+    return "\n".join(rows)
+
 
 BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "significance-full": significance_full,
@@ -1167,6 +1321,11 @@ BLOCKS: Dict[str, Callable[[], Optional[str]]] = {
     "tex-rigor-bench": tex_rigor_bench,
     "tex-rigor-trading": tex_rigor_trading,
     "hedging-quotes": hedging_quotes,
+    "depth-seeds": depth_seeds,
+    "depth-walkforward": depth_walkforward,
+    "depth-behaviour": depth_behaviour,
+    "depth-holm": depth_holm,
+    "tex-depth": tex_depth,
 }
 
 TARGETS = ("README.md", "RESULTS.md", os.path.join("paper", "rl_trader.tex"),

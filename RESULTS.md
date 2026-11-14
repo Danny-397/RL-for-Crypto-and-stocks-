@@ -35,7 +35,12 @@ respectively.
    §5. Replicated on other hardware (§5d) the stock verdict holds and the crypto one
    becomes borderline (p = 0.22 published, 0.03 replicated); adjusted for risk
    (§5e), the agent's Sharpe ratio and its alpha on the traded asset are negative in
-   both markets.
+   both markets. A pre-registered follow-up (§10h) runs 30 seeds and retrains
+   across four periods of history. Stocks are worse than holding in every period.
+   Crypto is not distinguishable on total return (p = 0.19, behind on five of six
+   coins), and behind in three of four periods. The fourth was a crash, which the
+   agent lost less in. The policy's direction calls are coin flips, and it pays
+   to reverse them daily.
 4. **Catching that is the result.** This is Henderson et al.'s (2018) *Deep RL that
    Matters* finding — single-run RL numbers are unreliable — reproduced in a new
    domain: the framework's own significance tooling exposed a false positive that a
@@ -415,50 +420,60 @@ unlucky learning rate. `tools/hyperparameter_sweep.py` asks that question
 directly — each of four PPO knobs moved to either side of its published default,
 everything else held fixed, retrained from scratch.
 
-`python tools/hyperparameter_sweep.py --seeds 3 --timesteps 60000`
+`python tools/hyperparameter_sweep.py --seeds 10 --timesteps 150000`
 
 <!-- BEGIN GENERATED: sweep-table -->
 **Stocks** — 9 configurations, 0 with a positive edge over buy-and-hold:
 
 | Configuration | Edge vs. buy & hold | 95% CI |
 |---|---:|---:|
-| baseline *(published default)* | −252.2% | `[−256.2%, −248.9%]` |
-| learning_rate=0.0001 | −255.4% | `[−257.8%, −251.1%]` |
-| learning_rate=0.001 | −270.4% | `[−273.7%, −267.2%]` |
-| clip_ratio=0.1 | −248.0% | `[−264.1%, −238.7%]` |
-| clip_ratio=0.3 | −269.3% | `[−284.7%, −259.3%]` |
-| gae_lambda=0.9 | −248.4% | `[−257.0%, −242.8%]` |
-| gae_lambda=0.99 | −263.6% | `[−266.7%, −260.8%]` |
-| entropy_coef=0 | −254.4% | `[−257.6%, −248.1%]` |
-| entropy_coef=0.05 | −251.5% | `[−256.7%, −241.3%]` |
+| baseline *(published default)* | −262.9% | `[−274.1%, −246.8%]` |
+| learning_rate=0.0001 | −257.0% | `[−262.4%, −251.4%]` |
+| learning_rate=0.001 | −263.6% | `[−272.3%, −254.2%]` |
+| clip_ratio=0.1 | −261.7% | `[−269.7%, −253.1%]` |
+| clip_ratio=0.3 | −271.4% | `[−278.8%, −262.0%]` |
+| gae_lambda=0.9 | −257.8% | `[−267.4%, −248.1%]` |
+| gae_lambda=0.99 | −265.9% | `[−270.2%, −261.0%]` |
+| entropy_coef=0 | −262.1% | `[−271.8%, −251.1%]` |
+| entropy_coef=0.05 | −257.7% | `[−267.7%, −246.5%]` |
 
 **Crypto** — 9 configurations, 0 with a positive edge over buy-and-hold:
 
 | Configuration | Edge vs. buy & hold | 95% CI |
 |---|---:|---:|
-| baseline *(published default)* | −41.8% | `[−68.1%, −15.9%]` |
-| learning_rate=0.0001 | −31.1% | `[−43.3%, −18.0%]` |
-| learning_rate=0.001 | −69.8% | `[−91.4%, −29.0%]` |
-| clip_ratio=0.1 | −33.1% | `[−50.2%, −16.5%]` |
-| clip_ratio=0.3 | −42.6% | `[−84.7%, −19.0%]` |
-| gae_lambda=0.9 | −39.3% | `[−68.6%, +2.7%]` |
-| gae_lambda=0.99 | −43.1% | `[−55.9%, −18.6%]` |
-| entropy_coef=0 | −73.9% | `[−83.1%, −66.1%]` |
-| entropy_coef=0.05 | −42.1% | `[−74.7%, +22.2%]` |
+| baseline *(published default)* | −39.3% | `[−61.5%, −6.4%]` |
+| learning_rate=0.0001 | −49.4% | `[−60.4%, −38.4%]` |
+| learning_rate=0.001 | −61.4% | `[−66.6%, −55.1%]` |
+| clip_ratio=0.1 | −42.0% | `[−54.8%, −28.1%]` |
+| clip_ratio=0.3 | −34.1% | `[−71.2%, +26.5%]` |
+| gae_lambda=0.9 | −21.9% | `[−42.8%, +0.4%]` |
+| gae_lambda=0.99 | −56.4% | `[−65.6%, −45.5%]` |
+| entropy_coef=0 | −50.6% | `[−70.1%, −21.8%]` |
+| entropy_coef=0.05 | −52.7% | `[−64.7%, −38.2%]` |
 
-*3 seeds per configuration, 60k steps each, one knob moved at a time with everything else held at its default. Not a grid search: the question is whether the negative result is fragile, not which recipe wins. With this many seeds no single row is a significance claim — the sign test cannot reach p ≤ 0.05 at that sample size.*
+*10 seeds per configuration, 150k steps each, one knob moved at a time with everything else held at its default. Not a grid search: the question is whether the negative result is fragile, not which recipe wins. Nine configurations are compared, so a single row with an interval that clears zero would still be one of eighteen, not a finding.*
 <!-- END GENERATED: sweep-table -->
 
-**Reading it:** not one of the eighteen configurations produced a positive edge.
-The equity result is not merely negative but *stable* — every recipe lands within
-about 22 points of the same answer — while crypto is noisier, as it is everywhere
-else in this document. Nothing here is a significance claim about any individual
+> **Updated in §10h (pre-registered, 2026-11-14).** Re-run with the repaired PPO,
+> 10 seeds per configuration and the published 150k-step budget, on the archived
+> 2026-10-28 data (the first version used 3 seeds at 60k steps and the published
+> PPO).
+
+**Reading it:** not one of the eighteen configurations produced a positive edge
+(P3.1 held). The equity result is not merely negative but *stable*: every recipe
+lands within about 15 points of the same answer. Crypto is noisier, as it is
+everywhere else in this document, with means from −22% to −61%, and the two
+intervals that reach above zero (gae_lambda=0.9 and clip_ratio=0.3) still have
+negative means. Nothing here is a significance claim about any individual
 row; the point is the absence of an exception. Had one configuration come out
 ahead, the honest reading would have been "one of eighteen, at three seeds"
 rather than a discovery, and the panel on the site is written to say exactly that
 if it ever happens.
 
 ### 5c. Does it survive a different *slice of history*? — multi-fold walk-forward
+
+> **Superseded by §10h (D2)**, which runs the whole basket in both markets across
+> four periods with the repaired PPO. This single-coin study is kept as it ran.
 
 §5 varies the **seed** and holds the split fixed. It cannot tell you whether the
 result is an artifact of *which* 40% of history happened to be the test block.
@@ -1087,6 +1102,134 @@ newer PyTorch and one thread per process, against the original's Windows laptop;
 we did not isolate which matters. Seeded runs here reproduce on one machine, not
 bit for bit across machines; the conclusions do.
 
+### 10h. Thirty seeds, every period, a fuller sweep
+
+Pre-registered on 2026-11-14 before any run
+([`docs/preregistration/2026-11-14-depth.md`](docs/preregistration/2026-11-14-depth.md)),
+in answer to five open points: one test period, a crypto verdict that moved
+between machines, a thin hyper-parameter sweep, means instead of run-level
+statistics, and an unexplained crypto beta of zero. Everything uses the
+repaired PPO, the leak-free crypto cut, 150k steps and the archived 2026-10-28
+data, run in `rigor.yml` (job `depth`, branch `experiments/depth`).
+
+**D1. Thirty seeds.** The study of §5, run on seeds 100–129. This is a new run, not an
+extension of the published one: on these runners, seeds 100–109 do not reproduce
+the published per-seed numbers (§5d).
+
+<!-- BEGIN GENERATED: depth-seeds -->
+| Market | Agent, mean (95% CI) | Agent, IQM (95% CI) | Buy & hold | Agent vs buy & hold | Tickers where the agent trails | P(a run beats buy & hold) |
+|---|---:|---:|---:|---|---:|---:|
+| Stocks | **−29.8%** `[−35%, −24%]` | −31.9% `[−38%, −25%]` | +240% | significantly **worse** (p = 0.0021) | 10 of 10 | 0.00 `[0.00, 0.00]` |
+| Crypto | **−40.5%** `[−51%, −28%]` | −49.2% `[−59%, −35%]` | +10% | indistinguishable (p = 0.19) | 5 of 6 | 0.23 `[0.17, 0.28]` |
+
+*Seeds 100–129, 150k steps, archived 2026-10-28 data, leak-free crypto cut; GitHub Actions run 43620358297. The test is the paired permutation test of the seed-averaged return against buy-and-hold across tickers; with six coins it cannot give a p below 0.031. IQM: interquartile mean of the per-seed basket means. P(a run beats buy & hold): the share of (seed, ticker) runs that end above buy-and-hold on their ticker, with a bootstrap CI that resamples seeds within each ticker.*
+<!-- END GENERATED: depth-seeds -->
+
+Stocks: worse than buy-and-hold on all ten tickers, in every one of the 300
+runs (P1.1 held). Crypto: −40.5% against buy-and-hold's +10.3%, behind on five
+of six coins, p = 0.19. Under the registered rule that reads **not
+distinguishable from holding** (P1.2 held). It agrees with the published run
+(p = 0.22), not the replication (p = 0.03). The crypto test cannot settle the
+question either way: with six coins, "worse" needs the agent behind on all six,
+and here it is ahead on one (ADA, −44% against −56%). On a risk-adjusted basis
+the answer is clearer. The agent's Sharpe ratio (−0.59 against +0.32) and its
+alpha on the traded asset (−28.6% a year) are both negative at the test's
+floor, p = 0.03, as they were in §5e.
+
+**D2. The whole basket across history.** Four periods on one calendar for every
+ticker; each fold retrains from scratch on everything before its test block.
+
+<!-- BEGIN GENERATED: depth-walkforward -->
+**Stocks** (10 tickers, 10 seeds per fold):
+
+| Fold | Test window | Agent (mean of seeds) | Buy & hold | Agent vs buy & hold | Tickers where the agent trails | Beta |
+|---|---|---:|---:|---|---:|---:|
+| 0 | 2020-12-08 to 2022-05-11 | −13.1% | +18.9% | significantly **worse** (p = 0.0059) | 9 of 10 | +0.12 |
+| 1 | 2022-05-12 to 2023-10-16 | −6.8% | +31.0% | significantly **worse** (p = 0.0021) | 10 of 10 | +0.13 |
+| 2 | 2023-10-17 to 2025-03-24 | −9.2% | +42.0% | significantly **worse** (p = 0.0021) | 10 of 10 | +0.05 |
+| 3 | 2025-03-25 to 2026-08-28 | −11.7% | +70.0% | significantly **worse** (p = 0.0021) | 10 of 10 | +0.09 |
+
+Pooled over all 40 (ticker, fold) pairs: agent − buy & hold **−50.7%**, significantly **worse** (p < 0.0001); the agent trails on 39 of 40 pairs and in 4 of 4 folds.
+
+**Crypto** (6 tickers, 10 seeds per fold):
+
+| Fold | Test window | Agent (mean of seeds) | Buy & hold | Agent vs buy & hold | Tickers where the agent trails | Beta |
+|---|---|---:|---:|---|---:|---:|
+| 0 | 2023-01-09 to 2023-12-06 | −8.3% | +57.2% | significantly **worse** (p = 0.03) | 6 of 6 | +0.13 |
+| 1 | 2023-12-07 to 2024-11-02 | −17.3% | +9.2% | indistinguishable (p = 0.16) | 5 of 6 | +0.20 |
+| 2 | 2024-11-03 to 2025-09-30 | −25.4% | +18.5% | significantly **worse** (p = 0.03) | 6 of 6 | −0.01 |
+| 3 | 2025-10-01 to 2026-08-28 | −14.4% | −45.8% | significantly **better** (p = 0.03) | 0 of 6 | +0.11 |
+
+Pooled over all 24 (ticker, fold) pairs: agent − buy & hold **−26.1%**, significantly **worse** (p = 0.02); the agent trails on 17 of 24 pairs and in 3 of 4 folds.
+
+*One calendar for every ticker: the window all of them trade in is split into a first 40% (the first fold's training period) and four equal test blocks. Each fold trains from scratch on every ticker's history before its block (scaler fit on those rows) and scores every ticker on the block; 150k steps, seeds 100–109, archived 2026-10-28 data. The pooled pairs are not independent (a ticker recurs across folds, and tickers in a fold move together), so the pooled p is descriptive.*
+<!-- END GENERATED: depth-walkforward -->
+
+Stocks are behind buy-and-hold in every period, and significantly so in each
+(P2.1 held). Crypto is behind in three of four periods and on 17 of 24
+(coin, period) pairs, and the pooled difference is negative (P2.2 held). **P2.3
+failed.** In the last period, October 2025 to August 2026, crypto fell 46%, and
+the agent was ahead of buy-and-hold on all six coins (−14% against −46%,
+p = 0.03). This is the same pattern §5c found in the 2022 crash: the agent lost
+less because it held little net exposure (beta 0.11), not because it called the
+fall. Its alpha in that period is still negative (−7.9% a year). The pooled
+crypto p (0.022) is read as descriptive, as registered, since the pairs are not
+independent.
+
+**D3. The hyper-parameter sweep** at 10 seeds and 150k steps is in §5b.
+
+**D4. What the policy does.** Positions on the test period, averaged over D1's
+seeds:
+
+<!-- BEGIN GENERATED: depth-behaviour -->
+| | Days long | Days short | Days flat | Mean position | Mean size of position | Daily turnover | Hit rate | Beta |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Stocks** | 51% | 46% | 4% | +0.04 | 0.67 | 0.55 | 0.498 | +0.09 |
+| **Crypto** | 51% | 45% | 4% | +0.05 | 0.67 | 0.52 | 0.500 | +0.04 |
+| ADA-USD | 53% | 44% | 4% | +0.07 | 0.68 | 0.51 | 0.492 | −0.04 |
+| BTC-USD | 51% | 46% | 4% | +0.04 | 0.67 | 0.57 | 0.501 | +0.07 |
+| ETH-USD | 52% | 45% | 3% | +0.07 | 0.69 | 0.57 | 0.509 | +0.15 |
+| LTC-USD | 50% | 46% | 4% | +0.04 | 0.66 | 0.48 | 0.493 | +0.06 |
+| SOL-USD | 52% | 44% | 4% | +0.07 | 0.65 | 0.48 | 0.505 | +0.06 |
+| XRP-USD | 49% | 48% | 4% | +0.01 | 0.67 | 0.52 | 0.502 | −0.07 |
+
+*Averages over the 30 seeds of D1 on each ticker's test period. A position is the fraction of equity held, negative when short; flat means |position| < 0.05. Turnover: mean absolute day-to-day change in position. Hit rate: the share of non-flat days on which the position's sign matched the asset's next move (0.5 is a coin flip).*
+<!-- END GENERATED: depth-behaviour -->
+
+Of the three explanations registered for the near-zero beta, the first is
+wrong and the other two hold. The agent is almost never in cash (flat on 4% of
+days; H-a rejected). It is long about half the time and short most of the
+rest, with positions of two-thirds of equity on average, so its net exposure
+averages out to almost nothing (H-b held). The direction it picks matches the
+next day's move as often as a coin flip would: a hit rate of 0.500 on
+crypto and 0.498 on stocks (H-c held). The same pattern holds on every ticker.
+It also changes its position by more than half its equity every day. At the
+modelled costs, that turnover alone comes to roughly 11% a year on stocks and
+38% a year on crypto, about the size of the negative alphas (−12% and −29%).
+So the losses are what a policy with no directional information pays to change
+its mind every day. The features appear to carry no usable signal (§6), and
+this is what PPO converges to without one.
+
+**Reporting.** The registered family, raw and Holm-adjusted:
+
+<!-- BEGIN GENERATED: depth-holm -->
+| Test | p | Holm-adjusted p |
+|---|---:|---:|
+| P1.1 stocks, 30 seeds | 0.0021 | 0.0063 |
+| P1.2 crypto, 30 seeds | 0.19 | 0.19 |
+| P2.1 stocks, walk-forward | < 0.0001 | 0.0002 |
+| P2.2 crypto, walk-forward | 0.02 | 0.04 |
+<!-- END GENERATED: depth-holm -->
+
+| Prediction | Result |
+|---|---|
+| P1.1 stocks worse at 30 seeds | held |
+| P1.2 crypto not better at 30 seeds | held (not distinguishable, p = 0.19) |
+| P2.1 stocks worse across periods | held, in all four periods |
+| P2.2 crypto not better across periods | held (pooled difference negative) |
+| P2.3 never better in any period | **failed**: crypto, Oct 2025 – Aug 2026, a 46% fall |
+| P3.1 no configuration with a positive edge | held: 0 of 18 (§5b) |
+
 ## 11. Limitations & next steps
 
 - **Pendulum is unexplained** (§10a). The repaired PPO matches Stable-Baselines3
@@ -1107,11 +1250,15 @@ bit for bit across machines; the conclusions do.
   ticker's OHLCV. The remaining levers are *more* exogenous data: macro series
   (VIX, rates, the dollar) and ultimately fundamentals / news sentiment — not a
   bigger network.
-- **Real-data walk-forward is now multi-*fold*, but only on one asset.** §5c runs
-  4 rolling folds x 5 seeds on BTC-USD and finds the agent reliably negative in
-  every period. The remaining gap is breadth: §5c is a single ticker, §5 is a
-  6-ticker basket on one split. Running the full basket multi-fold is ~6x the
-  compute of §5c and would let both axes be reported together.
+- **Six coins limit the crypto test.** A sign-flip test across six tickers
+  cannot give a p below 0.031, so the crypto verdict on total return stays
+  "not distinguishable" unless the agent trails on every coin, however many
+  seeds are run (§10h). A wider crypto universe would need data that starts
+  later, which shortens every test period.
+- **Walk-forward folds share tickers.** §10h's pooled walk-forward test treats
+  (ticker, period) pairs as exchangeable, but the same ticker recurs across
+  periods and tickers within a period move together. It is reported as
+  descriptive; a block-bootstrap over periods would need more periods than four.
 - **Head-to-head feed-forward vs. LSTM** and cost/turnover-sensitivity sweeps are
   natural extensions the codebase is already structured for.
 
@@ -1127,6 +1274,11 @@ python tools/baseline_report.py                             # agent vs baselines
 python tools/ablation.py --timesteps 60000                  # the overfitting ablation (§1)
 python tools/significance.py --market crypto --seeds 5      # synthetic multi-seed test (§2)
 python tools/real_significance.py --seeds 10 --timesteps 150000  # real-data multi-seed test (§5)
+python tools/real_significance.py --seeds 30 --timesteps 150000  # thirty seeds (§10h D1)
+for m in stock crypto; do for f in 0 1 2 3; do               # basket walk-forward (§10h D2)
+  python tools/basket_walk_forward.py --market $m --fold $f --seeds 10; done; done
+python tools/basket_walk_forward.py --summarise results/depth/wf-*.json
+python tools/hyperparameter_sweep.py --seeds 10 --timesteps 150000  # the sweep (§5b)
 python tools/surrogate_test.py --mode synthetic --seeds 5 --timesteps 60000  # surrogate test (§6)
 python tools/portfolio_experiment.py --market stock         # cross-sectional allocation (§7)
 python tools/hedging_experiment.py train                    # part 2: 40 hedging policies (§9)

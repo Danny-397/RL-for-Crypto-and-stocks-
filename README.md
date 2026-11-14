@@ -12,7 +12,17 @@ and one lucky seed, with markets as the testbed and an honest negative result.
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23843503-1682D4)](https://doi.org/10.5281/zenodo.23843503)
 
 **[Live site and lab](https://rl-for-crypto-and-stocks.vercel.app/)** · [Results](RESULTS.md) · [Paper](paper/) ·
-[Guide](guide/README.md) · [Cite](#citing)
+[Guide](guide/README.md) · [One-page summary (PDF)](docs/assets/rl-trader-summary.pdf) · [Cite](#citing)
+
+> **In one minute.** An AI agent that teaches itself to trade stocks and crypto, and a
+> study that then tries hard to prove its own results wrong. One early run looked
+> spectacular, nearly quadrupling its money on crypto. Tested properly, across dozens of
+> independent training runs and four different periods of history, that win turns out
+> to be luck. The agent does no better than simply buying and holding, and its daily
+> bets on up or down are right half the time, like a coin flip. The same code does
+> work on a different problem, hedging an option, where it beats a standard textbook
+> strategy when trading is expensive. The result is negative; what the project shows
+> is how to catch a false result before believing it.
 
 [![The RL Trader lab, recorded live against the backend](docs/assets/lab-demo.gif)](https://rl-for-crypto-and-stocks.vercel.app/#lab)
 
@@ -23,11 +33,12 @@ capture.</sub>
 ## In brief
 
 - **No edge.** Trained on ten real stocks and six coins and scored on history it never
-  saw, across ten seeds, the agent loses to buy-and-hold on stocks (p = 0.002). On
-  crypto every seed loses money; against buy-and-hold the verdict is borderline
-  (p = 0.22 in the published run, 0.03 when replicated on other hardware). Adjusted
-  for risk, its Sharpe ratio and its alpha on the traded asset are negative in both
-  markets.
+  saw, the agent loses to buy-and-hold on stocks (p = 0.002, in all 300 runs of a
+  30-seed follow-up). On crypto it trails on five of six coins, which six coins cannot
+  make significant (p = 0.19 at 30 seeds). Retrained across four periods of history,
+  it trails in every period on stocks and in three of four on crypto; the fourth was a
+  crash, in which it lost less. Adjusted for risk, its Sharpe ratio and its alpha on
+  the traded asset are negative in both markets.
 - **The study was audited, and it held.** A pre-registered audit found two real
   flaws: the PPO trailed Stable-Baselines3, and the crypto split leaked across coins.
   Both are fixed in v2.3.0, and neither changes the conclusion.
@@ -99,6 +110,26 @@ asset) makes the agent look worse, not better ([RESULTS §5d–5e](RESULTS.md)):
 
 *From the replication run (same seeds, data and held-out windows as the published study; RESULTS.md §5d). Sharpe is annualised from daily returns; the test is the same paired permutation across tickers. Alpha and beta come from regressing the agent's daily returns on the traded asset's (zero risk-free rate); alpha is annualised, and its test is a sign-flip test of the per-ticker alphas against zero.*
 <!-- END GENERATED: significance-risk -->
+
+A pre-registered follow-up ([RESULTS §10h](RESULTS.md#10h-thirty-seeds-every-period-a-fuller-sweep))
+answers the remaining questions an expert would ask. It runs 30 seeds, retrains the
+whole basket across four periods of history, and repeats the hyper-parameter sweep
+at the full budget. It also logs the positions the agent holds:
+
+<!-- BEGIN GENERATED: depth-seeds -->
+| Market | Agent, mean (95% CI) | Agent, IQM (95% CI) | Buy & hold | Agent vs buy & hold | Tickers where the agent trails | P(a run beats buy & hold) |
+|---|---:|---:|---:|---|---:|---:|
+| Stocks | **−29.8%** `[−35%, −24%]` | −31.9% `[−38%, −25%]` | +240% | significantly **worse** (p = 0.0021) | 10 of 10 | 0.00 `[0.00, 0.00]` |
+| Crypto | **−40.5%** `[−51%, −28%]` | −49.2% `[−59%, −35%]` | +10% | indistinguishable (p = 0.19) | 5 of 6 | 0.23 `[0.17, 0.28]` |
+
+*Seeds 100–129, 150k steps, archived 2026-10-28 data, leak-free crypto cut; GitHub Actions run 43620358297. The test is the paired permutation test of the seed-averaged return against buy-and-hold across tickers; with six coins it cannot give a p below 0.031. IQM: interquartile mean of the per-seed basket means. P(a run beats buy & hold): the share of (seed, ticker) runs that end above buy-and-hold on their ticker, with a bootstrap CI that resamples seeds within each ticker.*
+<!-- END GENERATED: depth-seeds -->
+
+Stocks trail buy-and-hold in every period. Crypto trails in three of four, and the
+fourth was a 46% fall, in which the agent lost less. The near-zero beta has a
+plain explanation: the agent is long about half the time and short most of the
+rest. Its long-or-short calls match the next day's move as often as a coin flip,
+and it pays to reverse them most days.
 
 Neither the audit nor these checks change the conclusion. Held-out return at the
 published budget, mean basket return (IQM over 10 seeds):

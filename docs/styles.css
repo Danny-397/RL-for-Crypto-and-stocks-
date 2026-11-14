@@ -167,7 +167,8 @@ code { font-family: var(--font-mono); font-size: 0.88em; }
 .hero h1 { font-size: clamp(36px, 4.6vw, 54px); }
 .grad { color: inherit; }
 .lede { color: var(--muted); font-size: 18px; line-height: 1.55; margin: 20px 0 0; max-width: 500px; }
-.lede strong { color: var(--text); }
+.lede strong, .lede b { color: var(--text); }
+.lede a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 .lede.lede-sub { font-size: 14px; margin-top: 12px; color: var(--faint); }
 .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 32px; }
 

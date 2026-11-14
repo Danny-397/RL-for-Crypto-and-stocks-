@@ -29,6 +29,8 @@ FIVE = re.compile(r"\b(?:5|five)[- ](?:[\w-]+ ){0,2}(?:seeds?|pairs|runs)\b", re
 
 # Substring of the line -> why five is right there.
 ALLOWED = {
+    "near-the-money contract-days over": "real option-quote day pairs, counted weekly by "
+                                         "the hedging-quotes job; not seeds",
     '"run 5 seeds"': "rhetorical: why training is not a live button",
     "five-seed count was fixed": "history of the ablation's seed count",
     "For each of 5 seeds it": "the multi-fold walk-forward (RESULTS 5c) is 5 seeds",
