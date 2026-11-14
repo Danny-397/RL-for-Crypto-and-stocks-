@@ -92,7 +92,7 @@
   background: var(--surface-2); color: var(--text);
 }
 .tour-btn[disabled] { opacity: .4; cursor: default; }
-.tour-next { background: var(--accent-fill); color: #fff; }
+.tour-next { background: var(--accent-fill); color: var(--on-accent); }
 .tour-close {
   appearance: none; cursor: pointer; border: 0; background: none;
   color: var(--muted); font-size: 22px; line-height: 1; padding: 4px 6px;
@@ -167,10 +167,10 @@
 .run-btn {
   width: 100%; margin-top: 18px; padding: 13px 16px;
   font-family: var(--font-body); font-size: 14px; font-weight: 600;
-  color: #fff; background: var(--accent-fill);
+  color: var(--on-accent); background: var(--accent-fill);
   border: 0; border-radius: var(--radius-sm); cursor: pointer; font-variant-numeric: tabular-nums;
 }
-.run-btn:hover:not(:disabled) { background: #1a7ef0; }
+.run-btn:hover:not(:disabled) { background: #ffb340; }
 .run-btn:disabled { background: var(--surface-2); color: var(--faint); cursor: not-allowed; }
 .run-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
@@ -502,7 +502,7 @@
 .rbar-row.is-reference .rbar-name { color: var(--volt); }
 .ref-tag {
   font-family: var(--font-data); font-size: 9px; font-style: normal; color: var(--volt);
-  border: 1px solid rgba(77, 163, 255, .35); border-radius: 4px; padding: 1px 5px;
+  border: 1px solid rgba(255, 159, 10, .35); border-radius: 4px; padding: 1px 5px;
   margin-left: 6px; vertical-align: middle; font-variant-numeric: tabular-nums;
 }
 /* A mean that does not separate from noise is not coloured as a win or a loss. */
@@ -527,8 +527,8 @@
   border: 1px solid var(--border); border-radius: 12px;
   padding: 20px; background: var(--bg-soft); position: relative;
 }
-.vp-card.is-claim { border-color: rgba(77, 163, 255, 0.35); }
-.vp-card.is-truth { border-color: rgba(77, 163, 255, 0.35); }
+.vp-card.is-claim { border-color: rgba(255, 159, 10, 0.35); }
+.vp-card.is-truth { border-color: rgba(255, 159, 10, 0.35); }
 .vp-kicker {
   font-family: var(--font-data); font-size: 10px; color: var(--faint); margin-bottom: 10px; font-variant-numeric: tabular-nums;
 }
@@ -593,7 +593,7 @@
   border-bottom: 1px solid var(--border);
 }
 .wi-row:last-child { border-bottom: 0; }
-.wi-row.is-agent { background: rgba(77, 163, 255, 0.045); }
+.wi-row.is-agent { background: rgba(255, 159, 10, 0.045); }
 .wi-name { font-family: var(--font-data); font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
 .wi-name small { display: block; color: var(--faint); font-size: 10px; }
 .wi-row.is-agent .wi-name { color: var(--volt); }
@@ -674,7 +674,7 @@
 }
 .nb-status-chip.done { color: var(--pos); border-color: rgba(52, 211, 153, .35); }
 .nb-status-chip.error { color: var(--neg); border-color: rgba(248, 113, 113, .35); }
-.nb-status-chip.running { color: var(--cyan); border-color: rgba(77, 163, 255, .35); }
+.nb-status-chip.running { color: var(--cyan); border-color: rgba(255, 159, 10, .35); }
 .nb-empty {
   padding: 30px 10px; text-align: center; color: var(--muted); font-size: 14px;
 }
@@ -751,7 +751,7 @@
 /* the backend is asleep and being woken -- in progress, not a failure */
 .api-pill.is-waking {
   color: var(--cyan);
-  border-color: rgba(77, 163, 255, 0.4);
+  border-color: rgba(255, 159, 10, 0.4);
 }
 .api-pill.is-waking .dot-led {
   background: var(--cyan);
@@ -912,7 +912,7 @@
   background: rgba(255, 255, 255, 0.035);
 }
 .wf-track > i { position: absolute; top: 0; height: 100%; border-radius: 4px; }
-.wf-train { background: rgba(77, 163, 255, 0.22); }
+.wf-train { background: rgba(255, 159, 10, 0.22); }
 .wf-test { background: var(--volt); }
 
 .wf-table-wrap { overflow-x: auto; margin-bottom: 18px; }

@@ -26,7 +26,7 @@ TEXT = "#f5f5f7"
 MUTED = "#a1a1a6"
 FAINT = "#86868b"
 LINE = "#2a2a2e"
-ACCENT = "#4da3ff"   # the agent's series
+ACCENT = "#ff9f0a"   # the agent's series
 BENCH = "#8e8e93"    # buy & hold
 
 ROWS = [("crypto", "Crypto"), ("stock", "Stocks")]
