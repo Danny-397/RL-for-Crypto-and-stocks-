@@ -109,6 +109,70 @@ def _alpha_beta(agent_steps: np.ndarray, asset_steps: np.ndarray, periods: int):
     return alpha, beta
 
 
+# What the policy actually does on the test period, so a figure like "beta 0"
+# can be explained rather than guessed at: is it sitting in cash, or holding
+# positions that change direction often enough to cancel out?
+BEHAVIOUR_KEYS = ("pos_mean", "pos_abs", "frac_long", "frac_short", "frac_flat",
+                  "turnover", "hit_rate")
+FLAT = 0.05   # |position| below this fraction of equity counts as flat
+
+
+def _behaviour(actions: np.ndarray, asset_steps: np.ndarray) -> dict:
+    """Summary of the positions a policy held over one backtest.
+
+    ``actions`` are the target positions (fraction of equity, negative is short)
+    the policy chose at each bar, clipped as the environment clips them;
+    ``asset_steps`` are the asset's returns over the bar each was held for.
+    ``hit_rate`` is the share of non-flat bars on which the position's sign
+    matched the asset's move: 0.5 is a coin flip.
+    """
+    pos = np.clip(np.asarray(actions, dtype=float), -1.0, 1.0)
+    n = min(len(pos), len(asset_steps))
+    pos, move = pos[:n], np.asarray(asset_steps[:n], dtype=float)
+    if n == 0:
+        return {k: float("nan") for k in BEHAVIOUR_KEYS}
+    held = np.abs(pos) >= FLAT
+    hits = np.sign(pos[held]) == np.sign(move[held])
+    return {
+        "pos_mean": float(pos.mean()),
+        "pos_abs": float(np.abs(pos).mean()),
+        "frac_long": float((pos >= FLAT).mean()),
+        "frac_short": float((pos <= -FLAT).mean()),
+        "frac_flat": float((~held).mean()),
+        "turnover": float(np.abs(np.diff(pos)).mean()) if n > 1 else 0.0,
+        "hit_rate": float(hits.mean()) if held.any() else float("nan"),
+    }
+
+
+def _robust(per_seed_ticker: np.ndarray, bh_by_ticker: np.ndarray, seed: int = 0) -> dict:
+    """Run-level summaries recommended for deep-RL evaluation (Agarwal et al. 2021).
+
+    ``per_seed_ticker`` is seeds x tickers of held-out agent returns. Reports the
+    interquartile mean of the per-seed basket means, and the probability that a
+    run (one seed on one ticker) beats buy-and-hold on that ticker, with a 95%
+    bootstrap interval that resamples seeds within each ticker (stratified).
+    """
+    from rl_trader.evaluation.rigor import aggregate_scores
+
+    m = np.asarray(per_seed_ticker, dtype=float)
+    bh = np.asarray(bh_by_ticker, dtype=float)
+    beats = m > bh[None, :]
+    rng = np.random.default_rng(seed)
+    n_s, n_t = beats.shape
+    boots = np.empty(5_000)
+    for i in range(len(boots)):
+        idx = rng.integers(0, n_s, size=(n_s, n_t))
+        boots[i] = np.take_along_axis(beats, idx, axis=0).mean()
+    lo, hi = np.quantile(boots, [0.025, 0.975])
+    return {
+        "seed_means": aggregate_scores(m.mean(axis=1)),
+        "p_improve": round(float(beats.mean()), 3),
+        "p_improve_low": round(float(lo), 3),
+        "p_improve_high": round(float(hi), 3),
+        "tickers_behind": int((m.mean(axis=0) < bh).sum()),
+    }
+
+
 def _evaluate_basket(agent, basket, market, cfg, periods):
     """Per-ticker results on the held-out test split.
 
@@ -118,6 +182,7 @@ def _evaluate_basket(agent, basket, market, cfg, periods):
     """
     agent_rets, bh_rets = [], []
     agent_sh, bh_sh, alphas, betas = [], [], [], []
+    behaviour = {k: [] for k in BEHAVIOUR_KEYS}
     w = cfg.env.window_size
     for sp in basket.values():
         test = sp["test"]
@@ -129,11 +194,15 @@ def _evaluate_basket(agent, basket, market, cfg, periods):
         bh_rets.append(bh["total_return"])
         agent_sh.append(res.metrics["sharpe"])
         bh_sh.append(bh["sharpe"])
-        alpha, beta = _alpha_beta(res.returns, np.diff(prices) / prices[:-1], periods)
+        asset_steps = np.diff(prices) / prices[:-1]
+        alpha, beta = _alpha_beta(res.returns, asset_steps, periods)
         alphas.append(alpha)
         betas.append(beta)
+        for k, v in _behaviour(res.actions, asset_steps).items():
+            behaviour[k].append(v)
     risk = {"agent_sharpe": np.array(agent_sh), "bh_sharpe": np.array(bh_sh),
             "alpha": np.array(alphas), "beta": np.array(betas)}
+    risk.update({k: np.array(v) for k, v in behaviour.items()})
     return np.array(agent_rets), np.array(bh_rets), risk
 
 
@@ -149,7 +218,9 @@ def run_market(market: str, cfg_fn, seeds: int, timesteps: int, data_dir: str, l
     seed_mean_returns, seed_win_rates = [], []
     agent_by_asset = np.zeros(len(tickers))
     bh_by_asset = None
-    risk_sum = {k: np.zeros(len(tickers)) for k in ("agent_sharpe", "alpha", "beta")}
+    risk_sum = {k: np.zeros(len(tickers))
+                for k in ("agent_sharpe", "alpha", "beta") + BEHAVIOUR_KEYS}
+    per_seed_ticker = []
     bh_sharpe = None
     seed_alphas = []
 
@@ -169,8 +240,10 @@ def run_market(market: str, cfg_fn, seeds: int, timesteps: int, data_dir: str, l
         a, b, risk = _evaluate_basket(agent, basket, market, cfg, periods)
         bh_by_asset = b
         agent_by_asset += a
+        per_seed_ticker.append(a)
         for k in risk_sum:
-            risk_sum[k] += risk[k]
+            # A policy that never left cash has no hit rate; count it as a coin flip.
+            risk_sum[k] += np.nan_to_num(risk[k], nan=0.5)
         bh_sharpe = risk["bh_sharpe"]
         seed_alphas.append(float(risk["alpha"].mean()))
         seed_mean_returns.append(float(a.mean()))
@@ -201,9 +274,12 @@ def run_market(market: str, cfg_fn, seeds: int, timesteps: int, data_dir: str, l
         "per_ticker": {t: {"agent_sharpe": round(float(per_asset["agent_sharpe"][i]), 3),
                            "bh_sharpe": round(float(bh_sharpe[i]), 3),
                            "alpha": round(float(per_asset["alpha"][i]), 4),
-                           "beta": round(float(per_asset["beta"][i]), 3)}
+                           "beta": round(float(per_asset["beta"][i]), 3),
+                           **{k: round(float(per_asset[k][i]), 3) for k in BEHAVIOUR_KEYS}}
                        for i, t in enumerate(tickers)},
+        "behaviour": {k: round(float(per_asset[k].mean()), 3) for k in BEHAVIOUR_KEYS},
     }
+    m = np.array(per_seed_ticker)
     return {
         "tickers": tickers,
         "ret_ci": ret_ci,
@@ -213,6 +289,12 @@ def run_market(market: str, cfg_fn, seeds: int, timesteps: int, data_dir: str, l
         "diff": obs_diff,
         "p": p_value,
         "risk": risk_summary,
+        "robust": _robust(m, bh_by_asset),
+        "per_seed_ticker": [[round(float(v), 4) for v in row] for row in m],
+        "bh_by_ticker": [round(float(v), 4) for v in bh_by_asset],
+        # With n tickers the sign-flip test cannot give a p below 2 / 2**n
+        # (0.031 for six coins), however many seeds are run.
+        "p_floor": round(2.0 / 2 ** len(tickers), 4),
     }
 
 
@@ -255,7 +337,9 @@ def main() -> None:
             "ci_low": round(ci.low, 4), "ci_high": round(ci.high, 4),
             "bh": round(r["bh_mean"], 4), "p": round(r["p"], 4), "seeds": args.seeds,
             "seed_base": args.seed_base, "diff": round(r["diff"], 4),
-            "risk": r["risk"],
+            "risk": r["risk"], "robust": r["robust"], "tickers": r["tickers"],
+            "per_seed_ticker": r["per_seed_ticker"], "bh_by_ticker": r["bh_by_ticker"],
+            "p_floor": r["p_floor"],
         }
     print("=" * 70)
 

@@ -113,7 +113,7 @@ def run_variant(market: str, spec: dict, basket, seeds: int, timesteps: int, log
             return random.choice(train_slices)
 
         agent, _ = run_ppo_training(cfg, train_series_factory=factory)
-        agent_rets, bh_rets = _evaluate_basket(agent, basket, market, cfg, periods)
+        agent_rets, bh_rets, _ = _evaluate_basket(agent, basket, market, cfg, periods)
         bh_mean = float(bh_rets.mean())
         seed_returns.append(float(agent_rets.mean()))
         seed_edges.append(float((agent_rets - bh_rets).mean()))
