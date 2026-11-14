@@ -37,7 +37,12 @@ jobs:
           path: paper/rl_trader.pdf
           if-no-files-found: error
 
+      # Only on main. A bot commit on a PR branch carries "[skip ci]" in its
+      # message, and a squash merge copies that message into main's commit,
+      # which then skips CI on main (happened with #35 and #42). Branches still
+      # compile the paper and upload the PDF above.
       - name: Commit the PDF back to the repo
+        if: github.ref == 'refs/heads/main'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
