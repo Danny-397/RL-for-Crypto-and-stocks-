@@ -29,6 +29,12 @@ significance test on it:
 up?" below). In v2.2.1 the crypto row read +56.8%: the old split leaked across coins
 in calendar time.*
 
+Two later checks ([RESULTS §5d–5e](../RESULTS.md)): re-running the same seeds on
+other hardware leaves the stock verdict unchanged and moves the crypto one to p = 0.03,
+so the crypto comparison is borderline rather than clearly "indistinguishable"; and
+adjusting for risk, the agent's Sharpe ratio and its alpha on the traded asset are
+negative in both markets.
+
 Read the spread, not the mean. The individual seeds returned:
 
 <!-- BEGIN GENERATED: seed-spread -->

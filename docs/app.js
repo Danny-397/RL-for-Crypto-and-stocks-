@@ -188,6 +188,24 @@
     'shown crypto <em>making</em> money (<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md#10c-a-calendar-leak-in-the-crypto-split" ' +
     'target="_blank" rel="noopener">RESULTS.md §10c</a>).';
 
+  // The published seeds re-run on a different machine (RESULTS.md §5d-5e). Built
+  // from window.RL_REPLICATION, so the caveat moves with the data.
+  function replicationNote(market) {
+    const rep = window.RL_REPLICATION;
+    const pub = window.RL_SIGNIFICANCE;
+    if (!rep || !pub || !rep.crypto || !rep.stock || !rep.crypto.risk) return "";
+    const pv = (p) => (p < 0.01 ? p.toFixed(4) : p.toFixed(2));
+    const link = '<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md#5d-does-it-replicate-on-other-hardware" ' +
+      'target="_blank" rel="noopener">RESULTS.md §5d–5e</a>';
+    const r = rep[market] || rep.crypto;
+    const sh = (v) => (v < 0 ? "\u2212" : "+") + Math.abs(v).toFixed(2);
+    return ` Re-run on other hardware, the same seeds gave p = ${pv(rep.crypto.p)} for ` +
+      `crypto (p = ${pv(pub.crypto.p)} here) and an unchanged stock verdict, so the ` +
+      `crypto comparison is borderline. Adjusted for risk the agent is worse in both ` +
+      `markets: Sharpe ${sh(r.risk.agent_sharpe)} against ${sh(r.risk.bh_sharpe)} for ` +
+      `buy-&amp;-hold on ${market === "stock" ? "stocks" : "crypto"} (${link}).`;
+  }
+
   function verdictFor(market) {
     const lead = "Every figure here is the <b>real held-out backtest</b> for the " +
       "asset you picked — out-of-sample, costs included, no cherry-picking.";
@@ -215,7 +233,8 @@
       return `${lead} Every one of the <b>${n} seeds</b> lost money (the best ` +
         `returned <b>${p1(Math.max(...spread))}</b>); the mean is <b>${p1(r.mean)}</b> ` +
         `(${ci}). Against buy-&amp;-hold across the held-out tickers the difference ` +
-        `is <b>not distinguishable</b> (p = ${pv}).${here}${market === "crypto" ? LEAK_NOTE : ""}`;
+        `is <b>not distinguishable</b> (p = ${pv}).${here}${market === "crypto" ? LEAK_NOTE : ""}` +
+        replicationNote(market);
     }
     return `${lead} A single seed can look spectacular${best}, but across ` +
       `<b>${n} seeds</b> the mean is <b>${p1(r.mean)}</b> (${ci}), and against ` +
@@ -485,7 +504,7 @@
         (Math.max(...c.seed_returns) < 0
           ? "Every crypto run lost money; how much depended on the seed."
           : "Pick one dot and you can tell either story.") +
-        LEAK_NOTE;
+        replicationNote("crypto");
     }
 
     const total = Math.max(c.seed_returns.length, st.seed_returns.length);
@@ -1078,7 +1097,7 @@
     }
   }
 
-  // ── the generalization gap: single-asset vs cross-asset training ──
+  // ── the generalization gap: one fixed simulated path vs a fresh path per episode ──
   //
   // Rendered from window.RL_ABLATION (tools/ablation_multiseed.py) rather than
   // typed into the HTML. These four rows used to be hand-written, and a rebuild
@@ -1112,11 +1131,11 @@
   }
 
   const ARMS = [
-    { key: "single", title: "Trained on one asset",
+    { key: "single", title: "Trained on one fixed path",
       badge: "memorised", tone: "bad",
       note: "It saw a single price path often enough to learn that path. The " +
             "in-sample figure is not a strategy — it is a receipt for overfitting." },
-    { key: "domain", title: "Trained across the basket",
+    { key: "domain", title: "A fresh path every episode",
       badge: "generalised", tone: "good",
       note: "Domain randomization removes any single path to memorise, so the " +
             "in-sample number drops by orders of magnitude — and the held-out " +
@@ -1159,8 +1178,8 @@
 
     const meta = document.getElementById("rs-meta");
     if (meta) {
-      meta.textContent = `${nSeeds} seeds \u00b7 ` +
-        `${(ABL.timesteps / 1000).toFixed(0)}k steps each \u00b7 identical held-out paths`;
+      meta.textContent = `Simulated markets \u00b7 ${nSeeds} seeds \u00b7 ` +
+        `${(ABL.timesteps / 1000).toFixed(0)}k steps each \u00b7 30 identical held-out paths`;
     }
 
     const cap = document.getElementById("rs-caption");
@@ -1208,7 +1227,7 @@
     for (const [market, label] of [["crypto", "Crypto"], ["stock", "Stocks"]]) {
       const m = ABL.markets[market];
       if (!m) continue;
-      for (const [key, how] of [["single", "single asset"], ["domain", "across tickers"]]) {
+      for (const [key, how] of [["single", "one fixed path"], ["domain", "fresh path each episode"]]) {
         const d = m[key];
         rows.push(
           `<tr><td class="num-l">${label} &middot; ${how}</td>` +
@@ -1255,6 +1274,11 @@
       const r = SIG.crypto.seed_returns || [];
       if (r.length) put("tl-5a", `${p1(Math.min(...r))} to ${p1(Math.max(...r))}`);
       put("tl-5b", pv(SIG.crypto.p));
+      const rep = window.RL_REPLICATION;
+      if (rep && rep.crypto) {
+        put("tl-5r", ` (re-run on other hardware, the same seeds gave ${pv(rep.crypto.p)}: ` +
+          `borderline, but in neither run better than holding)`);
+      }
     }
     if (SIG && SIG.stock) {
       put("tl-7", p1(SIG.stock.mean));

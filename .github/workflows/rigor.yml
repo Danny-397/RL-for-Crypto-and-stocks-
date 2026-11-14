@@ -27,7 +27,7 @@ env:
 jobs:
   benchmark:
     # Stage 1: is this PPO correct? 4 tasks x 3 arms x 10 seeds.
-    if: (github.event_name == 'push' && !contains(github.ref_name, 'trading') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired') && !contains(github.ref_name, 'headline')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'trading')
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'trading') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired') && !contains(github.ref_name, 'headline') && !contains(github.ref_name, 'riskadj')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'trading')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -54,7 +54,7 @@ jobs:
   trading:
     # Stages 2-4: other implementations/algorithms, training budget, time-limit
     # handling, and the hindsight-free universe. Needs the archived data.
-    if: (github.event_name == 'push' && !contains(github.ref_name, 'benchmark') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired') && !contains(github.ref_name, 'headline')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'benchmark')
+    if: (github.event_name == 'push' && !contains(github.ref_name, 'benchmark') && !contains(github.ref_name, 'diagnose') && !contains(github.ref_name, 'leakfree') && !contains(github.ref_name, 'repaired') && !contains(github.ref_name, 'headline') && !contains(github.ref_name, 'riskadj')) || (github.event_name == 'workflow_dispatch' && inputs.suite != 'benchmark')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -281,9 +281,44 @@ jobs:
             server/models/*.npz
             checkpoints/ppo_*.pt
 
+  riskadj:
+    # Risk-adjusted re-read of the published significance study: the same ten
+    # seeds (100-109) on the same archived data, recording Sharpe ratios and the
+    # agent's alpha/beta on each traded asset. Its total returns must equal the
+    # published ones exactly, which doubles as a reproducibility check.
+    if: github.event_name == 'push' && contains(github.ref_name, 'riskadj')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e .
+      - name: Unpack the archived data
+        env:
+          KEY: ${{ secrets.RIGOR_DATA_KEY }}
+        run: |
+          test -n "$KEY" || { echo "RIGOR_DATA_KEY is not set"; exit 1; }
+          gpg --batch --quiet --pinentry-mode loopback --passphrase "$KEY" -d data/encrypted/rigor-data-2026-11-13.tgz.gpg > /tmp/d.tgz
+          mkdir -p data/raw && tar xzf /tmp/d.tgz -C data/raw stock crypto
+          python tools/fetch_data.py --verify --out data/raw --snapshot docs/preregistration/2026-10-28-fresh-seeds.SNAPSHOT.json
+      - name: Significance with risk-adjusted measures (10 seeds)
+        run: |
+          mkdir -p results/riskadj
+          python tools/real_significance.py --seeds 10 --seed-base 100 --timesteps 150000 --out results/riskadj/significance.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riskadj
+          path: results/riskadj/
+
   aggregate:
     needs: [benchmark, trading, diagnose, retrade, leakfree, repaired, headline]
-    if: always()
+    # The riskadj job uploads its own artifact and has nothing to aggregate.
+    if: always() && !contains(github.ref_name, 'riskadj')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

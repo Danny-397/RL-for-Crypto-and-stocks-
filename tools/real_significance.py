@@ -93,18 +93,48 @@ def load_real_basket(data_dir: str, market: str, train_frac: float = 0.6, split:
     return basket
 
 
+def _alpha_beta(agent_steps: np.ndarray, asset_steps: np.ndarray, periods: int):
+    """Annualised alpha and beta of the agent's daily returns on the asset's own.
+
+    Total return against buy-and-hold rewards whoever held the most of a rising
+    asset. Regressing on the asset separates the exposure the agent carried
+    (beta) from what it added beyond that exposure (alpha), which is the
+    comparison a quant would make. Zero risk-free rate, as everywhere else here.
+    """
+    n = min(len(agent_steps), len(asset_steps))
+    a, b = agent_steps[:n], asset_steps[:n]
+    var = float(np.var(b))
+    beta = float(np.cov(a, b, bias=True)[0, 1] / var) if var > 1e-18 else 0.0
+    alpha = float((a.mean() - beta * b.mean()) * periods)
+    return alpha, beta
+
+
 def _evaluate_basket(agent, basket, market, cfg, periods):
-    """Per-ticker agent and buy-&-hold total returns over the held-out test split."""
+    """Per-ticker results on the held-out test split.
+
+    Returns the agent's and buy-&-hold's total returns (the published study) and,
+    alongside them, risk-adjusted measures: each side's annualised Sharpe ratio,
+    and the agent's annualised alpha and beta on the asset it traded.
+    """
     agent_rets, bh_rets = [], []
+    agent_sh, bh_sh, alphas, betas = [], [], [], []
     w = cfg.env.window_size
     for sp in basket.values():
         test = sp["test"]
         env = make_env(market, test, cfg.env, cfg.reward, random_start=False)
-        agent_rets.append(backtest(agent, env, market=market).metrics["total_return"])
+        res = backtest(agent, env, market=market)
+        agent_rets.append(res.metrics["total_return"])
         prices = test.prices[w - 1 :]
         bh = compute_metrics(cfg.env.initial_balance * (prices / prices[0]), periods)
         bh_rets.append(bh["total_return"])
-    return np.array(agent_rets), np.array(bh_rets)
+        agent_sh.append(res.metrics["sharpe"])
+        bh_sh.append(bh["sharpe"])
+        alpha, beta = _alpha_beta(res.returns, np.diff(prices) / prices[:-1], periods)
+        alphas.append(alpha)
+        betas.append(beta)
+    risk = {"agent_sharpe": np.array(agent_sh), "bh_sharpe": np.array(bh_sh),
+            "alpha": np.array(alphas), "beta": np.array(betas)}
+    return np.array(agent_rets), np.array(bh_rets), risk
 
 
 def run_market(market: str, cfg_fn, seeds: int, timesteps: int, data_dir: str, log,
@@ -119,6 +149,9 @@ def run_market(market: str, cfg_fn, seeds: int, timesteps: int, data_dir: str, l
     seed_mean_returns, seed_win_rates = [], []
     agent_by_asset = np.zeros(len(tickers))
     bh_by_asset = None
+    risk_sum = {k: np.zeros(len(tickers)) for k in ("agent_sharpe", "alpha", "beta")}
+    bh_sharpe = None
+    seed_alphas = []
 
     for s in range(seeds):
         cfg = cfg_fn()
@@ -133,9 +166,13 @@ def run_market(market: str, cfg_fn, seeds: int, timesteps: int, data_dir: str, l
             return random.choice(train_slices)
 
         agent, _ = run_ppo_training(cfg, train_series_factory=factory)
-        a, b = _evaluate_basket(agent, basket, market, cfg, periods)
+        a, b, risk = _evaluate_basket(agent, basket, market, cfg, periods)
         bh_by_asset = b
         agent_by_asset += a
+        for k in risk_sum:
+            risk_sum[k] += risk[k]
+        bh_sharpe = risk["bh_sharpe"]
+        seed_alphas.append(float(risk["alpha"].mean()))
         seed_mean_returns.append(float(a.mean()))
         seed_win_rates.append(float((a > b).mean()))
         log.info("[%s] seed %d/%d | basket-mean agent %+.2f%% | win-rate %.0f%%",
@@ -144,6 +181,29 @@ def run_market(market: str, cfg_fn, seeds: int, timesteps: int, data_dir: str, l
     agent_by_asset /= seeds
     ret_ci = bootstrap_ci(seed_mean_returns)
     obs_diff, p_value = paired_permutation_test(agent_by_asset, bh_by_asset)
+
+    # Risk-adjusted: the same paired test across tickers, on Sharpe ratios, and a
+    # sign-flip test of the agent's alpha on the traded asset against zero.
+    per_asset = {k: v / seeds for k, v in risk_sum.items()}
+    sharpe_diff, sharpe_p = paired_permutation_test(per_asset["agent_sharpe"], bh_sharpe)
+    alpha_mean, alpha_p = paired_permutation_test(per_asset["alpha"], np.zeros(len(tickers)))
+    alpha_ci = bootstrap_ci(seed_alphas)
+    risk_summary = {
+        "agent_sharpe": round(float(per_asset["agent_sharpe"].mean()), 3),
+        "bh_sharpe": round(float(bh_sharpe.mean()), 3),
+        "sharpe_diff": round(float(sharpe_diff), 3),
+        "sharpe_p": round(float(sharpe_p), 4),
+        "alpha": round(float(alpha_mean), 4),
+        "alpha_ci_low": round(float(alpha_ci.low), 4),
+        "alpha_ci_high": round(float(alpha_ci.high), 4),
+        "alpha_p": round(float(alpha_p), 4),
+        "beta": round(float(per_asset["beta"].mean()), 3),
+        "per_ticker": {t: {"agent_sharpe": round(float(per_asset["agent_sharpe"][i]), 3),
+                           "bh_sharpe": round(float(bh_sharpe[i]), 3),
+                           "alpha": round(float(per_asset["alpha"][i]), 4),
+                           "beta": round(float(per_asset["beta"][i]), 3)}
+                       for i, t in enumerate(tickers)},
+    }
     return {
         "tickers": tickers,
         "ret_ci": ret_ci,
@@ -152,6 +212,7 @@ def run_market(market: str, cfg_fn, seeds: int, timesteps: int, data_dir: str, l
         "bh_mean": float(bh_by_asset.mean()),
         "diff": obs_diff,
         "p": p_value,
+        "risk": risk_summary,
     }
 
 
@@ -165,6 +226,9 @@ def main() -> None:
     parser.add_argument("--seed-base", type=int, default=100)
     parser.add_argument("--out", default=os.path.join("docs", "significance.js"),
                         help="where to write the per-seed results (default: the site's data file)")
+    parser.add_argument("--global-name", default="RL_SIGNIFICANCE",
+                        help="JS global to assign (a replication is written as RL_REPLICATION "
+                             "so the site can load it beside the published run)")
     args = parser.parse_args()
 
     log = get_logger("real_significance")
@@ -191,6 +255,7 @@ def main() -> None:
             "ci_low": round(ci.low, 4), "ci_high": round(ci.high, 4),
             "bh": round(r["bh_mean"], 4), "p": round(r["p"], 4), "seeds": args.seeds,
             "seed_base": args.seed_base, "diff": round(r["diff"], 4),
+            "risk": r["risk"],
         }
     print("=" * 70)
 
@@ -198,7 +263,7 @@ def main() -> None:
     out = args.out
     with open(out, "w", encoding="utf-8") as fh:
         fh.write("/* Auto-generated by tools/real_significance.py — per-seed real-data returns. */\n")
-        fh.write("window.RL_SIGNIFICANCE = ")
+        fh.write(f"window.{args.global_name} = ")
         json.dump(site, fh, indent=0)
         fh.write(";\n")
     print(f"wrote {out}")
