@@ -23,7 +23,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Compile LaTeX
         uses: xu-cheng/latex-action@v3
@@ -35,7 +35,7 @@ jobs:
       # Built here so it cannot fall behind the LaTeX: it did, silently, when two
       # math commands had no mapping and the converter exited without writing.
       # An unmapped command now fails this job on the branch that adds it.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Convert to Markdown
@@ -44,7 +44,7 @@ jobs:
           python tools/paper_to_markdown.py
 
       - name: Upload PDF as a build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rl_trader-pdf
           path: paper/rl_trader.pdf
