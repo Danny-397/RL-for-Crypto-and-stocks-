@@ -1,8 +1,8 @@
 # RL Trader
 
-**Is a deep-RL trading agent learning, or just lucky?** A from-scratch PPO study of
-the two ways reinforcement-learning results fool you, memorising the training data
-and one lucky seed, with markets as the testbed and an honest negative result.
+**Is a deep-RL trading agent learning, or just lucky?** PPO written from scratch, a
+paper archived with a DOI, and a live lab: a study of how to evaluate reinforcement
+learning rigorously, using financial markets as a deliberately hard testbed.
 
 [![CI](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/ci.yml/badge.svg)](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/ci.yml)
 [![Browser smoke](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/smoke.yml/badge.svg)](https://github.com/Danny-397/RL-for-Crypto-and-stocks-/actions/workflows/smoke.yml)
@@ -14,15 +14,14 @@ and one lucky seed, with markets as the testbed and an honest negative result.
 **[Live site and lab](https://rl-for-crypto-and-stocks.vercel.app/)** · [Results](RESULTS.md) · [Paper](paper/) ·
 [Guide](guide/README.md) · [One-page summary (PDF)](docs/assets/rl-trader-summary.pdf) · [Cite](#citing)
 
-> **In one minute.** An AI agent that teaches itself to trade stocks and crypto, and a
-> study that then tries hard to prove its own results wrong. One early run looked
-> spectacular, nearly quadrupling its money on crypto. Tested properly, across dozens of
-> independent training runs and four different periods of history, that win turns out
-> to be luck. The agent does no better than simply buying and holding, and its daily
-> bets on up or down are right half the time, like a coin flip. The same code does
-> work on a different problem, hedging an option, where it beats a standard textbook
-> strategy when trading is expensive. The result is negative; what the project shows
-> is how to catch a false result before believing it.
+> **In one minute.** An AI agent that teaches itself to trade stocks and crypto, built
+> from scratch, and the evaluation machinery to tell real learning from luck: dozens of
+> independent training runs, four periods of history the agent never saw, confidence
+> intervals on every number, and predictions committed before the runs. On hedging an
+> option, the agent works: it beats a standard textbook strategy when trading is
+> expensive, on 19 years of real SPY data. On predicting prices, the same machinery
+> shows that a spectacular early run (nearly 4x on crypto) was luck, and the agent does
+> no better than buying and holding.
 
 [![The RL Trader lab, recorded live against the backend](docs/assets/lab-demo.gif)](https://rl-for-crypto-and-stocks.vercel.app/#lab)
 
@@ -32,7 +31,10 @@ capture.</sub>
 
 ## In brief
 
-- **No edge.** Trained on ten real stocks and six coins and scored on history it never
+- **Where RL does help.** The same PPO, used to hedge a sold option instead of
+  predicting prices, learns to trade less as costs rise and beats a tuned textbook
+  hedge at high costs on 19 years of real SPY data.
+- **Price prediction: no edge.** Trained on ten real stocks and six coins and scored on history it never
   saw, the agent loses to buy-and-hold on stocks (p = 0.002, in all 300 runs of a
   30-seed follow-up). On crypto it trails on five of six coins, which six coins cannot
   make significant (p = 0.19 at 30 seeds). Retrained across four periods of history,
@@ -42,12 +44,9 @@ capture.</sub>
 - **The study was audited, and it held.** A pre-registered audit found two real
   flaws: the PPO trailed Stable-Baselines3, and the crypto split leaked across coins.
   Both are fixed in v2.3.0, and neither changes the conclusion.
-- **Where RL does help.** The same PPO, used to hedge a sold option instead of
-  predicting prices, learns to trade less as costs rise and beats a tuned textbook
-  hedge at high costs on 19 years of real SPY data.
 
-The finding is negative, and that is the contribution: the point of the project is the
-evaluation machinery that establishes it.
+The contribution is the evaluation machinery: it is what separates the hedging result,
+which holds up, from the trading result, which does not.
 
 ## What this is, and what it is not
 
