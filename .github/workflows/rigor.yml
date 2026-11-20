@@ -36,8 +36,8 @@ jobs:
         env: [Pendulum-v1, InvertedPendulum-v5, HalfCheetah-v5, Hopper-v5]
         arm: [ours, ours_tb, sb3]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
@@ -46,7 +46,7 @@ jobs:
           pip install -r requirements.txt -e . "stable-baselines3==2.9.2" "gymnasium[mujoco]"
       - name: Train 10 seeds
         run: python tools/ppo_benchmark.py run-many --env ${{ matrix.env }} --arm ${{ matrix.arm }} --seeds 0-9 --jobs 4
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: bench-${{ matrix.env }}-${{ matrix.arm }}
           path: results/ppo_benchmark/
@@ -68,8 +68,8 @@ jobs:
           - {market: stock, arm: ours, seeds: "200-204", universe: pit}
           - {market: stock, arm: ours, seeds: "205-209", universe: pit}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
@@ -91,7 +91,7 @@ jobs:
           if [ "${{ matrix.universe }}" = "pit" ]; then MAX="--max-steps 150000"; fi
           python tools/trading_rigor.py run-many --market ${{ matrix.market }} --arm ${{ matrix.arm }} \
             --universe ${{ matrix.universe }} --seeds ${{ matrix.seeds }} --jobs 4 $MAX
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: trading-${{ matrix.universe }}-${{ matrix.market }}-${{ matrix.arm }}-${{ matrix.seeds }}
           path: results/trading_rigor/
@@ -109,8 +109,8 @@ jobs:
         # Round 2 (branch experiments/diagnose2): the update-step differences.
         arm: ${{ fromJSON(contains(github.ref_name, 'diagnose2') && '["ours_vloss","ours_eps","ours_mbadv","ours_sb3like"]' || '["ours_sep","ours_norm","ours_nosquash","ours_fixed"]') }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
@@ -119,7 +119,7 @@ jobs:
           pip install -r requirements.txt -e . "stable-baselines3==2.9.2" "gymnasium[mujoco]"
       - name: Train 10 seeds
         run: python tools/ppo_benchmark.py run-many --env ${{ matrix.env }} --arm ${{ matrix.arm }} --seeds 0-9 --jobs 4
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: bench-${{ matrix.env }}-${{ matrix.arm }}
           path: results/ppo_benchmark/
@@ -134,8 +134,8 @@ jobs:
         market: [stock, crypto]
         seeds: ["200-204", "205-209"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
@@ -152,7 +152,7 @@ jobs:
           python tools/fetch_data.py --verify --out data/raw --snapshot docs/preregistration/2026-10-28-fresh-seeds.SNAPSHOT.json
       - name: Train
         run: python tools/trading_rigor.py run-many --market ${{ matrix.market }} --arm ours_fixed --seeds ${{ matrix.seeds }} --jobs 5
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: trading-main-${{ matrix.market }}-ours_fixed-${{ matrix.seeds }}
           path: results/trading_rigor/
@@ -169,8 +169,8 @@ jobs:
         arm: [ours, ours_fixed, sb3_ppo, sb3_sac]
         seeds: ["200-203", "204-207", "208-209"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
@@ -187,7 +187,7 @@ jobs:
           python tools/fetch_data.py --verify --out data/raw --snapshot docs/preregistration/2026-10-28-fresh-seeds.SNAPSHOT.json
       - name: Train
         run: python tools/trading_rigor.py run-many --market crypto --arm ${{ matrix.arm }} --split common --seeds ${{ matrix.seeds }} --jobs 4
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: trading-common-crypto-${{ matrix.arm }}-${{ matrix.seeds }}
           path: results/trading_rigor/
@@ -207,8 +207,8 @@ jobs:
           - {market: crypto, split: common, seeds: "200-204"}
           - {market: crypto, split: common, seeds: "205-209"}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
@@ -225,7 +225,7 @@ jobs:
           python tools/fetch_data.py --verify --out data/raw --snapshot docs/preregistration/2026-10-28-fresh-seeds.SNAPSHOT.json
       - name: Train
         run: python tools/trading_rigor.py run-many --market ${{ matrix.market }} --arm ours_repaired --split ${{ matrix.split }} --seeds ${{ matrix.seeds }} --jobs 5
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: trading-repaired-${{ matrix.market }}-${{ matrix.seeds }}
           path: results/trading_rigor/
@@ -242,8 +242,8 @@ jobs:
       matrix:
         part: [significance, site]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
@@ -270,7 +270,7 @@ jobs:
           python tools/attribution_report.py
           python tools/supervised_report.py
           python tools/cost_sensitivity.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: headline-${{ matrix.part }}
           path: |
@@ -290,8 +290,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
@@ -310,7 +310,7 @@ jobs:
         run: |
           mkdir -p results/riskadj
           python tools/real_significance.py --seeds 10 --seed-base 100 --timesteps 150000 --out results/riskadj/significance.js
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: riskadj
           path: results/riskadj/
@@ -339,8 +339,8 @@ jobs:
           - {part: wf, market: crypto, fold: 2}
           - {part: wf, market: crypto, fold: 3}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
@@ -369,7 +369,7 @@ jobs:
         if: matrix.part == 'wf'
         run: |
           python tools/basket_walk_forward.py --market ${{ matrix.market }} --fold ${{ matrix.fold }} --folds 4 --seeds 10 --seed-base 100 --timesteps 150000 --out-dir results/depth
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: depth-${{ matrix.part }}-${{ matrix.market }}-${{ matrix.fold }}
           path: results/depth/
@@ -379,15 +379,15 @@ jobs:
     if: always() && github.event_name == 'push' && contains(github.ref_name, 'depth')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
         run: |
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt -e .
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: artifacts
       - name: Combine
@@ -396,7 +396,7 @@ jobs:
           find artifacts -type f -exec cp {} results/depth/ \;
           ls -l results/depth
           python tools/basket_walk_forward.py --summarise results/depth/wf-*.json --out results/depth/basket_walk_forward.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: depth-results
           path: results/depth/
@@ -407,15 +407,15 @@ jobs:
     if: always() && !contains(github.ref_name, 'riskadj') && !contains(github.ref_name, 'depth')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
         run: |
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt -e . "gymnasium[mujoco]"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: artifacts
       - name: Aggregate
@@ -426,7 +426,7 @@ jobs:
           ls results/ppo_benchmark | wc -l; ls results/trading_rigor | wc -l
           if ls results/ppo_benchmark/*.json >/dev/null 2>&1; then python tools/ppo_benchmark.py aggregate; fi
           if ls results/trading_rigor/*.json >/dev/null 2>&1; then python tools/trading_rigor.py aggregate; fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: rigor-results
           path: |
