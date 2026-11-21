@@ -335,6 +335,23 @@ def test_registry_lists_and_evicts():
     assert all("id" in row and "status" in row for row in listing)
 
 
+def test_only_max_running_experiments_run_at_once():
+    import threading
+    import time
+
+    release = threading.Event()
+    mgr = ExperimentManager(max_running=2)
+    exps = [mgr.create("unit", {}, lambda e: release.wait(5) and {"ok": True}) for _ in range(5)]
+    deadline = time.time() + 5
+    while sum(e.status == "running" for e in exps) < 2 and time.time() < deadline:
+        time.sleep(0.01)
+    time.sleep(0.1)  # give any extra thread the chance to start, if it could
+    assert [e.status for e in exps].count("running") == 2
+    assert [e.status for e in exps].count("queued") == 3
+    release.set()
+    assert all(_wait(e).status == "done" for e in exps)
+
+
 def test_experiment_ids_are_unique_and_readable():
     mgr = ExperimentManager()
     ids = {mgr.create("unit", {}, lambda e: {}).id for _ in range(25)}

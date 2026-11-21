@@ -38,6 +38,10 @@ from typing import Any, Callable, Dict, List, Optional
 from . import prereg
 
 MAX_EXPERIMENTS = 200
+# Experiments run at once; the rest wait as "queued". The free instance has
+# 512 MB and a fraction of a CPU, so dozens of simultaneous sweeps (one script
+# is enough) would run it out of memory and wipe every visitor's results.
+MAX_RUNNING = 2
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
@@ -161,10 +165,12 @@ class Experiment:
 class ExperimentManager:
     """Thread-safe, bounded registry that runs experiments on worker threads."""
 
-    def __init__(self, max_experiments: int = MAX_EXPERIMENTS) -> None:
+    def __init__(self, max_experiments: int = MAX_EXPERIMENTS,
+                 max_running: int = MAX_RUNNING) -> None:
         self._lock = threading.Lock()
         self._experiments: "OrderedDict[str, Experiment]" = OrderedDict()
         self._max = max_experiments
+        self._slots = threading.BoundedSemaphore(max_running)
 
     # -- ids -------------------------------------------------------------- #
     def _new_id(self) -> str:
@@ -206,20 +212,21 @@ class ExperimentManager:
         return exp
 
     def _run(self, exp: Experiment, runner: Callable[["Experiment"], Dict[str, Any]]) -> None:
-        exp.status = "running"
-        exp.stage = "starting"
-        exp.started_at = time.time()
-        try:
-            exp.result = runner(exp)
-            exp.progress = 1.0
-            exp.stage = "complete"
-            exp.status = "done"
-        except Exception as exc:  # surfaced to the client, never silently swallowed
-            exp.status = "error"
-            exp.stage = "failed"
-            exp.error = f"{type(exc).__name__}: {exc}"[:400]
-        finally:
-            exp.finished_at = time.time()
+        with self._slots:  # stays "queued" until one of MAX_RUNNING slots frees up
+            exp.status = "running"
+            exp.stage = "starting"
+            exp.started_at = time.time()
+            try:
+                exp.result = runner(exp)
+                exp.progress = 1.0
+                exp.stage = "complete"
+                exp.status = "done"
+            except Exception as exc:  # surfaced to the client, never silently swallowed
+                exp.status = "error"
+                exp.stage = "failed"
+                exp.error = f"{type(exc).__name__}: {exc}"[:400]
+            finally:
+                exp.finished_at = time.time()
 
     def _evict_locked(self) -> None:
         """Drop oldest *finished* experiments once over capacity."""
