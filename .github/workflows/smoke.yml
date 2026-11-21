@@ -72,7 +72,7 @@ jobs:
           # The exact command render.yaml uses, so this also checks that the
           # production entrypoint still starts.
           python -m gunicorn --chdir server app:app \
-            --workers 1 --bind 127.0.0.1:8000 --timeout 120 > backend.log 2>&1 &
+            --workers 1 --threads 4 --bind 127.0.0.1:8000 --timeout 120 > backend.log 2>&1 &
           # Poll rather than sleep: a fixed wait is either wasteful or flaky, and
           # a flaky smoke test is worse than none.
           for i in $(seq 1 60); do

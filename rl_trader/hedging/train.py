@@ -10,7 +10,7 @@ agent never sees the same path twice, so it cannot memorise one.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -123,5 +123,3 @@ def train_hedger(spec: HedgeSpec, cfg: Optional[HedgeTrainConfig] = None,
     return agent, hist
 
 
-def with_seed(cfg: HedgeTrainConfig, seed: int) -> HedgeTrainConfig:
-    return replace(cfg, seed=seed)
