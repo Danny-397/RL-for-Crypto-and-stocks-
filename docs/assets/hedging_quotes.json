@@ -1,9 +1,9 @@
 {
- "generated": "2026-11-14",
+ "generated": "2026-11-21",
  "archive": {
   "first": "2026-11-06",
-  "last": "2026-11-13",
-  "days": 6,
+  "last": "2026-11-20",
+  "days": 11,
   "source": "Danny-397/Tradeski data/options-archive (SPY)"
  },
  "vix_to_atm_assumed": 0.875,
@@ -74,36 +74,96 @@
     "model_iv": 0.1689,
     "ratio_to_vix": 0.8058,
     "model_price_error_median": 0.1099
+   },
+   {
+    "date": "2026-11-16",
+    "expiry": "2026-12-18",
+    "trading_days": 23,
+    "spot": 739.95,
+    "atm_iv": 0.1921,
+    "vix": 22.91,
+    "model_iv": 0.2005,
+    "ratio_to_vix": 0.8384,
+    "model_price_error_median": 0.0442
+   },
+   {
+    "date": "2026-11-17",
+    "expiry": "2026-12-18",
+    "trading_days": 22,
+    "spot": 732.44,
+    "atm_iv": 0.2111,
+    "vix": 25.46,
+    "model_iv": 0.2228,
+    "ratio_to_vix": 0.8291,
+    "model_price_error_median": 0.056
+   },
+   {
+    "date": "2026-11-18",
+    "expiry": "2026-12-18",
+    "trading_days": 21,
+    "spot": 730.2,
+    "atm_iv": 0.2102,
+    "vix": 24.56,
+    "model_iv": 0.2149,
+    "ratio_to_vix": 0.8559,
+    "model_price_error_median": 0.0253
+   },
+   {
+    "date": "2026-11-19",
+    "expiry": "2026-12-18",
+    "trading_days": 20,
+    "spot": 715.87,
+    "atm_iv": 0.2474,
+    "vix": 28.44,
+    "model_iv": 0.2489,
+    "ratio_to_vix": 0.8699,
+    "model_price_error_median": 0.0215
+   },
+   {
+    "date": "2026-11-20",
+    "expiry": "2026-12-18",
+    "trading_days": 19,
+    "spot": 689.81,
+    "atm_iv": 0.3421,
+    "vix": 35.89,
+    "model_iv": 0.314,
+    "ratio_to_vix": 0.9532,
+    "model_price_error_median": -0.0138
    }
   ],
-  "ratio_median": 0.8629
+  "ratio_median": 0.8616
  },
  "part_b": {
-  "n": 1536,
+  "n": 2943,
   "day_pairs": [
    "2026-11-06",
    "2026-11-09",
    "2026-11-10",
    "2026-11-11",
-   "2026-11-12"
+   "2026-11-12",
+   "2026-11-13",
+   "2026-11-16",
+   "2026-11-17",
+   "2026-11-18",
+   "2026-11-19"
   ],
   "rms": {
-   "none": 0.5845,
-   "delta": 0.1381,
-   "agent_s0": 0.1482,
-   "agent_s1": 0.1392,
-   "agent_s2": 0.1437,
-   "agent_s3": 0.1474,
-   "agent_s4": 0.1452,
-   "agent_s5": 0.1477,
-   "agent_s6": 0.1416,
-   "agent_s7": 0.1455,
-   "agent_s8": 0.1338,
-   "agent_s9": 0.15
+   "none": 0.6205,
+   "delta": 0.2389,
+   "agent_s0": 0.2432,
+   "agent_s1": 0.247,
+   "agent_s2": 0.2452,
+   "agent_s3": 0.2398,
+   "agent_s4": 0.2621,
+   "agent_s5": 0.2368,
+   "agent_s6": 0.2498,
+   "agent_s7": 0.2342,
+   "agent_s8": 0.2724,
+   "agent_s9": 0.2282
   },
-  "agent_rms_median": 0.1454,
-  "agent_vs_delta": 1.053,
-  "agent_hedge_gap_to_delta": 0.0393
+  "agent_rms_median": 0.2442,
+  "agent_vs_delta": 1.022,
+  "agent_hedge_gap_to_delta": 0.0353
  },
  "part_c": {
   "n": 0,
