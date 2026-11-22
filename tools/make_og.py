@@ -26,7 +26,7 @@ TEXT = "#e4e8ec"
 MUTED = "#a5afba"
 FAINT = "#838e9a"
 LINE = "#2a3440"
-ACCENT = "#d68fb6"   # plum: every training run, as in the site hero
+ACCENT = "#e0b354"   # gold: every training run, as in the site hero
 BENCH = "#8a96a3"    # buy & hold
 
 ROWS = [("crypto", "Crypto"), ("stock", "Stocks")]

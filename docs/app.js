@@ -6,7 +6,7 @@
   "use strict";
 
   const DATA = window.RL_RESULTS || null;
-  const VOLT = "#d68fb6";                    // plum: the agent's own runs
+  const VOLT = "#e0b354";                    // gold: the agent's own runs
   const BENCH = "#8a96a3";                   // graphite: buy-and-hold
   const POS = "#5dbb8a", NEG = "#e5776b";   // gains and losses, as in styles.css
 
@@ -102,8 +102,8 @@
 
       if (s.fill) {
         const grad = ctx.createLinearGradient(0, pad.t, 0, H);
-        grad.addColorStop(0, "rgba(214, 143, 182, 0.10)");
-        grad.addColorStop(1, "rgba(214, 143, 182, 0)");
+        grad.addColorStop(0, "rgba(224, 179, 84, 0.10)");
+        grad.addColorStop(1, "rgba(224, 179, 84, 0)");
         ctx.beginPath();
         ctx.moveTo(X(0, n), Y(s.data[0]));
         for (let i = 1; i < count; i++) ctx.lineTo(X(i, n), Y(s.data[i]));
@@ -530,7 +530,7 @@
       ctx.font = FONT;
 
       // 95% CI of the mean, quietly behind the dots
-      ctx.fillStyle = "rgba(214, 143, 182, 0.16)";
+      ctx.fillStyle = "rgba(224, 179, 84, 0.16)";
       ctx.fillRect(X(d.ci_low), y - half, X(d.ci_high) - X(d.ci_low), half * 2);
 
       // buy & hold
@@ -785,7 +785,7 @@
     ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(W - padR, axisY); ctx.stroke();
 
     // 95% CI band + mean
-    ctx.fillStyle = "rgba(214, 143, 182, 0.12)";
+    ctx.fillStyle = "rgba(224, 179, 84, 0.12)";
     ctx.fillRect(X(d.ci_low), axisY - 30, X(d.ci_high) - X(d.ci_low), 60);
     ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(X(d.mean), axisY - 30); ctx.lineTo(X(d.mean), axisY + 30); ctx.stroke();

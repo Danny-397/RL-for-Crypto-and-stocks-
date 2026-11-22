@@ -170,7 +170,7 @@
   color: var(--on-accent); background: var(--accent-fill);
   border: 0; border-radius: var(--radius-sm); cursor: pointer; font-variant-numeric: tabular-nums;
 }
-.run-btn:hover:not(:disabled) { background: #e2a5c6; }
+.run-btn:hover:not(:disabled) { background: #ebc570; }
 .run-btn:disabled { background: var(--surface-2); color: var(--faint); cursor: not-allowed; }
 .run-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
@@ -502,7 +502,7 @@
 .rbar-row.is-reference .rbar-name { color: var(--volt); }
 .ref-tag {
   font-family: var(--font-data); font-size: 9px; font-style: normal; color: var(--volt);
-  border: 1px solid rgba(214, 143, 182, .35); border-radius: 4px; padding: 1px 5px;
+  border: 1px solid rgba(224, 179, 84, .35); border-radius: 4px; padding: 1px 5px;
   margin-left: 6px; vertical-align: middle; font-variant-numeric: tabular-nums;
 }
 /* A mean that does not separate from noise is not coloured as a win or a loss. */
@@ -527,8 +527,8 @@
   border: 1px solid var(--border); border-radius: 12px;
   padding: 20px; background: var(--bg-soft); position: relative;
 }
-.vp-card.is-claim { border-color: rgba(214, 143, 182, 0.35); }
-.vp-card.is-truth { border-color: rgba(214, 143, 182, 0.35); }
+.vp-card.is-claim { border-color: rgba(224, 179, 84, 0.35); }
+.vp-card.is-truth { border-color: rgba(224, 179, 84, 0.35); }
 .vp-kicker {
   font-family: var(--font-data); font-size: 10px; color: var(--faint); margin-bottom: 10px; font-variant-numeric: tabular-nums;
 }
@@ -593,7 +593,7 @@
   border-bottom: 1px solid var(--border);
 }
 .wi-row:last-child { border-bottom: 0; }
-.wi-row.is-agent { background: rgba(214, 143, 182, 0.045); }
+.wi-row.is-agent { background: rgba(224, 179, 84, 0.045); }
 .wi-name { font-family: var(--font-data); font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
 .wi-name small { display: block; color: var(--faint); font-size: 10px; }
 .wi-row.is-agent .wi-name { color: var(--volt); }
@@ -674,7 +674,7 @@
 }
 .nb-status-chip.done { color: var(--pos); border-color: rgba(93, 187, 138, .35); }
 .nb-status-chip.error { color: var(--neg); border-color: rgba(229, 119, 107, .35); }
-.nb-status-chip.running { color: var(--cyan); border-color: rgba(214, 143, 182, .35); }
+.nb-status-chip.running { color: var(--cyan); border-color: rgba(224, 179, 84, .35); }
 .nb-empty {
   padding: 30px 10px; text-align: center; color: var(--muted); font-size: 14px;
 }
@@ -755,7 +755,7 @@
 /* the backend is asleep and being woken -- in progress, not a failure */
 .api-pill.is-waking {
   color: var(--cyan);
-  border-color: rgba(214, 143, 182, 0.4);
+  border-color: rgba(224, 179, 84, 0.4);
 }
 .api-pill.is-waking .dot-led {
   background: var(--cyan);
@@ -916,7 +916,7 @@
   background: rgba(255, 255, 255, 0.035);
 }
 .wf-track > i { position: absolute; top: 0; height: 100%; border-radius: 4px; }
-.wf-train { background: rgba(214, 143, 182, 0.22); }
+.wf-train { background: rgba(224, 179, 84, 0.22); }
 .wf-test { background: var(--volt); }
 
 .wf-table-wrap { overflow-x: auto; margin-bottom: 18px; }
