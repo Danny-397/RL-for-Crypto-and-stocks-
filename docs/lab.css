@@ -998,3 +998,27 @@
 .pg-baselines .wf-table td:first-child { max-width: 260px; white-space: normal; }
 .wf-table tr.is-agent td { color: var(--text); }
 .wf-table tr.is-agent td:first-child { border-left: 2px solid var(--volt); padding-left: 9px; }
+
+/* ── Touch screens: finger-sized targets (about 44px) ─────────────────────
+   Desktop is unchanged. Controls grow; text links and text buttons keep
+   their look and get a larger invisible hit area via ::after. */
+@media (pointer: coarse) {
+  .seg button { min-height: 40px; }
+  .chip { min-height: 40px; }
+  .btn-link#hg-prev, .btn-link#hg-next { min-width: 44px; min-height: 44px; font-size: 18px; }
+  .ctl input[type="range"], .scrub-row input[type="range"], .hm-controls input[type="range"] { height: 32px; }
+  .brand, .tour-start, .footer a, .foot-meta a { position: relative; }
+  .brand::after, .tour-start::after, .footer a::after, .foot-meta a::after {
+    content: ""; position: absolute; inset: -12px -6px;
+  }
+}
+/* Phones: nothing smaller than 12px. These are every rule in styles.css and
+   lab.css set at 10-11px. */
+@media (max-width: 640px) {
+  .api-pill, .lab-tab-group-label, .tour-step, .ctl > label, .chart-title, .legend,
+  .metric .k, .metric .cmp, .receipt dt, .tag-synthetic, .tag-real, .tag-precomputed,
+  .xr-node .k, .xr-node .cmp, .xr-group > h4, .xr-feat .fname, .xr-scale, .ab-sub,
+  .ab-row .lbl, .ab-row .ci, .ab-gap .lbl, .gen-stats h4, .stat-controls label, .run-btn-sm,
+  .rbar-name small, .rbar-val small, .sub-h, .vp-kicker, .vp-flag, .wi-ctl label,
+  .wi-name small, .wi-num small, .nb-count, .nb-cfg, .badge-live, .tl-n, .pc-n { font-size: 12px; }
+}
