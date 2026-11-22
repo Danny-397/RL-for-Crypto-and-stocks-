@@ -6,9 +6,9 @@
   "use strict";
 
   const DATA = window.RL_RESULTS || null;
-  const VOLT = "#d97757";
-  const BENCH = "rgba(140, 152, 168, 0.85)";
-  const POS = "#22c55e", NEG = "#ef4444";   // gains and losses, as in styles.css
+  const VOLT = "#d68fb6";                    // plum: the agent's own runs
+  const BENCH = "#8a96a3";                   // graphite: buy-and-hold
+  const POS = "#5dbb8a", NEG = "#e5776b";   // gains and losses, as in styles.css
 
   // ── formatting helpers ──────────────────────────────────────
   const sgn = (v) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1) + "%";
@@ -22,9 +22,9 @@
   // elements below whenever they render; an element can state its sign with
   // data-sign when its text has none (a dollar balance, say).
   const SIGN_SEL = [
-    ".tl-fig", ".lr-fig", ".chart-foot .v", ".sc-a", ".sc-b", ".sc-a [data-sign]",
+    ".chart-foot .v", ".sc-a", ".sc-b", ".sc-a [data-sign]",
     ".sc-b [data-sign]", ".restable td:not(.num-l):not(.muted-cell)", ".restable td small",
-    ".rs-v:not(.rs-train)", ".hero-note b", ".lab-caption b", ".insight b",
+    ".rs-v:not(.rs-train)", ".insight b",
     ".honest-note b", ".behavior b", ".scrub-readout b", ".period b", ".rs-note b",
   ].join(",");
   function signColor(root) {
@@ -102,8 +102,8 @@
 
       if (s.fill) {
         const grad = ctx.createLinearGradient(0, pad.t, 0, H);
-        grad.addColorStop(0, "rgba(217, 119, 87, 0.10)");
-        grad.addColorStop(1, "rgba(217, 119, 87, 0)");
+        grad.addColorStop(0, "rgba(214, 143, 182, 0.10)");
+        grad.addColorStop(1, "rgba(214, 143, 182, 0)");
         ctx.beginPath();
         ctx.moveTo(X(0, n), Y(s.data[0]));
         for (let i = 1; i < count; i++) ctx.lineTo(X(i, n), Y(s.data[i]));
@@ -142,13 +142,13 @@
     for (let i = 0; i < dd.length; i++) ctx.lineTo(X(i), Y(dd[i]));
     ctx.lineTo(X(dd.length - 1), pad.t); ctx.closePath();
     const grad = ctx.createLinearGradient(0, pad.t, 0, H);
-    grad.addColorStop(0, "rgba(239, 68, 68, 0.05)");
-    grad.addColorStop(1, "rgba(239, 68, 68, 0.4)");
+    grad.addColorStop(0, "rgba(229, 119, 107, 0.05)");
+    grad.addColorStop(1, "rgba(229, 119, 107, 0.4)");
     ctx.fillStyle = grad; ctx.fill();
 
     ctx.beginPath();
     for (let i = 0; i < dd.length; i++) (i ? ctx.lineTo(X(i), Y(dd[i])) : ctx.moveTo(X(i), Y(dd[i])));
-    ctx.strokeStyle = "rgba(239, 68, 68, 0.85)"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = "rgba(229, 119, 107, 0.85)"; ctx.lineWidth = 1.5; ctx.stroke();
   }
 
   // ── action histogram ────────────────────────────────────────
@@ -172,8 +172,8 @@
       const h = (c / maxc) * (H - pad.t - pad.b);
       const x = pad.l + i * bw, y = H - pad.b - h;
       const center = i / (BINS - 1); // 0..1
-      ctx.fillStyle = center < 0.45 ? "rgba(239, 68, 68, 0.7)"
-        : center > 0.55 ? "rgba(34, 197, 94, 0.8)" : "rgba(140,152,168,0.6)";
+      ctx.fillStyle = center < 0.45 ? "rgba(229, 119, 107, 0.7)"
+        : center > 0.55 ? "rgba(93, 187, 138, 0.8)" : "rgba(140,152,168,0.6)";
       ctx.fillRect(x + 1, y, bw - 2, h);
     });
 
@@ -264,14 +264,10 @@
   // the market pages carry the full caveat (replicationNote).
   function heroDepthNote() {
     const dep = window.RL_DEPTH;
-    if (!dep || !dep.seeds || !dep.seeds.crypto || !dep.behaviour) return "";
-    const d = dep.seeds.crypto, hit = dep.behaviour.crypto.hit_rate;
-    const pv = (p) => (p < 0.01 ? p.toFixed(4) : p.toFixed(2));
-    return ` At ${d.n} seeds crypto trails buy-&amp;-hold on ${d.tickers_behind} of ${d.tickers} ` +
-      `coins (p = ${pv(d.p)}), and the agent's long-or-short calls are right ` +
-      `<b>${(hit * 100).toFixed(1)}%</b> of the time, a coin flip ` +
-      '(<a href="https://github.com/Danny-397/RL-for-Crypto-and-stocks-/blob/main/RESULTS.md#10h-thirty-seeds-every-period-a-fuller-sweep" ' +
-      'target="_blank" rel="noopener">§10h</a>).';
+    if (!dep || !dep.behaviour || !dep.behaviour.crypto) return "";
+    const hit = dep.behaviour.crypto.hit_rate;
+    return ` Its calls on whether price would rise or fall were right ` +
+      `<b>${(hit * 100).toFixed(1)}%</b> of the time, a coin flip.`;
   }
 
   function verdictFor(market) {
@@ -430,7 +426,7 @@
     for (let i = 0; i < n; i++) {
       const a = acts[i];
       if (Math.abs(a) < 0.05) continue;
-      ctx.fillStyle = a > 0 ? "rgba(34, 197, 94, 0.12)" : "rgba(239, 68, 68, 0.13)";
+      ctx.fillStyle = a > 0 ? "rgba(93, 187, 138, 0.12)" : "rgba(229, 119, 107, 0.13)";
       ctx.fillRect(X(i) - colW / 2, pad.t, colW + 1, H - pad.t - pad.b);
     }
     // price line
@@ -441,7 +437,7 @@
     const cx = X(cursor), a = acts[cursor];
     ctx.strokeStyle = "rgba(255, 255, 255, 0.35)"; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, H - pad.b); ctx.stroke();
-    ctx.fillStyle = a > 0.05 ? "#22c55e" : (a < -0.05 ? "#ef4444" : "#8a97a8");
+    ctx.fillStyle = a > 0.05 ? "#5dbb8a" : (a < -0.05 ? "#e5776b" : "#8a97a8");
     ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.arc(cx, Y(price[cursor]), 4.2, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
@@ -478,64 +474,95 @@
     const badge = document.getElementById("hero-badge");
     const sub = document.getElementById("hero-sub");
     const n = sig.crypto.seeds || sig.crypto.seed_returns.length;
-    if (badge) badge.textContent = `Crypto & stocks · held-out, ${n} training runs`;
+    if (badge) badge.textContent = `Crypto and stocks: ${n} training runs each, on data held out from training`;
     const m = DATA && DATA.markets && DATA.markets.crypto;
-    if (sub) sub.textContent = m && m.end_date ? `daily bars · test window to ${fmtMon(m.end_date)}` : "daily bars";
+    if (sub) sub.textContent = m && m.end_date ? `Daily bars, test window to ${fmtMon(m.end_date)}` : "Daily bars";
   }
 
-  function drawHeroSeeds(canvas, sig, shown) {
+  // Sized to its CSS box at device resolution, so the hero stays crisp at any width.
+  function fitCanvas(canvas) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = canvas.clientWidth || canvas.width, h = canvas.clientHeight || canvas.height;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    }
     const ctx = canvas.getContext("2d");
-    const W = canvas.width, H = canvas.height;
-    const FONT = "13px -apple-system, BlinkMacSystemFont, Inter, Segoe UI, system-ui, sans-serif";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, W: w, H: h };
+  }
+
+  // t: seconds since the first dot started falling. Each run drops in on its own
+  // beat and settles, so the spread of outcomes builds up one seed at a time.
+  const DROP_GAP = 0.09, DROP_DUR = 0.55;
+  function drawHeroSeeds(canvas, sig, t) {
+    const { ctx, W, H } = fitCanvas(canvas);
+    const small = W < 560;
+    const FONT = `${small ? 11 : 12.5}px Inter, -apple-system, "Segoe UI", system-ui, sans-serif`;
     ctx.clearRect(0, 0, W, H);
 
     const all = [0];
     HERO_ROWS.forEach((r) => { const d = sig[r.key]; all.push(...d.seed_returns, d.bh, d.ci_low, d.ci_high); });
     let lo = Math.min(...all), hi = Math.max(...all);
-    const span = hi - lo || 1; lo -= span * 0.05; hi += span * 0.07;
-    const padL = 14, padR = 14;
+    const span = hi - lo || 1; lo -= span * 0.04; hi += span * 0.06;
+    const padL = small ? 4 : 8, padR = small ? 4 : 8;
     const X = (v) => padL + ((v - lo) / (hi - lo)) * (W - padL - padR);
-    const rowY = [96, 216];
+    const rowY = [H * 0.3, H * 0.7], half = small ? 22 : 28;
 
     // zero line and one tick per +100%, shared by both rows
     ctx.font = FONT; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-    for (let t = 0; t <= hi; t += 1) {
-      const x = X(t);
-      ctx.strokeStyle = t === 0 ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.07)";
-      ctx.setLineDash(t === 0 ? [3, 3] : []);
-      ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H - 26); ctx.stroke();
+    for (let v = 0; v <= hi; v += 1) {
+      const x = X(v);
+      ctx.strokeStyle = v === 0 ? "rgba(228,232,236,0.30)" : "rgba(228,232,236,0.07)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash(v === 0 ? [2, 4] : []);
+      ctx.beginPath(); ctx.moveTo(x, 12); ctx.lineTo(x, H - 26); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = "rgba(255,255,255,0.45)";
-      ctx.fillText(t === 0 ? "0%" : "+" + t * 100 + "%", x, H - 8);
+      ctx.fillStyle = "rgba(228,232,236,0.5)";
+      ctx.textAlign = v === 0 && x < 20 ? "left" : "center";
+      ctx.fillText(v === 0 ? "0%" : "+" + v * 100 + "%", x, H - 6);
     }
 
     HERO_ROWS.forEach((r, ri) => {
       const d = sig[r.key], y = rowY[ri];
-      ctx.textAlign = "left"; ctx.fillStyle = "rgba(255,255,255,0.78)";
-      ctx.fillText(r.label, padL, y - 44);
+      ctx.textAlign = "left"; ctx.fillStyle = "rgba(228,232,236,0.88)";
+      ctx.font = `italic ${small ? 16 : 19}px Newsreader, Georgia, serif`;
+      ctx.fillText(r.label, padL, y - half - 12);
+      ctx.font = FONT;
 
-      // 95% CI band and mean
-      ctx.fillStyle = "rgba(217, 119, 87, 0.10)";
-      ctx.fillRect(X(d.ci_low), y - 26, X(d.ci_high) - X(d.ci_low), 52);
-      ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(X(d.mean), y - 26); ctx.lineTo(X(d.mean), y + 26); ctx.stroke();
+      // 95% CI of the mean, quietly behind the dots
+      ctx.fillStyle = "rgba(214, 143, 182, 0.16)";
+      ctx.fillRect(X(d.ci_low), y - half, X(d.ci_high) - X(d.ci_low), half * 2);
 
       // buy & hold
       const bx = X(d.bh);
-      ctx.strokeStyle = BENCH; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.moveTo(bx, y - 32); ctx.lineTo(bx, y + 32); ctx.stroke();
+      ctx.strokeStyle = BENCH; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(bx, y - half - 6); ctx.lineTo(bx, y + half + 6); ctx.stroke();
       ctx.fillStyle = BENCH;
-      ctx.textAlign = bx > W - 90 ? "right" : "center";
-      ctx.fillText("buy & hold " + sgn(d.bh), bx > W - 90 ? bx - 6 : bx, y + 48);
+      const right = bx > W - 120;
+      ctx.textAlign = right ? "right" : "left";
+      ctx.fillText("buy & hold " + sgn(d.bh), right ? bx - 8 : bx + 8, y - half - 12);
 
       // one dot per run, staggered vertically so overlapping runs stay visible
       d.seed_returns.forEach((v, i) => {
-        if (i >= shown) return;
-        const dy = ((i % 5) - 2) * 9;
-        ctx.fillStyle = v >= 0 ? POS : NEG; ctx.shadowBlur = 0;
-        ctx.beginPath(); ctx.arc(X(v), y + dy, 4.5, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
+        const p = Math.max(0, Math.min(1, (t - i * DROP_GAP) / DROP_DUR));
+        if (p <= 0) return;
+        const ease = 1 - Math.pow(1 - p, 3);
+        const dy = ((i % 5) - 2) * (small ? 7 : 9);
+        const yy = y + dy - (1 - ease) * 46;
+        ctx.globalAlpha = Math.min(1, p * 2.5);
+        ctx.fillStyle = VOLT;
+        ctx.beginPath(); ctx.arc(X(v), yy, small ? 4 : 5, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
       });
+
+      // the mean of the runs, drawn once they have all landed
+      const done = Math.max(0, Math.min(1, (t - d.seed_returns.length * DROP_GAP) / 0.3));
+      if (done > 0) {
+        ctx.globalAlpha = done;
+        ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(X(d.mean), y - half); ctx.lineTo(X(d.mean), y + half); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
     });
   }
 
@@ -562,31 +589,41 @@
     put("m-stock", sgn(st.mean), st.mean < 0);
     const note = document.getElementById("hero-note");
     if (note) {
-      const n = c.seeds || c.seed_returns.length;
       note.innerHTML =
         `Each dot is one complete training run: same code, same data, a different ` +
-        `random seed. Crypto runs ranged from <b>${sgn(Math.min(...c.seed_returns))}</b> ` +
-        `to <b>${sgn(Math.max(...c.seed_returns))}</b>. Across ${n} runs crypto is ` +
-        `${verdict(c)} from buy-&amp;-hold and stocks are ${verdict(st)} ` +
-        `(p = ${st.p.toFixed(3)}). ` +
+        `random seed. The shaded band is where the average run lands, with 95% confidence. ` +
         (Math.max(...c.seed_returns) < 0
-          ? "Every crypto run lost money; how much depended on the seed."
+          ? "Every crypto run lost money; only how much depended on the seed."
           : "Pick one dot and you can tell either story.") +
         heroDepthNote();
     }
 
     const total = Math.max(c.seed_returns.length, st.seed_returns.length);
-    let shown = reduceMotion ? total : 0;
-    function frame() {
-      drawHeroSeeds(canvas, sig, shown);
-      if (shown < total) { shown += 1; setTimeout(() => requestAnimationFrame(frame), 70); }
+    const END = total * DROP_GAP + DROP_DUR + 0.3;
+    let last = END;
+    function play() {
+      const t0 = performance.now();
+      (function frame(now) {
+        last = Math.min(END, (now - t0) / 1000);
+        drawHeroSeeds(canvas, sig, last);
+        if (last < END) requestAnimationFrame(frame);
+      })(t0);
     }
     if (!reduceMotion && "IntersectionObserver" in window) {
+      last = 0; drawHeroSeeds(canvas, sig, 0);
       const io = new IntersectionObserver((e) => {
-        if (e[0].isIntersecting) { frame(); io.disconnect(); }
-      }, { threshold: 0.25 });
+        if (e[0].isIntersecting) { play(); io.disconnect(); }
+      }, { threshold: 0.3 });
       io.observe(canvas);
-    } else { frame(); }
+    } else { drawHeroSeeds(canvas, sig, END); }
+    let rz;
+    window.addEventListener("resize", () => {
+      clearTimeout(rz); rz = setTimeout(() => drawHeroSeeds(canvas, sig, last), 120);
+    });
+    // The serif row labels may arrive after the first frame.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => drawHeroSeeds(canvas, sig, last));
+    }
   }
 
   // ── count-up helper ─────────────────────────────────────────
@@ -748,7 +785,7 @@
     ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(W - padR, axisY); ctx.stroke();
 
     // 95% CI band + mean
-    ctx.fillStyle = "rgba(217, 119, 87, 0.12)";
+    ctx.fillStyle = "rgba(214, 143, 182, 0.12)";
     ctx.fillRect(X(d.ci_low), axisY - 30, X(d.ci_high) - X(d.ci_low), 60);
     ctx.strokeStyle = VOLT; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(X(d.mean), axisY - 30); ctx.lineTo(X(d.mean), axisY + 30); ctx.stroke();

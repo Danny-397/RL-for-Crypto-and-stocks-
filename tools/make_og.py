@@ -21,15 +21,13 @@ import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib import font_manager  # noqa: E402
 
 # docs/styles.css tokens
-BG = "#0b0b0c"
-TEXT = "#f5f5f7"
-MUTED = "#a1a1a6"
-FAINT = "#86868b"
-LINE = "#2a2a2e"
-ACCENT = "#d97757"   # the agent's series
-POS = "#22c55e"      # a run that made money
-NEG = "#ef4444"      # a run that lost money
-BENCH = "#8e8e93"    # buy & hold
+BG = "#121821"       # midnight, as in docs/styles.css
+TEXT = "#e4e8ec"
+MUTED = "#a5afba"
+FAINT = "#838e9a"
+LINE = "#2a3440"
+ACCENT = "#d68fb6"   # plum: every training run, as in the site hero
+BENCH = "#8a96a3"    # buy & hold
 
 ROWS = [("crypto", "Crypto"), ("stock", "Stocks")]
 
@@ -41,6 +39,15 @@ def _font() -> str:
         if name in installed:
             return name
     return "DejaVu Sans"
+
+
+def _serif() -> str:
+    """The site sets headlines in Newsreader; fall back to a close book serif."""
+    installed = {f.name for f in font_manager.fontManager.ttflist}
+    for name in ("Newsreader", "Georgia", "DejaVu Serif"):
+        if name in installed:
+            return name
+    return "serif"
 
 
 def _load_significance() -> dict:
@@ -67,7 +74,7 @@ def main() -> None:
     # Title block
     fig.text(0.06, 0.865, "RL Trader", color=MUTED, fontsize=20, fontweight="semibold")
     fig.text(0.06, 0.70, "Is the agent learning, or just lucky?", color=TEXT,
-             fontsize=46, fontweight="bold")
+             fontsize=50, fontfamily=_serif())
     fig.text(0.06, 0.615,
              "A from-scratch deep-RL study of memorisation and seed luck, on crypto and stocks.",
              color=MUTED, fontsize=18)
@@ -97,7 +104,7 @@ def main() -> None:
         n = len(d["seed_returns"])
         offsets = [((j % 5) - 2) * 0.07 for j in range(n)]
         ax.scatter(d["seed_returns"], [y + o for o in offsets], s=70,
-                   color=[POS if v >= 0 else NEG for v in d["seed_returns"]],
+                   color=ACCENT,
                    edgecolors=BG, linewidths=1.2, zorder=3)
         ax.plot([d["bh"], d["bh"]], [y - 0.28, y + 0.28], color=BENCH, lw=3,
                 solid_capstyle="round", zorder=2)
@@ -107,7 +114,8 @@ def main() -> None:
         verdict = "indistinguishable" if d["p"] >= 0.05 else (
             "worse" if d["mean"] < d["bh"] else "better")
         ax.text(lo - pad, y + 0.34,
-                f"{label}   mean {_pct(d['mean'])}  ·  vs buy & hold: {verdict} ({_p(d['p'])})",
+                f"{label}: average run {_pct(d['mean'])}, {verdict} "
+                f"{'from' if verdict == 'indistinguishable' else 'than'} buy & hold ({_p(d['p'])})",
                 color=TEXT, fontsize=14, fontweight="semibold", ha="left")
 
     n_seeds = len(sig["crypto"]["seed_returns"])
